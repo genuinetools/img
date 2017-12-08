@@ -27,6 +27,7 @@ func main() {
 	// Build the list of available commands.
 	commands := []command{
 		&buildCommand{},
+		&pullCommand{},
 		&versionCommand{},
 	}
 
