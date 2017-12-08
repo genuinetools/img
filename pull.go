@@ -56,6 +56,7 @@ func (cmd *pullCommand) Run(args []string) error {
 	if err != nil {
 		return fmt.Errorf("not a valid image %q: %v", args[0], err)
 	}
+	name = reference.TagNameOnly(name)
 
 	_, tag, _, err := splitNameTag(args[0])
 	if err != nil {
@@ -93,7 +94,7 @@ func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repo
 	// Create the manifest service
 	ms, err := src.Manifests(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting manifest service failed: %v", err)
 	}
 
 	// Create the tags service
@@ -102,18 +103,18 @@ func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repo
 	// Get the tag descriptor for the digest
 	descriptor, err := ts.Get(ctx, tag)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting the tag descriptor failed: %v", err)
 	}
 
 	// Get the manifest
 	manifest, err := ms.Get(ctx, descriptor.Digest)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting the manifest failed: %v", err)
 	}
 
 	dstRepo, err := dst.Repository(ctx, name)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating the destination repository failed: %v", err)
 	}
 
 	srcBlobStore := src.Blobs(ctx)
@@ -121,21 +122,21 @@ func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repo
 	for _, ref := range manifest.References() {
 		blob, err := srcBlobStore.Get(ctx, ref.Digest)
 		if err != nil {
-			return err
+			return fmt.Errorf("getting remote blob failed failed: %v", err)
 		}
 
 		upload, err := dstBlobStore.Create(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("creating the local blob writer failed: %v", err)
 		}
 
 		if _, err := upload.Write(blob); err != nil {
-			return err
+			return fmt.Errorf("writing to the local blob failed: %v", err)
 		}
 
 		descriptor = ref
 		if _, err := upload.Commit(ctx, descriptor); err != nil {
-			return err
+			return fmt.Errorf("commiting locally failed: %v", err)
 		}
 
 		upload.Close()
@@ -143,11 +144,11 @@ func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repo
 
 	dms, err := dstRepo.Manifests(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating manifest service locally failed: %v", err)
 	}
 
 	if _, err := dms.Put(ctx, manifest); err != nil {
-		return err
+		return fmt.Errorf("putting the manifest locally failed: %v", err)
 	}
 
 	return nil

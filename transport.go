@@ -7,11 +7,13 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/jessfraz/distribution/registry/client/transport"
 	"github.com/jessfraz/reg/registry"
 )
 
 var (
-	reProtocol = regexp.MustCompile("^https?://")
+	defaultUserAgent = "jessfraz/img"
+	reProtocol       = regexp.MustCompile("^https?://")
 )
 
 func newRegistryTransport(auth types.AuthConfig, dontVerifySSL bool) http.RoundTripper {
@@ -21,19 +23,21 @@ func newRegistryTransport(auth types.AuthConfig, dontVerifySSL bool) http.RoundT
 		url = "https://" + url
 	}
 
-	transport := http.DefaultTransport
+	tp := http.DefaultTransport
 
 	// If insecure set that way.
 	if dontVerifySSL {
-		transport = &http.Transport{
+		tp = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		}
 	}
 
+	t := transport.NewTransport(tp, transportHeaders(defaultUserAgent, nil)...)
+
 	tokenTransport := &registry.TokenTransport{
-		Transport: transport,
+		Transport: t,
 		Username:  auth.Username,
 		Password:  auth.Password,
 	}
@@ -48,4 +52,18 @@ func newRegistryTransport(auth types.AuthConfig, dontVerifySSL bool) http.RoundT
 	}
 
 	return errorTransport
+}
+
+// transportHeaders returns request modifiers with a User-Agent and metaHeaders
+func transportHeaders(userAgent string, metaHeaders http.Header) []transport.RequestModifier {
+	modifiers := []transport.RequestModifier{}
+	if userAgent != "" {
+		modifiers = append(modifiers, transport.NewHeaderRequestModifier(http.Header{
+			"User-Agent": []string{userAgent},
+		}))
+	}
+	if metaHeaders != nil {
+		modifiers = append(modifiers, transport.NewHeaderRequestModifier(metaHeaders))
+	}
+	return modifiers
 }
