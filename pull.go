@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/docker/distribution"
@@ -63,14 +62,21 @@ func (cmd *pullCommand) Run(args []string) error {
 		return err
 	}
 
-	domain := defaultDockerRegistry
-	if reference.Domain(name) != "docker.io" && reference.Domain(name) != "" {
-		domain = "https://" + reference.Domain(name)
+	auth, err := getAuthConfig(reference.Domain(name))
+	if err != nil {
+		return err
 	}
 
-	// TODO: make a flag for the registry or parse it from the string
+	domain := defaultDockerRegistry
+	if reference.Domain(name) != "docker.io" && reference.Domain(name) != "" {
+		domain = auth.ServerAddress
+	}
+
+	// TODO: add flag to flip switch for turning off SSL verification
+	transport := newRegistryTransport(auth, false)
+
 	// Create the new Registry client.
-	remote, err := client.NewRepository(name, domain, http.DefaultTransport)
+	remote, err := client.NewRepository(name, domain, transport)
 	if err != nil {
 		return fmt.Errorf("creating new registry repository failed: %v", err)
 	}
