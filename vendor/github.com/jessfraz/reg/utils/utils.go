@@ -9,6 +9,11 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
+const (
+	// DefaultDockerRegistry is the default docker registry address.
+	DefaultDockerRegistry = "https://registry-1.docker.io"
+)
+
 // GetAuthConfig returns the docker registry AuthConfig.
 // Optionally takes in the authentication values, otherwise pulls them from the
 // docker config file.
@@ -30,9 +35,9 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 	if !dcfg.ContainsAuth() {
 		// If we were passed a registry, just use that.
 		if registry != "" {
-			return types.AuthConfig{
+			return setDefaultRegistry(types.AuthConfig{
 				ServerAddress: registry,
-			}, nil
+			}), nil
 		}
 
 		// Otherwise, just use an empty auth config.
@@ -54,9 +59,9 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 		}
 
 		// Otherwise just use the registry with no auth.
-		return types.AuthConfig{
+		return setDefaultRegistry(types.AuthConfig{
 			ServerAddress: registry,
-		}, nil
+		}), nil
 	}
 
 	// Just set the auth config as the first registryURL, username and password
@@ -91,4 +96,12 @@ func GetRepoAndRef(arg string) (repo, ref string, err error) {
 	}
 
 	return
+}
+
+func setDefaultRegistry(auth types.AuthConfig) types.AuthConfig {
+	if auth.ServerAddress == "docker.io" {
+		auth.ServerAddress = DefaultDockerRegistry
+	}
+
+	return auth
 }

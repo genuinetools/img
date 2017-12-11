@@ -23,8 +23,6 @@ import (
 
 const (
 	dockerConfigPath = ".docker/config.json"
-
-	defaultDockerRegistry = "https://registry-1.docker.io"
 )
 
 var (
@@ -101,7 +99,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "registry, r",
 			Usage: "URL to the private registry (ex. r.j3ss.co)",
-			Value: defaultDockerRegistry,
+			Value: utils.DefaultDockerRegistry,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -235,7 +233,7 @@ func main() {
 					return err
 				}
 
-				layer, err := r.DownloadLayer(repo, digest.Digest(ref))
+				layer, err := r.DownloadLayer(repo, digest.FromString(ref))
 				if err != nil {
 					return err
 				}

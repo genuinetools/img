@@ -41,7 +41,7 @@
   branch = "master"
   name = "github.com/docker/docker"
   packages = ["api/types","api/types/blkiodev","api/types/container","api/types/filters","api/types/mount","api/types/network","api/types/registry","api/types/strslice","api/types/swarm","api/types/swarm/runtime","api/types/versions","pkg/homedir","pkg/idtools","pkg/ioutils","pkg/jsonmessage","pkg/longpath","pkg/mount","pkg/stringid","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","registry","registry/resumable"]
-  revision = "549a2b9bbe757c8cd6d295f51fd67074847b7a94"
+  revision = "f5416e76702e8becb34d1e9843d0e2cd0f9f95bf"
 
 [[projects]]
   branch = "master"
@@ -94,14 +94,14 @@
 [[projects]]
   branch = "master"
   name = "github.com/jessfraz/distribution"
-  packages = ["reference","registry/client/transport"]
+  packages = ["reference"]
   revision = "f4118485915abb8b163442717326597908eee6aa"
 
 [[projects]]
   branch = "master"
   name = "github.com/jessfraz/reg"
   packages = ["registry","utils"]
-  revision = "8e5eba873507fcc3b2a00530a45b47661c831717"
+  revision = "758d45bea21e221fe53d28a9db18745949b1f72a"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -161,11 +161,11 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "b8f5ef32195cae6470b728e8ca677f0dbed1a004"
+  revision = "53aa286056ef226755cd898109dbcdaba8ac0b81"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6208dcc38c88a77dc53e40dcbdab71c19ad6c9c9546b85dd2a5332d6e611e503"
+  inputs-digest = "77f0627be6a4569504f29be207696ad48ec5623ab844a300c7bf2c020b0b6aa6"
   solver-name = "gps-cdcl"
   solver-version = 1

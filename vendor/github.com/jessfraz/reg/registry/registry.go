@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/docker/api/types"
 )
 
@@ -113,8 +115,8 @@ func (r *Registry) getJSON(url string, response interface{}, addV2Header bool) (
 		return nil, err
 	}
 	if addV2Header {
-		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+		req.Header.Add("Accept", schema2.MediaTypeManifest)
+		req.Header.Add("Accept", manifestlist.MediaTypeManifestList)
 	}
 	resp, err := r.Client.Do(req)
 	if err != nil {
