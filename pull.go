@@ -2,14 +2,20 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"log"
+	"runtime"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver/filesystem"
-	"github.com/jessfraz/distribution/reference"
 	"github.com/jessfraz/reg/registry"
 	"github.com/jessfraz/reg/utils"
 	digest "github.com/opencontainers/go-digest"
@@ -20,6 +26,9 @@ const (
 	// TODO: change this from tmpfs
 	defaultLocalRegistry = "/tmp/img-local-registry"
 
+	// simultaneousLayerPullWindow is the size of the parallel layer pull window.
+	// A layer may not be pulled until the layer preceeding it by the length of the
+	// pull window has been successfully pulled.
 	simultaneousLayerPullWindow = 4
 )
 
@@ -93,6 +102,22 @@ func pull(ctx context.Context, dst distribution.Namespace, src *registry.Registr
 		return fmt.Errorf("getting manifest for %s:%s failed: %v", imgPath, tag, err)
 	}
 
+	switch v := manifest.(type) {
+	case *schema1.SignedManifest:
+		fmt.Println("got schema1 manifest")
+		return nil
+	case *schema2.DeserializedManifest:
+		fmt.Println("got schema2 manifest")
+		return pullV2(ctx, dst, src, v, name, imgPath)
+	case *manifestlist.DeserializedManifestList:
+		fmt.Println("got manifestlist")
+		return pullManifestList(ctx, dst, src, v, name, imgPath)
+	}
+
+	return errors.New("unsupported manifest format")
+}
+
+func pullV2(ctx context.Context, dst distribution.Namespace, src *registry.Registry, manifest *schema2.DeserializedManifest, name reference.Named, imgPath string) error {
 	dstRepo, err := dst.Repository(ctx, name)
 	if err != nil {
 		return fmt.Errorf("creating the destination repository failed: %v", err)
@@ -133,6 +158,42 @@ func pull(ctx context.Context, dst distribution.Namespace, src *registry.Registr
 	return nil
 }
 
+func pullManifestList(ctx context.Context, dst distribution.Namespace, src *registry.Registry, mfstList *manifestlist.DeserializedManifestList, name reference.Named, imgPath string) error {
+	if _, err := schema2ManifestDigest(name, mfstList); err != nil {
+		return err
+	}
+
+	log.Printf("%s resolved to a manifestList object with %d entries; looking for a %s/%s match", name, len(mfstList.Manifests), runtime.GOOS, runtime.GOARCH)
+
+	manifestMatches := filterManifests(mfstList.Manifests, runtime.GOOS)
+
+	if len(manifestMatches) == 0 {
+		return fmt.Errorf("no matching manifest for %s/%s in the manifest list entries", runtime.GOOS, runtime.GOARCH)
+	}
+
+	if len(manifestMatches) > 1 {
+		log.Printf("found multiple matches in manifest list, choosing best match %s", manifestMatches[0].Digest.String())
+	}
+	manifestDigest := manifestMatches[0].Digest
+
+	// Get the manifest.
+	manifest, err := src.Manifest(imgPath, manifestDigest.String())
+	if err != nil {
+		return fmt.Errorf("getting manifest for %s@%s failed: %v", imgPath, manifestDigest.String(), err)
+	}
+
+	switch v := manifest.(type) {
+	case *schema1.SignedManifest:
+		fmt.Println("got schema1 manifest")
+		return nil
+	case *schema2.DeserializedManifest:
+		fmt.Println("got schema2 manifest")
+		return pullV2(ctx, dst, src, v, name, imgPath)
+	}
+
+	return errors.New("unsupported manifest format")
+}
+
 // schema2ManifestDigest computes the manifest digest, and, if pulling by
 // digest, ensures that it matches the requested digest.
 func schema2ManifestDigest(ref reference.Named, mfst distribution.Manifest) (digest.Digest, error) {
@@ -148,12 +209,22 @@ func schema2ManifestDigest(ref reference.Named, mfst distribution.Manifest) (dig
 			return "", err
 		}
 		if !verifier.Verified() {
-			err := fmt.Errorf("manifest verification failed for digest %s", digested.Digest())
-			//logrus.Error(err)
-			return "", err
+			return "", fmt.Errorf("manifest verification failed for digest %s", digested.Digest())
 		}
 		return digested.Digest(), nil
 	}
 
 	return digest.FromBytes(canonical), nil
+}
+
+func filterManifests(manifests []manifestlist.ManifestDescriptor, os string) []manifestlist.ManifestDescriptor {
+	var matches []manifestlist.ManifestDescriptor
+	for _, manifestDescriptor := range manifests {
+		if manifestDescriptor.Platform.Architecture == runtime.GOARCH && manifestDescriptor.Platform.OS == os {
+			matches = append(matches, manifestDescriptor)
+
+			log.Printf("found match for %s/%s with media type %s, digest %s", os, runtime.GOARCH, manifestDescriptor.MediaType, manifestDescriptor.Digest.String())
+		}
+	}
+	return matches
 }

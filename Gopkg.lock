@@ -93,12 +93,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/jessfraz/distribution"
-  packages = ["reference"]
-  revision = "f4118485915abb8b163442717326597908eee6aa"
-
-[[projects]]
-  branch = "master"
   name = "github.com/jessfraz/reg"
   packages = ["registry","utils"]
   revision = "758d45bea21e221fe53d28a9db18745949b1f72a"
@@ -166,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "77f0627be6a4569504f29be207696ad48ec5623ab844a300c7bf2c020b0b6aa6"
+  inputs-digest = "3bbf79e8a6886bf622b9ae6b5a89d2b604ac4a14e43c4a10ce01e33fc653227e"
   solver-name = "gps-cdcl"
   solver-version = 1
