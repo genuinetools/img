@@ -1,0 +1,78 @@
+{{define "vulns"}}
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <base href="/" >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>{{ .RegistryURL }}/{{ .Repo }}:{{ .Tag }} Vulnerability Report</title>
+    <link rel="icon" type="image/ico" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+</head>
+<body>
+    <div class="container">
+        <ol class="breadcrumb">
+            <li><a href="/">{{ .RegistryURL }}</a></li>
+            <li class="active">{{ .Repo }}:{{ .Tag }}</li>
+        </ol>
+
+        <div class="page-header">
+            <h1>{{ .RegistryURL }}/{{ .Repo }}:{{ .Tag }} <small>Vulnerability Report</small></h1>
+        </div>
+        <p class="text-right">Generated on: {{.Date}}</p>
+
+        {{if gt .BadVulns 5}}
+        <div class="alert alert-danger" role="alert">
+            {{.BadVulns}} High, Critical, and/or Defcon1 vulnerabilities found
+        </div>
+        {{end}}
+
+        <h2>Summary</h2>
+        <ul class="list-group">
+            <li class="list-group-item">
+                <span class="badge">{{ len .Vulns }}</span>
+                <b>Total</b>
+            </li>
+            {{range $key, $value := .VulnsBySeverity}}
+            <li class="list-group-item">
+                <span class="label label-{{color $key}} pull-right">{{ len $value }}</span>
+                {{ $key }}
+            </li>
+            {{end}}
+        </ul>
+
+        <h2>Details</h2>
+        {{range $vulns := .VulnsBySeverity}}
+        {{range $value := $vulns}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">{{$value.Name}}
+                    <span class="label label-{{color $value.Severity}} pull-right">{{$value.Severity}}</span>
+                </h3>
+            </div>
+            <div class="panel-body">
+                {{$value.Description}}
+            </div>
+            <div class="panel-footer">
+                <a href="{{$value.Link}}" target="_blank">{{$value.Link}}</a>
+            </div>
+        </div>
+        {{end}}
+        {{end}}
+
+    </div>
+
+    <script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-29404280-12', 'jessfraz.com');
+ga('send', 'pageview');
+    </script>
+</body>
+</html>
+{{end}}

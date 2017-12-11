@@ -164,17 +164,12 @@ func (r *Router) GetRoute(name string) *Route {
 // StrictSlash defines the trailing slash behavior for new routes. The initial
 // value is false.
 //
-// When true, if the route path is "/path/", accessing "/path" will perform a redirect
+// When true, if the route path is "/path/", accessing "/path" will redirect
 // to the former and vice versa. In other words, your application will always
 // see the path as specified in the route.
 //
 // When false, if the route path is "/path", accessing "/path/" will not match
 // this route and vice versa.
-//
-// The re-direct is a HTTP 301 (Moved Permanently). Note that when this is set for
-// routes with a non-idempotent method (e.g. POST, PUT), the subsequent re-directed
-// request will be made as a GET by most clients. Use middleware or client settings
-// to modify this behaviour as needed.
 //
 // Special case: when a route sets a path prefix using the PathPrefix() method,
 // strict slash is ignored for that route because the redirect behavior can't
@@ -201,6 +196,10 @@ func (r *Router) SkipClean(value bool) *Router {
 // UseEncodedPath tells the router to match the encoded original path
 // to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
+// This behavior has the drawback of needing to match routes against
+// r.RequestURI instead of r.URL.Path. Any modifications (such as http.StripPrefix)
+// to r.URL.Path will not affect routing when this flag is on and thus may
+// induce unintended behavior.
 //
 // If not called, the router will match the unencoded path to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"

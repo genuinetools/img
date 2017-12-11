@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver/filesystem"
 	"github.com/jessfraz/distribution/reference"
+	"github.com/jessfraz/reg/utils"
 )
 
 const (
@@ -63,7 +64,7 @@ func (cmd *pullCommand) Run(args []string) error {
 		return err
 	}
 
-	auth, err := getAuthConfig(reference.Domain(name))
+	auth, err := utils.GetAuthConfig("", "", reference.Domain(name))
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,8 @@ func (cmd *pullCommand) Run(args []string) error {
 }
 
 func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repository, name reference.Named, tag string) error {
+	n := src.Named()
+	fmt.Printf("name: %#v\n", n)
 	// Create the manifest service
 	ms, err := src.Manifests(ctx)
 	if err != nil {
@@ -101,6 +104,11 @@ func pull(ctx context.Context, dst distribution.Namespace, src distribution.Repo
 	ts := src.Tags(ctx)
 
 	// Get the tag descriptor for the digest
+	all, err := ts.All(ctx)
+	if err != nil {
+		return fmt.Errorf("getting the tag descriptor failed: %v", err)
+	}
+	fmt.Printf("tags: %#v\n", all)
 	descriptor, err := ts.Get(ctx, tag)
 	if err != nil {
 		return fmt.Errorf("getting the tag descriptor failed: %v", err)
