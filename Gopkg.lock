@@ -28,7 +28,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/docker/cli"
-  packages = ["cli/config/configfile","cli/config/credentials","opts"]
+  packages = ["cli/command/image/build","cli/config/configfile","cli/config/credentials","opts"]
   revision = "29d3510d50d58c34e89801303f2a390857d89a44"
 
 [[projects]]
@@ -40,7 +40,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/docker/docker"
-  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/filters","api/types/mount","api/types/network","api/types/registry","api/types/strslice","api/types/swarm","api/types/swarm/runtime","api/types/versions","pkg/homedir","pkg/idtools","pkg/ioutils","pkg/jsonmessage","pkg/longpath","pkg/mount","pkg/stringid","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","registry","registry/resumable"]
+  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/filters","api/types/mount","api/types/network","api/types/registry","api/types/strslice","api/types/swarm","api/types/swarm/runtime","api/types/versions","builder/dockerfile/command","builder/dockerfile/parser","builder/dockerignore","builder/remotecontext/git","pkg/archive","pkg/fileutils","pkg/homedir","pkg/idtools","pkg/ioutils","pkg/jsonmessage","pkg/longpath","pkg/mount","pkg/pools","pkg/progress","pkg/streamformatter","pkg/stringid","pkg/symlink","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","pkg/urlutil","registry","registry/resumable"]
   revision = "f5416e76702e8becb34d1e9843d0e2cd0f9f95bf"
 
 [[projects]]
@@ -111,7 +111,7 @@
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
+  packages = ["libcontainer/system","libcontainer/user"]
   revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
   version = "v0.1.1"
 
@@ -157,9 +157,15 @@
   packages = ["unix","windows"]
   revision = "53aa286056ef226755cd898109dbcdaba8ac0b81"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3bbf79e8a6886bf622b9ae6b5a89d2b604ac4a14e43c4a10ce01e33fc653227e"
+  inputs-digest = "c8917636030bde41769cb4f7729f03ba92b827885a64e59488e27677e154b4ec"
   solver-name = "gps-cdcl"
   solver-version = 1

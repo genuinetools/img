@@ -20,12 +20,12 @@ import (
 	digest "github.com/opencontainers/go-digest"
 )
 
-const pullShortHelp = `Pull and verify an image from a registry.`
+const pullShortHelp = `Pull an image or a repository from a registry.`
 const pullLongHelp = `
 `
 
 func (cmd *pullCommand) Name() string      { return "pull" }
-func (cmd *pullCommand) Args() string      { return "name[:tag|@digest]" }
+func (cmd *pullCommand) Args() string      { return "[OPTIONS] NAME[:TAG|@DIGEST]" }
 func (cmd *pullCommand) ShortHelp() string { return pullShortHelp }
 func (cmd *pullCommand) LongHelp() string  { return pullLongHelp }
 func (cmd *pullCommand) Hidden() bool      { return false }
@@ -65,6 +65,15 @@ func (cmd *pullCommand) Run(args []string) error {
 		return err
 	}
 
+	// Pull the image.
+	if err := pull(ctx, local, name, tag); err != nil {
+		return fmt.Errorf("pulling failed: %v", err)
+	}
+
+	return nil
+}
+
+func pull(ctx context.Context, dst distribution.Namespace, name reference.Named, tag string) error {
 	// Get the auth config.
 	auth, err := utils.GetAuthConfig("", "", reference.Domain(name))
 	if err != nil {
@@ -73,20 +82,11 @@ func (cmd *pullCommand) Run(args []string) error {
 
 	// TODO: add flag to flip switch for turning off SSL verification
 	// Create a new registry client.
-	r, err := registry.New(auth, *verbose)
+	src, err := registry.New(auth, *verbose)
 	if err != nil {
 		return fmt.Errorf("creating new registry api client failed: %v", err)
 	}
 
-	// Pull the image.
-	if err := pull(ctx, local, r, name, tag); err != nil {
-		return fmt.Errorf("pulling failed: %v", err)
-	}
-
-	return nil
-}
-
-func pull(ctx context.Context, dst distribution.Namespace, src *registry.Registry, name reference.Named, tag string) error {
 	fmt.Println("pulling", name.String())
 
 	imgPath := reference.Path(name)
@@ -121,6 +121,9 @@ func pullV2(ctx context.Context, dst distribution.Namespace, src *registry.Regis
 
 	dstBlobStore := dstRepo.Blobs(ctx)
 	for _, ref := range manifest.References() {
+		// TODO: make a progress bar
+		fmt.Printf("pulling layer %s\n", ref.Digest.String())
+
 		blob, err := src.DownloadLayer(imgPath, ref.Digest)
 		if err != nil {
 			return fmt.Errorf("getting remote blob %q failed failed: %v", ref.Digest.String(), err)

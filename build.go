@@ -1,130 +1,114 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/driver/filesystem"
-	"github.com/jessfraz/reg/utils"
+	"github.com/docker/cli/cli/command/image/build"
+	"github.com/docker/docker/builder/dockerfile/parser"
 )
 
-const buildShortHelp = `Build a Dockerfile or OCI campatible spec into an image.`
+const buildShortHelp = `Build an image from a Dockerfile.`
 const buildLongHelp = `
 `
 
 func (cmd *buildCommand) Name() string      { return "build" }
-func (cmd *buildCommand) Args() string      { return "[img] [mountPath]" }
+func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }
 func (cmd *buildCommand) ShortHelp() string { return buildShortHelp }
 func (cmd *buildCommand) LongHelp() string  { return buildLongHelp }
 func (cmd *buildCommand) Hidden() bool      { return false }
 
-func (cmd *buildCommand) Register(fs *flag.FlagSet) {}
+func (cmd *buildCommand) Register(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+}
 
-type buildCommand struct{}
+type buildCommand struct {
+	buildCtx       io.ReadCloser
+	contextDir     string
+	dockerfilePath string
+	relDockerfile  string
+	dockerfileCtx  io.ReadCloser
+}
 
-func (cmd *buildCommand) Run(args []string) error {
+func (cmd *buildCommand) Run(args []string) (err error) {
 	if len(args) < 1 {
-		return fmt.Errorf("must pass an image to pull")
+		return fmt.Errorf("must pass a path to build")
 	}
 
-	if len(args) < 2 {
-		return fmt.Errorf("must pass a mount path")
-	}
+	specifiedContext := args[0]
 
-	// Name the mount path.
-	mountPath := args[1]
-	fi, err := os.Stat(mountPath)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	// Create the directory if it does not exist.
-	if os.IsNotExist(err) {
-		if err := os.MkdirAll(mountPath, 0755); err != nil {
-			return err
-		}
-	}
-
-	// Ensure the mount path is a directory.
-	if !fi.IsDir() {
-		return fmt.Errorf("mount path %q should be a directory", mountPath)
-	}
-
-	// Create the context.
-	ctx := context.Background()
-
-	// Create the new local registry storage.
-	local, err := storage.NewRegistry(ctx, filesystem.New(filesystem.DriverParameters{
-		RootDirectory: defaultLocalRegistry,
-		MaxThreads:    100,
-	}))
-	if err != nil {
-		return fmt.Errorf("creating new registry storage failed: %v", err)
-	}
-
-	// Parse the repository name.
-	name, err := reference.ParseNormalizedNamed(args[0])
-	if err != nil {
-		return fmt.Errorf("not a valid image %q: %v", args[0], err)
-	}
-	// Add latest to the image name if it is empty.
-	name = reference.TagNameOnly(name)
-
-	// Get the tag for the repo.
-	_, tag, err := utils.GetRepoAndRef(args[0])
-	if err != nil {
-		return err
-	}
-
-	// Create the local repository.
-	repo, err := local.Repository(ctx, name)
-	if err != nil {
-		return fmt.Errorf("creating local repository for %q failed: %v", reference.Path(name), err)
-	}
-
-	// Create the manifest service.
-	ms, err := repo.Manifests(ctx)
-	if err != nil {
-		return fmt.Errorf("creating manifest service failed: %v", err)
-	}
-
-	// Get the specific tag.
-	td, err := repo.Tags(ctx).Get(ctx, tag)
-	if err != nil {
-		// Check if we got an unknown error, that means the tag does not exist.
-		if _, ok := err.(*distribution.ErrTagUnknown); ok {
-			// TODO: pull the image
-			return fmt.Errorf("image not found locally, first pull the image %s", name.String())
+	// Parse what is set to come from stdin.
+	if cmd.dockerfilePath == "-" {
+		if specifiedContext == "-" {
+			return errors.New("invalid argument: can't use stdin for both build context and dockerfile")
 		}
 
-		return fmt.Errorf("getting local repository tag %q failed: %v", tag, err)
+		cmd.dockerfileCtx = os.Stdin
 	}
 
-	// Get the specific manifest for the tag.
-	manifest, err := ms.Get(ctx, td.Digest)
+	switch {
+	case specifiedContext == "-":
+		// buildCtx is tar archive. if stdin was dockerfile then it is wrapped
+		cmd.buildCtx, cmd.relDockerfile, err = build.GetContextFromReader(os.Stdin, cmd.dockerfilePath)
+	case isLocalDir(specifiedContext):
+		cmd.contextDir, cmd.relDockerfile, err = build.GetContextFromLocalDir(specifiedContext, cmd.dockerfilePath)
+	default:
+		return fmt.Errorf("unable to prepare context: path %q not found", specifiedContext)
+	}
 	if err != nil {
-		return fmt.Errorf("getting local manifest for digest %q failed: %v", td.Digest.String(), err)
+		return fmt.Errorf("unable to prepare context: %s", err)
 	}
 
-	blobStore := repo.Blobs(ctx)
-	for _, ref := range manifest.References() {
-		fmt.Printf("unpacking %v\n", ref.Digest.String())
-		layer, err := blobStore.Open(ctx, ref.Digest)
+	// if dockerfile was not from stdin then read from file
+	// to the same reader that is usually stdin
+	if cmd.dockerfileCtx == nil {
+		cmd.dockerfileCtx, err = os.Open(cmd.relDockerfile)
 		if err != nil {
-			return fmt.Errorf("getting blob %q failed: %v", ref.Digest.String(), err)
+			return fmt.Errorf("failed to open %q: %v", cmd.relDockerfile, err)
 		}
+		defer cmd.dockerfileCtx.Close()
+	}
 
-		// Unpack the tarfile to the mount path.
-		if err := extractTarFile(mountPath, layer); err != nil {
-			return fmt.Errorf("error extracting tar for %q: %v", ref.Digest.String(), err)
+	// Parse the Dockerfile.
+	result, err := parser.Parse(cmd.dockerfileCtx)
+	if err != nil {
+		return err
+	}
+	ast := result.AST
+	nodes := []*parser.Node{ast}
+	if ast.Children != nil {
+		nodes = append(nodes, ast.Children...)
+	}
+
+	// get the image name
+	var image string
+	for _, n := range nodes {
+		if n.Value == "from" {
+			image = n.Next.Value
+			// TODO: actually parse the other shit
+			break
 		}
 	}
 
-	fmt.Printf("%s mounted at %s\n", name.Name(), mountPath)
+	// Create the rootfs directory.
+	rootFSPath, err := ioutil.TempDir("", "img-rootfs-")
+	if err != nil {
+		return fmt.Errorf("creating rootfs temporary directory failed: %v", err)
+	}
+
+	// Create the rootfs from the FROM image in the given Dockerfile.
+	if err := createRootFS(image, rootFSPath); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func isLocalDir(c string) bool {
+	_, err := os.Stat(c)
+	return err == nil
 }
