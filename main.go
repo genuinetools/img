@@ -4,9 +4,21 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
+)
+
+const (
+	defaultDockerRegistry = "https://registry-1.docker.io"
+	// TODO: change this from tmpfs
+	defaultLocalRegistry = "/tmp/img-local-registry"
+
+	// simultaneousLayerPullWindow is the size of the parallel layer pull window.
+	// A layer may not be pulled until the layer preceeding it by the length of the
+	// pull window has been successfully pulled.
+	simultaneousLayerPullWindow = 4
 )
 
 var (
@@ -112,5 +124,11 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, flagBlock.String())
 		}
+	}
+}
+
+func logf(format string, v ...interface{}) {
+	if *verbose {
+		log.Printf(format, v...)
 	}
 }
