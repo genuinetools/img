@@ -101,11 +101,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	}
 
 	// Create the rootfs from the FROM image in the given Dockerfile.
-	if err := createRootFS(image, rootFSPath); err != nil {
-		return err
-	}
-
-	return nil
+	return createRootFS(image, rootFSPath)
 }
 
 func isLocalDir(c string) bool {
