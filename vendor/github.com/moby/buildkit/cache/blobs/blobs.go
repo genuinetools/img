@@ -1,0 +1,109 @@
+package blobs
+
+import (
+	"context"
+	"time"
+
+	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/diff"
+	"github.com/containerd/containerd/mount"
+	"github.com/moby/buildkit/cache"
+	"github.com/moby/buildkit/snapshot"
+	"github.com/moby/buildkit/util/flightcontrol"
+	digest "github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
+)
+
+var g flightcontrol.Group
+
+const containerdUncompressed = "containerd.io/uncompressed"
+
+type DiffPair struct {
+	DiffID  digest.Digest
+	Blobsum digest.Digest
+}
+
+func GetDiffPairs(ctx context.Context, contentStore content.Store, snapshotter snapshot.Snapshotter, differ diff.Comparer, ref cache.ImmutableRef) ([]DiffPair, error) {
+	if ref == nil {
+		return nil, nil
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	var diffPairs []DiffPair
+	var currentPair DiffPair
+	parent := ref.Parent()
+	if parent != nil {
+		defer parent.Release(context.TODO())
+		eg.Go(func() error {
+			dp, err := GetDiffPairs(ctx, contentStore, snapshotter, differ, parent)
+			if err != nil {
+				return err
+			}
+			diffPairs = dp
+			return nil
+		})
+	}
+	eg.Go(func() error {
+		dp, err := g.Do(ctx, ref.ID(), func(ctx context.Context) (interface{}, error) {
+			diffID, blob, err := snapshotter.GetBlob(ctx, ref.ID())
+			if err != nil {
+				return nil, err
+			}
+			if blob != "" {
+				return DiffPair{DiffID: diffID, Blobsum: blob}, nil
+			}
+			// reference needs to be committed
+			parent := ref.Parent()
+			var lower []mount.Mount
+			if parent != nil {
+				defer parent.Release(context.TODO())
+				lower, err = parent.Mount(ctx, true)
+				if err != nil {
+					return nil, err
+				}
+			}
+			upper, err := ref.Mount(ctx, true)
+			if err != nil {
+				return nil, err
+			}
+			descr, err := differ.Compare(ctx, lower, upper,
+				diff.WithMediaType(ocispec.MediaTypeImageLayerGzip),
+				diff.WithReference(ref.ID()),
+				diff.WithLabels(map[string]string{
+					"containerd.io/gc.root": time.Now().UTC().Format(time.RFC3339Nano),
+				}),
+			)
+			if err != nil {
+				return nil, err
+			}
+			info, err := contentStore.Info(ctx, descr.Digest)
+			if err != nil {
+				return nil, err
+			}
+			diffIDStr, ok := info.Labels[containerdUncompressed]
+			if !ok {
+				return nil, errors.Errorf("invalid differ response with no diffID")
+			}
+			diffIDDigest, err := digest.Parse(diffIDStr)
+			if err != nil {
+				return nil, err
+			}
+			if err := snapshotter.SetBlob(ctx, ref.ID(), diffIDDigest, descr.Digest); err != nil {
+				return nil, err
+			}
+			return DiffPair{DiffID: diffIDDigest, Blobsum: descr.Digest}, nil
+		})
+		if err != nil {
+			return err
+		}
+		currentPair = dp.(DiffPair)
+		return nil
+	})
+	err := eg.Wait()
+	if err != nil {
+		return nil, err
+	}
+	return append(diffPairs, currentPair), nil
+}

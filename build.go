@@ -1,15 +1,23 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
-	"github.com/docker/cli/cli/command/image/build"
-	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/jessfraz/img/runc"
+	controlapi "github.com/moby/buildkit/api/services/control"
+	"github.com/moby/buildkit/control"
+	"github.com/moby/buildkit/frontend"
+	"github.com/moby/buildkit/frontend/dockerfile"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/worker"
+	"github.com/moby/buildkit/worker/base"
 )
 
 const buildShortHelp = `Build an image from a Dockerfile.`
@@ -24,14 +32,15 @@ func (cmd *buildCommand) Hidden() bool      { return false }
 
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
+	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
 }
 
 type buildCommand struct {
-	buildCtx       io.ReadCloser
 	contextDir     string
 	dockerfilePath string
-	relDockerfile  string
-	dockerfileCtx  io.ReadCloser
+	target         string
+	tag            string
 }
 
 func (cmd *buildCommand) Run(args []string) (err error) {
@@ -39,72 +48,110 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return fmt.Errorf("must pass a path to build")
 	}
 
-	specifiedContext := args[0]
+	// Get the specified context.
+	cmd.contextDir = args[0]
 
 	// Parse what is set to come from stdin.
 	if cmd.dockerfilePath == "-" {
-		if specifiedContext == "-" {
-			return errors.New("invalid argument: can't use stdin for both build context and dockerfile")
-		}
-
-		cmd.dockerfileCtx = os.Stdin
+		return errors.New("stdin not supported for Dockerfile yet")
 	}
 
-	switch {
-	case specifiedContext == "-":
-		// buildCtx is tar archive. if stdin was dockerfile then it is wrapped
-		cmd.buildCtx, cmd.relDockerfile, err = build.GetContextFromReader(os.Stdin, cmd.dockerfilePath)
-	case isLocalDir(specifiedContext):
-		cmd.contextDir, cmd.relDockerfile, err = build.GetContextFromLocalDir(specifiedContext, cmd.dockerfilePath)
-	default:
-		return fmt.Errorf("unable to prepare context: path %q not found", specifiedContext)
-	}
-	if err != nil {
-		return fmt.Errorf("unable to prepare context: %s", err)
+	if cmd.contextDir == "" {
+		return errors.New("please specify build context (e.g. \".\" for the current directory)")
 	}
 
-	// if dockerfile was not from stdin then read from file
-	// to the same reader that is usually stdin
-	if cmd.dockerfileCtx == nil {
-		cmd.dockerfileCtx, err = os.Open(cmd.relDockerfile)
-		if err != nil {
-			return fmt.Errorf("failed to open %q: %v", cmd.relDockerfile, err)
-		}
-		defer cmd.dockerfileCtx.Close()
+	if cmd.contextDir == "-" {
+		return errors.New("stdin not supported for build context yet")
 	}
 
-	// Parse the Dockerfile.
-	result, err := parser.Parse(cmd.dockerfileCtx)
+	if cmd.dockerfilePath == "" {
+		cmd.dockerfilePath = filepath.Join(cmd.contextDir, "Dockerfile")
+	}
+
+	// Create the controller.
+	c, err := createBuildkitController()
 	if err != nil {
 		return err
 	}
-	ast := result.AST
-	nodes := []*parser.Node{ast}
-	if ast.Children != nil {
-		nodes = append(nodes, ast.Children...)
-	}
+	fmt.Printf("controller: %#v\n", c)
 
-	// get the image name
-	var image string
-	for _, n := range nodes {
-		if n.Value == "from" {
-			image = n.Next.Value
-			// TODO: actually parse the other shit
-			break
-		}
-	}
-
-	// Create the rootfs directory.
-	rootFSPath, err := ioutil.TempDir("", "img-rootfs-")
+	// Create a temporary directory for the tar output.
+	tmpTar, err := ioutil.TempFile("", "buldkit-build-using-dockerfile")
 	if err != nil {
-		return fmt.Errorf("creating rootfs temporary directory failed: %v", err)
+		return err
 	}
+	fmt.Printf("tmpTar: %s\n", tmpTar.Name())
+	tmpTar.Close()
+	//	defer os.Remove(tmpTar.Name())
 
-	// Create the rootfs from the FROM image in the given Dockerfile.
-	return createRootFS(image, rootFSPath)
+	// Create the context.
+	ctx := context.Background()
+
+	// Solve the dockerfile.
+	resp, err := c.Solve(ctx, &controlapi.SolveRequest{
+		Ref:      identity.NewID(),
+		Exporter: "docker",
+		ExporterAttrs: map[string]string{
+			"name":   cmd.tag,
+			"output": tmpTar.Name(),
+		},
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"filename": cmd.dockerfilePath,
+			"target":   cmd.target,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("solving failed: %v", err)
+	}
+	fmt.Printf("solve response: %#v\n", resp)
+
+	return nil
 }
 
-func isLocalDir(c string) bool {
-	_, err := os.Stat(c)
-	return err == nil
+func createBuildkitController() (*control.Controller, error) {
+	// Create the runc worker.
+	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
+	if err != nil {
+		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
+	}
+
+	// Set the session manager.
+	sessionManager, err := session.NewManager()
+	if err != nil {
+		return nil, fmt.Errorf("creating session manager failed: %v", err)
+	}
+	opt.SessionManager = sessionManager
+
+	w, err := base.NewWorker(opt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the worker controller.
+	wc := &worker.Controller{}
+	if err = wc.Add(w); err != nil {
+		return nil, err
+	}
+
+	// Add the frontends.
+	frontends := map[string]frontend.Frontend{}
+	frontends["dockerfile.v0"] = dockerfile.NewDockerfileFrontend()
+
+	// Create the controller.
+	return control.NewController(control.Opt{
+		SessionManager:   sessionManager,
+		WorkerController: wc,
+		Frontends:        frontends,
+		CacheExporter:    w.CacheExporter,
+		CacheImporter:    w.CacheImporter,
+	})
+}
+
+func defaultSessionName() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "unknown"
+	}
+	return filepath.Base(wd)
 }

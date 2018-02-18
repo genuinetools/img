@@ -24,34 +24,32 @@
   name = "github.com/Sirupsen/logrus"
   source = "github.com/sirupsen/logrus"
 
-[[constraint]]
-  name = "github.com/docker/distribution"
-  branch = "master"
-
-[[constraint]]
+[[override]]
   name = "github.com/docker/docker"
-  branch = "master"
+  source = "github.com/moby/moby"
 
-[[constraint]]
-  name = "github.com/docker/docker-ce"
-  branch = "master"
+#[[constraint]]
+#  name = "github.com/docker/distribution"
+#  branch = "master"
 
-[[constraint]]
-  name = "github.com/docker/go-connections"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/docker/go-units"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/urfave/cli"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/opencontainers/go-digest"
-  branch = "master"
+[[override]]
+  name = "github.com/moby/buildkit"
+  revision = "master"
 
 [[constraint]]
   name = "github.com/jessfraz/reg"
   branch = "master"
+
+[[override]]
+  name = "github.com/grpc-ecosystem/grpc-opentracing"
+  revision = "420e5c3331a082e0c873adeeab1819fe1749dd0b"
+  source = "github.com/tonistiigi/grpc-opentracing"
+
+[[override]]
+  name = "github.com/hashicorp/go-immutable-radix"
+  revision = "826af9ccf0feeee615d546d69b11f8e98da8c8f1"
+  source = "github.com/tonistiigi/go-immutable-radix"
+
+[[override]]
+  name = "github.com/dmcgowan/go-tar"
+  branch = "go1.10"

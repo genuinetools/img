@@ -4,8 +4,17 @@
 [[projects]]
   branch = "master"
   name = "github.com/Azure/go-ansiterm"
-  packages = [".","winterm"]
+  packages = [
+    ".",
+    "winterm"
+  ]
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/BurntSushi/locker"
+  packages = ["."]
+  revision = "a6e239ea1c69bff1cfdb20c4b73dadf52f784b6a"
 
 [[projects]]
   name = "github.com/Microsoft/go-winio"
@@ -14,34 +23,176 @@
   version = "v0.4.5"
 
 [[projects]]
+  name = "github.com/Microsoft/hcsshim"
+  packages = ["."]
+  revision = "45ef15484298b76abeb9513ea0ea0abd2b5b84b3"
+  version = "v0.6.8"
+
+[[projects]]
   branch = "master"
   name = "github.com/Nvveen/Gotty"
   packages = ["."]
   revision = "cd527374f1e5bff4938207604a14f2e38a9cf512"
 
 [[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
+
+[[projects]]
   branch = "master"
+  name = "github.com/containerd/console"
+  packages = ["."]
+  revision = "84eeaae905fa414d03e07bcd6c8d3f19e7cf180e"
+
+[[projects]]
+  name = "github.com/containerd/containerd"
+  packages = [
+    "archive",
+    "archive/compression",
+    "containers",
+    "content",
+    "content/local",
+    "diff",
+    "diff/apply",
+    "diff/walking",
+    "errdefs",
+    "events",
+    "events/exchange",
+    "filters",
+    "gc",
+    "identifiers",
+    "images",
+    "images/oci",
+    "labels",
+    "leases",
+    "log",
+    "metadata",
+    "metadata/boltutil",
+    "mount",
+    "namespaces",
+    "oci",
+    "platforms",
+    "plugin",
+    "reference",
+    "remotes",
+    "remotes/docker",
+    "remotes/docker/schema1",
+    "rootfs",
+    "snapshots",
+    "snapshots/overlay",
+    "snapshots/storage",
+    "sys"
+  ]
+  revision = "af593cf5ab1d8089a42ee7f0b6ed541899378bf7"
+
+[[projects]]
   name = "github.com/containerd/continuity"
-  packages = ["pathdriver"]
-  revision = "0cf103d319cc2d7efe085224094f466d1f8b9640"
+  packages = [
+    "fs",
+    "pathdriver",
+    "sysx"
+  ]
+  revision = "992a5f112bd2211d0983a1cc8562d2882848f3a3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containerd/go-runc"
+  packages = ["."]
+  revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containerd/typeurl"
+  packages = ["."]
+  revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
+
+[[projects]]
+  branch = "go1.10"
+  name = "github.com/dmcgowan/go-tar"
+  packages = ["."]
+  revision = "01eea4a853c4e9ab63191abd92e8ed55be1f0928"
 
 [[projects]]
   branch = "master"
   name = "github.com/docker/cli"
-  packages = ["cli/command/image/build","cli/config/configfile","cli/config/credentials","opts"]
+  packages = [
+    "cli/config",
+    "cli/config/configfile",
+    "cli/config/credentials",
+    "opts"
+  ]
   revision = "29d3510d50d58c34e89801303f2a390857d89a44"
 
 [[projects]]
   branch = "master"
   name = "github.com/docker/distribution"
-  packages = [".","context","digestset","manifest","manifest/manifestlist","manifest/schema1","manifest/schema2","reference","registry/api/errcode","registry/api/v2","registry/client","registry/client/auth","registry/client/auth/challenge","registry/client/transport","registry/storage","registry/storage/cache","registry/storage/cache/memory","registry/storage/driver","registry/storage/driver/base","registry/storage/driver/factory","registry/storage/driver/filesystem","uuid"]
+  packages = [
+    ".",
+    "context",
+    "digestset",
+    "manifest",
+    "manifest/manifestlist",
+    "manifest/schema1",
+    "manifest/schema2",
+    "reference",
+    "registry/api/errcode",
+    "registry/api/v2",
+    "registry/client",
+    "registry/client/auth",
+    "registry/client/auth/challenge",
+    "registry/client/transport",
+    "registry/storage",
+    "registry/storage/cache",
+    "registry/storage/cache/memory",
+    "registry/storage/driver",
+    "registry/storage/driver/base",
+    "registry/storage/driver/factory",
+    "registry/storage/driver/filesystem",
+    "uuid"
+  ]
   revision = "f4118485915abb8b163442717326597908eee6aa"
 
 [[projects]]
   branch = "master"
   name = "github.com/docker/docker"
-  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/filters","api/types/mount","api/types/network","api/types/registry","api/types/strslice","api/types/swarm","api/types/swarm/runtime","api/types/versions","builder/dockerfile/command","builder/dockerfile/parser","builder/dockerignore","builder/remotecontext/git","pkg/archive","pkg/fileutils","pkg/homedir","pkg/idtools","pkg/ioutils","pkg/jsonmessage","pkg/longpath","pkg/mount","pkg/pools","pkg/progress","pkg/streamformatter","pkg/stringid","pkg/symlink","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","pkg/urlutil","registry","registry/resumable"]
-  revision = "f5416e76702e8becb34d1e9843d0e2cd0f9f95bf"
+  packages = [
+    "api/types",
+    "api/types/blkiodev",
+    "api/types/container",
+    "api/types/filters",
+    "api/types/mount",
+    "api/types/network",
+    "api/types/registry",
+    "api/types/strslice",
+    "api/types/swarm",
+    "api/types/swarm/runtime",
+    "api/types/versions",
+    "builder/dockerfile/command",
+    "builder/dockerfile/instructions",
+    "builder/dockerfile/parser",
+    "builder/dockerfile/shell",
+    "builder/dockerignore",
+    "errdefs",
+    "pkg/fileutils",
+    "pkg/homedir",
+    "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/jsonmessage",
+    "pkg/longpath",
+    "pkg/mount",
+    "pkg/signal",
+    "pkg/stringid",
+    "pkg/system",
+    "pkg/tarsum",
+    "pkg/term",
+    "pkg/term/windows",
+    "registry",
+    "registry/resumable"
+  ]
+  revision = "c5e7537d2305c1855f95422f08ca844d05a17aa2"
+  source = "github.com/moby/moby"
 
 [[projects]]
   branch = "master"
@@ -51,21 +202,44 @@
 
 [[projects]]
   name = "github.com/docker/docker-credential-helpers"
-  packages = ["client","credentials","pass"]
+  packages = [
+    "client",
+    "credentials",
+    "pass"
+  ]
   revision = "d68f9aeca33f5fd3f08eeae5e9d175edf4e731d1"
   version = "v0.6.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/docker/go-connections"
-  packages = ["nat","sockets","tlsconfig"]
-  revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
-  version = "v0.3.0"
+  packages = [
+    "nat",
+    "sockets",
+    "tlsconfig"
+  ]
+  revision = "7beb39f0b969b075d1325fecb092faf27fd357b6"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/docker/go-events"
+  packages = ["."]
+  revision = "9461782956ad83b30282bf90e31fa6a70c255ba9"
+
+[[projects]]
+  branch = "master"
   name = "github.com/docker/go-units"
   packages = ["."]
-  revision = "0dadbb0345b35ec7ef35e228dabb8de89a65bf52"
-  version = "v0.3.2"
+  revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
+
+[[projects]]
+  name = "github.com/docker/libnetwork"
+  packages = [
+    "resolvconf",
+    "resolvconf/dns",
+    "types"
+  ]
+  revision = "822e5b59d346b7ad0735df2c8e445e9787320e67"
 
 [[projects]]
   branch = "master"
@@ -75,9 +249,33 @@
 
 [[projects]]
   name = "github.com/gogo/protobuf"
-  packages = ["proto"]
+  packages = [
+    "gogoproto",
+    "proto",
+    "protoc-gen-gogo/descriptor",
+    "sortkeys",
+    "types"
+  ]
   revision = "342cbe0a04158f6dcb03ca0079991a51a4248c02"
   version = "v0.5"
+
+[[projects]]
+  name = "github.com/golang/protobuf"
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp"
+  ]
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/shlex"
+  packages = ["."]
+  revision = "6f45313302b9c56850fc17f99e40caebce98c716"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -92,10 +290,94 @@
   version = "v1.6.0"
 
 [[projects]]
+  name = "github.com/grpc-ecosystem/grpc-opentracing"
+  packages = ["go/otgrpc"]
+  revision = "420e5c3331a082e0c873adeeab1819fe1749dd0b"
+  source = "github.com/tonistiigi/grpc-opentracing"
+
+[[projects]]
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  revision = "826af9ccf0feeee615d546d69b11f8e98da8c8f1"
+  source = "github.com/tonistiigi/go-immutable-radix"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
+
+[[projects]]
   branch = "master"
   name = "github.com/jessfraz/reg"
-  packages = ["registry","utils"]
+  packages = [
+    "registry",
+    "utils"
+  ]
   revision = "758d45bea21e221fe53d28a9db18745949b1f72a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/hashstructure"
+  packages = ["."]
+  revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
+
+[[projects]]
+  name = "github.com/moby/buildkit"
+  packages = [
+    "api/services/control",
+    "cache",
+    "cache/blobs",
+    "cache/cacheimport",
+    "cache/contenthash",
+    "cache/instructioncache",
+    "cache/instructioncache/local",
+    "cache/metadata",
+    "client",
+    "client/llb",
+    "client/llb/imagemetaresolver",
+    "control",
+    "executor",
+    "executor/oci",
+    "exporter",
+    "exporter/containerimage",
+    "exporter/local",
+    "exporter/oci",
+    "frontend",
+    "frontend/dockerfile",
+    "frontend/dockerfile/builder",
+    "frontend/dockerfile/dockerfile2llb",
+    "frontend/gateway/client",
+    "identity",
+    "session",
+    "session/auth",
+    "session/filesync",
+    "session/grpchijack",
+    "snapshot",
+    "snapshot/blobmapping",
+    "snapshot/containerd",
+    "solver",
+    "solver/llbop",
+    "solver/pb",
+    "solver/types",
+    "source",
+    "source/containerimage",
+    "source/git",
+    "source/http",
+    "source/local",
+    "util/appdefaults",
+    "util/bgfunc",
+    "util/flightcontrol",
+    "util/imageutil",
+    "util/progress",
+    "util/progress/logs",
+    "util/push",
+    "util/system",
+    "util/tracing",
+    "worker",
+    "worker/base"
+  ]
+  revision = "master"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -105,15 +387,44 @@
 
 [[projects]]
   name = "github.com/opencontainers/image-spec"
-  packages = ["specs-go","specs-go/v1"]
+  packages = [
+    "identity",
+    "specs-go",
+    "specs-go/v1"
+  ]
   revision = "d60099175f88c47cd379c4738d158884749ed235"
   version = "v1.0.1"
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/system","libcontainer/user"]
+  packages = [
+    "libcontainer/system",
+    "libcontainer/user"
+  ]
   revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
   version = "v0.1.1"
+
+[[projects]]
+  name = "github.com/opencontainers/runtime-spec"
+  packages = ["specs-go"]
+  revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
+  version = "v1.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/opentracing-contrib/go-stdlib"
+  packages = ["nethttp"]
+  revision = "b1a47cfbdd7543e70e9ef3e73d0802ad306cc1cc"
+
+[[projects]]
+  name = "github.com/opentracing/opentracing-go"
+  packages = [
+    ".",
+    "ext",
+    "log"
+  ]
+  revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/peterhellberg/link"
@@ -136,8 +447,24 @@
 [[projects]]
   branch = "master"
   name = "github.com/stevvooe/resumable"
-  packages = [".","sha256","sha512"]
+  packages = [
+    ".",
+    "sha256",
+    "sha512"
+  ]
   revision = "2aaf90b2ceea5072cb503ef2a620b08ff3119870"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/gocapability"
+  packages = ["capability"]
+  revision = "db04d3cc01c8b54962a58ec7e491717d06cfcc16"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tonistiigi/fsutil"
+  packages = ["."]
+  revision = "0b8b62deeb18fecebc272676425c1416d1e86fec"
 
 [[projects]]
   branch = "master"
@@ -148,14 +475,54 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","proxy"]
+  packages = [
+    "context",
+    "context/ctxhttp",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/timeseries",
+    "lex/httplex",
+    "proxy",
+    "trace"
+  ]
   revision = "dc871a5d77e227f5bbf6545176ef3eeebf87e76e"
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "fd80eb99c8f653c847d294a001bdf2a3a6f768f5"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "53aa286056ef226755cd898109dbcdaba8ac0b81"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
+  revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1"
 
 [[projects]]
   branch = "master"
@@ -163,9 +530,47 @@
   packages = ["rate"]
   revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
 
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
+
+[[projects]]
+  name = "google.golang.org/grpc"
+  packages = [
+    ".",
+    "balancer",
+    "balancer/base",
+    "balancer/roundrobin",
+    "codes",
+    "connectivity",
+    "credentials",
+    "encoding",
+    "encoding/proto",
+    "grpclb/grpc_lb_v1/messages",
+    "grpclog",
+    "health",
+    "health/grpc_health_v1",
+    "internal",
+    "keepalive",
+    "metadata",
+    "naming",
+    "peer",
+    "resolver",
+    "resolver/dns",
+    "resolver/passthrough",
+    "stats",
+    "status",
+    "tap",
+    "transport"
+  ]
+  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
+  version = "v1.10.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c8917636030bde41769cb4f7729f03ba92b827885a64e59488e27677e154b4ec"
+  inputs-digest = "a2fb49a8b43a7f7b3b1022dbfae2d75bd5fd2175c4f89ebb0fa86da0610f3467"
   solver-name = "gps-cdcl"
   solver-version = 1
