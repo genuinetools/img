@@ -4,14 +4,15 @@
   notifications:
     email: true
   go:
-    - 1.6.x
-    - 1.7.x
-    - 1.8.x
-    - 1.9.x
+    - stable
     - tip
   env:
     global:
       - GO15VENDOREXPERIMENT=1
+  matrix:
+    allow_failures:
+      - go: tip
+    fast_finish: true
   install:
     - go get github.com/golang/lint/golint
     - go get honnef.co/go/tools/cmd/staticcheck
@@ -22,7 +23,10 @@
     - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
     - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"
     - go test $(go list ./... | grep -v vendor)
+    - make cover
     - make release
+  after_success:
+    - bash <(curl -s https://codecov.io/bash)
   deploy:
     provider: releases
     api_key:
@@ -63,5 +67,5 @@
       - cross/img-linux-amd64
     skip_cleanup: true
     on:
-      go: tip
+      go: stable
       tags: true

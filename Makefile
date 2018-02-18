@@ -67,10 +67,21 @@ staticcheck: ## Verifies `staticcheck` passes
 	@echo "+ $@"
 	@staticcheck $(shell go list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
 
+.PHONY: cover
+cover: ## Runs go test with coverage
+	@echo "" > coverage.txt
+	@for d in $(shell go list ./... | grep -v vendor); do \
+		go test -race -coverprofile=profile.out -covermode=atomic "$d"; \
+		if [ -f profile.out ]; then \
+			cat profile.out >> coverage.txt; \
+			rm profile.out; \
+		fi; \
+	done;
+
 .PHONY: install
 install: ## Installs the executable or package
 	@echo "+ $@"
-	@go install .
+	go install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
 
 define buildpretty
 mkdir -p $(BUILDDIR)/$(1)/$(2);

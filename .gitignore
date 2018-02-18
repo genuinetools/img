@@ -43,5 +43,8 @@ Icon
 .Trashes
 
 img
-binaries
-cross
+cross/
+
+# Go coverage results
+coverage.txt
+profile.out
