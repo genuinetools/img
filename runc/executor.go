@@ -151,7 +151,7 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		specconv.ToRootless(spec)
 	}
 
-	fmt.Printf("spec: %#v\n", spec)
+	// fmt.Printf("spec: %#v\n", spec)
 
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err
