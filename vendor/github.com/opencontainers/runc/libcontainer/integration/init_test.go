@@ -5,10 +5,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
+
+	"github.com/sirupsen/logrus"
 )
 
 // init runs the libcontainer initialization code because of the busybox style needs
@@ -36,19 +37,19 @@ var (
 func TestMain(m *testing.M) {
 	var (
 		err error
-		ret int = 0
+		ret int
 	)
 
 	logrus.SetOutput(os.Stderr)
 	logrus.SetLevel(logrus.InfoLevel)
 
-	factory, err = libcontainer.New(".", libcontainer.Cgroupfs)
+	factory, err = libcontainer.New("/run/libctTests", libcontainer.Cgroupfs)
 	if err != nil {
 		logrus.Error(err)
 		os.Exit(1)
 	}
 	if systemd.UseSystemd() {
-		systemdFactory, err = libcontainer.New(".", libcontainer.SystemdCgroups)
+		systemdFactory, err = libcontainer.New("/run/libctTests", libcontainer.SystemdCgroups)
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)

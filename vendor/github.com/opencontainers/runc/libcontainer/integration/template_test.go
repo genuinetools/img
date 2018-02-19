@@ -1,9 +1,9 @@
 package integration
 
 import (
-	"syscall"
-
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	"golang.org/x/sys/unix"
 )
 
 var standardEnvironment = []string{
@@ -13,30 +13,97 @@ var standardEnvironment = []string{
 	"TERM=xterm",
 }
 
-const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
+const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
 // newTemplateConfig returns a base template for running a container
 //
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
 func newTemplateConfig(rootfs string) *configs.Config {
+	allowAllDevices := false
 	return &configs.Config{
 		Rootfs: rootfs,
-		Capabilities: []string{
-			"CAP_CHOWN",
-			"CAP_DAC_OVERRIDE",
-			"CAP_FSETID",
-			"CAP_FOWNER",
-			"CAP_MKNOD",
-			"CAP_NET_RAW",
-			"CAP_SETGID",
-			"CAP_SETUID",
-			"CAP_SETFCAP",
-			"CAP_SETPCAP",
-			"CAP_NET_BIND_SERVICE",
-			"CAP_SYS_CHROOT",
-			"CAP_KILL",
-			"CAP_AUDIT_WRITE",
+		Capabilities: &configs.Capabilities{
+			Bounding: []string{
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE",
+			},
+			Permitted: []string{
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE",
+			},
+			Inheritable: []string{
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE",
+			},
+			Ambient: []string{
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE",
+			},
+			Effective: []string{
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE",
+			},
 		},
 		Namespaces: configs.Namespaces([]configs.Namespace{
 			{Type: configs.NEWNS},
@@ -49,12 +116,13 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			Path: "integration/test",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
-				AllowAllDevices:  false,
+				AllowAllDevices:  &allowAllDevices,
 				AllowedDevices:   configs.DefaultAllowedDevices,
 			},
 		},
 		MaskPaths: []string{
 			"/proc/kcore",
+			"/sys/firmware",
 		},
 		ReadonlyPaths: []string{
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
@@ -72,14 +140,14 @@ func newTemplateConfig(rootfs string) *configs.Config {
 				Source:      "tmpfs",
 				Destination: "/dev",
 				Device:      "tmpfs",
-				Flags:       syscall.MS_NOSUID | syscall.MS_STRICTATIME,
+				Flags:       unix.MS_NOSUID | unix.MS_STRICTATIME,
 				Data:        "mode=755",
 			},
 			{
 				Source:      "devpts",
 				Destination: "/dev/pts",
 				Device:      "devpts",
-				Flags:       syscall.MS_NOSUID | syscall.MS_NOEXEC,
+				Flags:       unix.MS_NOSUID | unix.MS_NOEXEC,
 				Data:        "newinstance,ptmxmode=0666,mode=0620,gid=5",
 			},
 			{
@@ -89,17 +157,20 @@ func newTemplateConfig(rootfs string) *configs.Config {
 				Data:        "mode=1777,size=65536k",
 				Flags:       defaultMountFlags,
 			},
-			{
-				Source:      "mqueue",
-				Destination: "/dev/mqueue",
-				Device:      "mqueue",
-				Flags:       defaultMountFlags,
-			},
+			/*
+				            CI is broken on the debian based kernels with this
+							{
+								Source:      "mqueue",
+								Destination: "/dev/mqueue",
+								Device:      "mqueue",
+								Flags:       defaultMountFlags,
+							},
+			*/
 			{
 				Source:      "sysfs",
 				Destination: "/sys",
 				Device:      "sysfs",
-				Flags:       defaultMountFlags | syscall.MS_RDONLY,
+				Flags:       defaultMountFlags | unix.MS_RDONLY,
 			},
 		},
 		Networks: []*configs.Network{
@@ -111,7 +182,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 		},
 		Rlimits: []configs.Rlimit{
 			{
-				Type: syscall.RLIMIT_NOFILE,
+				Type: unix.RLIMIT_NOFILE,
 				Hard: uint64(1025),
 				Soft: uint64(1025),
 			},

@@ -47,6 +47,7 @@
   revision = "84eeaae905fa414d03e07bcd6c8d3f19e7cf180e"
 
 [[projects]]
+  branch = "master"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -81,11 +82,11 @@
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
-    "snapshots/overlay",
+    "snapshots/naive",
     "snapshots/storage",
     "sys"
   ]
-  revision = "af593cf5ab1d8089a42ee7f0b6ed541899378bf7"
+  revision = "6a50dca19687386b966a486e6ec7ca1e940580ee"
 
 [[projects]]
   name = "github.com/containerd/continuity"
@@ -130,11 +131,8 @@
   name = "github.com/docker/distribution"
   packages = [
     ".",
-    "context",
     "digestset",
     "manifest",
-    "manifest/manifestlist",
-    "manifest/schema1",
     "manifest/schema2",
     "reference",
     "registry/api/errcode",
@@ -143,14 +141,8 @@
     "registry/client/auth",
     "registry/client/auth/challenge",
     "registry/client/transport",
-    "registry/storage",
     "registry/storage/cache",
-    "registry/storage/cache/memory",
-    "registry/storage/driver",
-    "registry/storage/driver/base",
-    "registry/storage/driver/factory",
-    "registry/storage/driver/filesystem",
-    "uuid"
+    "registry/storage/cache/memory"
   ]
   revision = "f4118485915abb8b163442717326597908eee6aa"
 
@@ -195,12 +187,6 @@
   source = "github.com/moby/moby"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/docker/docker-ce"
-  packages = ["components/cli/cli/config"]
-  revision = "ee263ca445d83cd7433c46e4cdf22575852179fe"
-
-[[projects]]
   name = "github.com/docker/docker-credential-helpers"
   packages = [
     "client",
@@ -240,12 +226,6 @@
     "types"
   ]
   revision = "822e5b59d346b7ad0735df2c8e445e9787320e67"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/docker/libtrust"
-  packages = ["."]
-  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -309,15 +289,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/jessfraz/reg"
-  packages = [
-    "registry",
-    "utils"
-  ]
-  revision = "758d45bea21e221fe53d28a9db18745949b1f72a"
-
-[[projects]]
-  branch = "master"
   name = "github.com/mitchellh/hashstructure"
   packages = ["."]
   revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
@@ -365,6 +336,7 @@
     "source/git",
     "source/http",
     "source/local",
+    "util/appcontext",
     "util/appdefaults",
     "util/bgfunc",
     "util/flightcontrol",
@@ -396,13 +368,17 @@
   version = "v1.0.1"
 
 [[projects]]
+  branch = "master"
   name = "github.com/opencontainers/runc"
   packages = [
+    "libcontainer/configs",
+    "libcontainer/seccomp",
+    "libcontainer/specconv",
     "libcontainer/system",
-    "libcontainer/user"
+    "libcontainer/user",
+    "libcontainer/utils"
   ]
-  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
-  version = "v0.1.1"
+  revision = "a618ab5a0186905949ee463dbb762c3d23e12a80"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -427,32 +403,22 @@
   version = "v1.0.2"
 
 [[projects]]
-  name = "github.com/peterhellberg/link"
-  packages = ["."]
-  revision = "d1cebc7ea14a5fc0de7cb4a45acae773161642c6"
-  version = "v1.0.0"
-
-[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  name = "github.com/seccomp/libseccomp-golang"
+  packages = ["."]
+  revision = "e3496e3a417d1dc9ecdceca5af2513271fed37a0"
+  version = "v0.9.0"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
   version = "v1.0.4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/stevvooe/resumable"
-  packages = [
-    ".",
-    "sha256",
-    "sha512"
-  ]
-  revision = "2aaf90b2ceea5072cb503ef2a620b08ff3119870"
 
 [[projects]]
   branch = "master"
@@ -571,6 +537,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "35e557838743817eb509099144f5f310ab0cd23f26e025ab4fd3b5e803d24b3a"
+  inputs-digest = "a909c8f2b7a42eac2e32a8cd0bf0dc10aaacd837dc80c6ea4e21d247c29aed46"
   solver-name = "gps-cdcl"
   solver-version = 1

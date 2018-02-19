@@ -2,7 +2,6 @@ package oci
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/containerd/containerd/images"
@@ -46,7 +45,6 @@ func New(opt Opt) (exporter.Exporter, error) {
 func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exporter.ExporterInstance, error) {
 	id := session.FromContext(ctx)
 	if id == "" {
-		log.Print("oci exporter")
 		return nil, errors.New("could not access local files without session")
 	}
 

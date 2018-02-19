@@ -32,10 +32,6 @@
   name = "github.com/moby/buildkit"
   revision = "master"
 
-[[constraint]]
-  name = "github.com/jessfraz/reg"
-  branch = "master"
-
 [[override]]
   name = "github.com/grpc-ecosystem/grpc-opentracing"
   revision = "420e5c3331a082e0c873adeeab1819fe1749dd0b"
@@ -52,4 +48,12 @@
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  revision = "af593cf5ab1d8089a42ee7f0b6ed541899378bf7"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/opencontainers/runc"
+  branch = "master"
+
+[[override]]
+  name = "github.com/opencontainers/runtime-spec"
+  version = "v1.0.1"
