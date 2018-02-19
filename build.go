@@ -72,7 +72,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ref := identity.NewID()
 
 	// Solve the dockerfile.
-	resp, err := c.Solve(ctx, &controlapi.SolveRequest{
+	_, err = c.Solve(ctx, &controlapi.SolveRequest{
 		Ref:      ref,
 		Session:  ref,
 		Exporter: "image",
@@ -89,8 +89,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	if err != nil {
 		return fmt.Errorf("solving failed: %v", err)
 	}
-	fmt.Printf("solve response: %#v\n", resp)
 
+	fmt.Printf("Built and pushed image: %s\n", cmd.tag)
 	return nil
 }
 

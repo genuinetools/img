@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"syscall"
 
@@ -20,6 +20,7 @@ import (
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/executor/oci"
 	"github.com/moby/buildkit/identity"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 )
 
 // Executor is the definition of an executor.
@@ -140,17 +141,30 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		return fmt.Errorf("failed to create directory at %s: %v", newp, err)
 	}
 
+	curUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+	if curUser.Uid != "0" {
+		// Make sure the spec is rootless.
+		// Only if we are not running as root.
+		specconv.ToRootless(spec)
+	}
+
+	fmt.Printf("spec: %#v\n", spec)
+
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err
 	}
 
-	log.Printf("> running %s %v", id, meta.Args)
+	fmt.Printf("RUN %v\n", meta.Args)
+	fmt.Println("--->")
 
 	status, err := w.runc.Run(ctx, id, bundle, &runc.CreateOpts{
 		IO: &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
 	})
 
-	log.Printf("< completed %s %v %v", id, status, err)
+	fmt.Printf("<--- %s %v %v\n", id, status, err)
 
 	if status != 0 {
 		select {
