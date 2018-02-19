@@ -61,15 +61,15 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return errors.New("stdin not supported for build context yet")
 	}
 
-	// Create the controller.
-	c, err := createBuildkitController(cmd)
-	if err != nil {
-		return err
-	}
-
 	// Create the context.
 	ctx := appcontext.Context()
 	ref := identity.NewID()
+
+	// Create the controller.
+	c, err := createBuildkitController(cmd, ref)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("Building %s...\n", cmd.tag)
 	fmt.Println("Setting up the rootfs... this may take a bit.")
@@ -97,9 +97,9 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	return nil
 }
 
-func createBuildkitController(cmd *buildCommand) (*control.Controller, error) {
+func createBuildkitController(cmd *buildCommand, ref string) (*control.Controller, error) {
 	// Create the runc worker.
-	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
+	opt, err := runc.NewWorkerOpt(filepath.Join(defaultStateDirectory, ref))
 	if err != nil {
 		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
