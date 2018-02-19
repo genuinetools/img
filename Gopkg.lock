@@ -35,13 +35,6 @@
   revision = "cd527374f1e5bff4938207604a14f2e38a9cf512"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  source = "github.com/sirupsen/logrus"
-  version = "v1.0.3"
-
-[[projects]]
   name = "github.com/boltdb/bolt"
   packages = ["."]
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
@@ -544,6 +537,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cccb4f2e263cdbf2f666ff785bfbe966ab76ab190ec70d4ea9c76e9482e51c96"
+  inputs-digest = "721c3011005ad8b653752b2c3ff18455adfc9b78800c21ede59c12fb37778320"
   solver-name = "gps-cdcl"
   solver-version = 1
