@@ -33,7 +33,7 @@ Flags:
 **Use just like you would `docker build`, currently it automatically pushes your image.**
 
 ```console
-$ sudo img  build -t jess/img .
+$ sudo img build -t jess/img .
 Building jess/img...
 Setting up the rootfs... this may take a bit.
 RUN [/bin/sh -c apk add --no-cache      ca-certificates]
