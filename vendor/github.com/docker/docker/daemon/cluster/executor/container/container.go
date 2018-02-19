@@ -1,4 +1,4 @@
-package container
+package container // import "github.com/docker/docker/daemon/cluster/executor/container"
 
 import (
 	"errors"
@@ -573,19 +573,6 @@ func (c *containerConfig) serviceConfig() *clustertypes.ServiceConfig {
 	}
 
 	return svcCfg
-}
-
-// networks returns a list of network names attached to the container. The
-// returned name can be used to lookup the corresponding network create
-// options.
-func (c *containerConfig) networks() []string {
-	var networks []string
-
-	for name := range c.networksAttachments {
-		networks = append(networks, name)
-	}
-
-	return networks
 }
 
 func (c *containerConfig) networkCreateRequest(name string) (clustertypes.NetworkCreateRequest, error) {

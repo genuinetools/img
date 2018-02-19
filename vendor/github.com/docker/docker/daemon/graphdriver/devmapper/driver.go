@@ -1,6 +1,6 @@
 // +build linux
 
-package devmapper
+package devmapper // import "github.com/docker/docker/daemon/graphdriver/devmapper"
 
 import (
 	"fmt"
@@ -39,10 +39,6 @@ type Driver struct {
 func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
 	deviceSet, err := NewDeviceSet(home, true, options, uidMaps, gidMaps)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := mount.MakePrivate(home); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +123,7 @@ func (d *Driver) GetMetadata(id string) (map[string]string, error) {
 func (d *Driver) Cleanup() error {
 	err := d.DeviceSet.Shutdown(d.home)
 
-	if err2 := mount.Unmount(d.home); err == nil {
+	if err2 := mount.RecursiveUnmount(d.home); err == nil {
 		err = err2
 	}
 
@@ -146,12 +142,7 @@ func (d *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) error {
 	if opts != nil {
 		storageOpt = opts.StorageOpt
 	}
-
-	if err := d.DeviceSet.AddDevice(id, parent, storageOpt); err != nil {
-		return err
-	}
-
-	return nil
+	return d.DeviceSet.AddDevice(id, parent, storageOpt)
 }
 
 // Remove removes a device with a given id, unmounts the filesystem.

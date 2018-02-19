@@ -1,6 +1,4 @@
-// +build linux
-
-package graphdriver
+package graphdriver // import "github.com/docker/docker/daemon/graphdriver"
 
 import (
 	"github.com/docker/docker/pkg/mount"

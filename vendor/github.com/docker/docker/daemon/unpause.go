@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"context"
@@ -14,12 +14,7 @@ func (daemon *Daemon) ContainerUnpause(name string) error {
 	if err != nil {
 		return err
 	}
-
-	if err := daemon.containerUnpause(container); err != nil {
-		return err
-	}
-
-	return nil
+	return daemon.containerUnpause(container)
 }
 
 // containerUnpause resumes the container execution after the container is paused.

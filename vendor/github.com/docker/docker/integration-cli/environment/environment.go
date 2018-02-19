@@ -1,4 +1,4 @@
-package environment
+package environment // import "github.com/docker/docker/integration-cli/environment"
 
 import (
 	"os"
@@ -47,33 +47,4 @@ func New() (*Execution, error) {
 		Execution:    *env,
 		dockerBinary: dockerBinary,
 	}, nil
-}
-
-// DockerBasePath is the base path of the docker folder (by default it is -/var/run/docker)
-// TODO: remove
-// Deprecated: use Execution.DaemonInfo.DockerRootDir
-func (e *Execution) DockerBasePath() string {
-	return e.DaemonInfo.DockerRootDir
-}
-
-// ExperimentalDaemon tell whether the main daemon has
-// experimental features enabled or not
-// Deprecated: use DaemonInfo.ExperimentalBuild
-func (e *Execution) ExperimentalDaemon() bool {
-	return e.DaemonInfo.ExperimentalBuild
-}
-
-// DaemonPlatform is held globally so that tests can make intelligent
-// decisions on how to configure themselves according to the platform
-// of the daemon. This is initialized in docker_utils by sending
-// a version call to the daemon and examining the response header.
-// Deprecated: use Execution.OSType
-func (e *Execution) DaemonPlatform() string {
-	return e.OSType
-}
-
-// MinimalBaseImage is the image used for minimal builds (it depends on the platform)
-// Deprecated: use Execution.PlatformDefaults.BaseImage
-func (e *Execution) MinimalBaseImage() string {
-	return e.PlatformDefaults.BaseImage
 }

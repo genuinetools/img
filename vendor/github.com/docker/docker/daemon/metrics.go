@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"path/filepath"
@@ -118,7 +118,8 @@ func (d *Daemon) cleanupMetricsPlugins() {
 	var wg sync.WaitGroup
 	wg.Add(len(ls))
 
-	for _, p := range ls {
+	for _, plugin := range ls {
+		p := plugin
 		go func() {
 			defer wg.Done()
 			pluginStopMetricsCollection(p)

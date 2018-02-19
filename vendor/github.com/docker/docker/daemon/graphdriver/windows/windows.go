@@ -1,6 +1,6 @@
 //+build windows
 
-package windows
+package windows // import "github.com/docker/docker/daemon/graphdriver/windows"
 
 import (
 	"bufio"
@@ -931,8 +931,6 @@ func parseStorageOpt(storageOpt map[string]string) (*storageOptions, error) {
 				return nil, err
 			}
 			options.size = uint64(size)
-		default:
-			return nil, fmt.Errorf("Unknown storage option: %s", key)
 		}
 	}
 	return &options, nil

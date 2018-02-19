@@ -1,4 +1,4 @@
-package plugin
+package plugin // import "github.com/docker/docker/daemon/cluster/controllers/plugin"
 
 import (
 	"io"
@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/errdefs"
 	enginetypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm/runtime"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/plugin"
 	"github.com/docker/docker/plugin/v2"
 	"github.com/docker/swarmkit/api"
@@ -26,7 +26,7 @@ import (
 // We'll also end up with many tasks all pointing to the same plugin ID.
 //
 // TODO(@cpuguy83): registry auth is intentionally not supported until we work out
-// the right way to pass registry crednetials via secrets.
+// the right way to pass registry credentials via secrets.
 type Controller struct {
 	backend Backend
 	spec    runtime.PluginSpec

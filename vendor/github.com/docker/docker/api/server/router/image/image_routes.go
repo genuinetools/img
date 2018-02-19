@@ -1,21 +1,18 @@
-package image
+package image // import "github.com/docker/docker/api/server/router/image"
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/server/httputils"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/backend"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/versions"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/system"
@@ -24,52 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
-
-func (s *imageRouter) postCommit(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	if err := httputils.ParseForm(r); err != nil {
-		return err
-	}
-
-	if err := httputils.CheckForJSON(r); err != nil {
-		return err
-	}
-
-	cname := r.Form.Get("container")
-
-	pause := httputils.BoolValue(r, "pause")
-	version := httputils.VersionFromContext(ctx)
-	if r.FormValue("pause") == "" && versions.GreaterThanOrEqualTo(version, "1.13") {
-		pause = true
-	}
-
-	c, _, _, err := s.decoder.DecodeConfig(r.Body)
-	if err != nil && err != io.EOF { //Do not fail if body is empty.
-		return err
-	}
-	if c == nil {
-		c = &container.Config{}
-	}
-
-	commitCfg := &backend.ContainerCommitConfig{
-		ContainerCommitConfig: types.ContainerCommitConfig{
-			Pause:        pause,
-			Repo:         r.Form.Get("repo"),
-			Tag:          r.Form.Get("tag"),
-			Author:       r.Form.Get("author"),
-			Comment:      r.Form.Get("comment"),
-			Config:       c,
-			MergeConfigs: true,
-		},
-		Changes: r.Form["changes"],
-	}
-
-	imgID, err := s.backend.Commit(cname, commitCfg)
-	if err != nil {
-		return err
-	}
-
-	return httputils.WriteJSON(w, http.StatusCreated, &types.IDResponse{ID: imgID})
-}
 
 // Creates an image from Pull or from Import
 func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
@@ -93,17 +44,7 @@ func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWrite
 
 	version := httputils.VersionFromContext(ctx)
 	if versions.GreaterThanOrEqualTo(version, "1.32") {
-		// TODO @jhowardmsft. The following environment variable is an interim
-		// measure to allow the daemon to have a default platform if omitted by
-		// the client. This allows LCOW and WCOW to work with a down-level CLI
-		// for a short period of time, as the CLI changes can't be merged
-		// until after the daemon changes have been merged. Once the CLI is
-		// updated, this can be removed. PR for CLI is currently in
-		// https://github.com/docker/cli/pull/474.
 		apiPlatform := r.FormValue("platform")
-		if system.LCOWSupported() && apiPlatform == "" {
-			apiPlatform = os.Getenv("LCOW_API_PLATFORM_IF_OMITTED")
-		}
 		platform = system.ParsePlatform(apiPlatform)
 		if err = system.ValidatePlatform(platform); err != nil {
 			err = fmt.Errorf("invalid platform: %s", err)
@@ -148,20 +89,6 @@ func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWrite
 	return nil
 }
 
-type validationError struct {
-	cause error
-}
-
-func (e validationError) Error() string {
-	return e.cause.Error()
-}
-
-func (e validationError) Cause() error {
-	return e.cause
-}
-
-func (validationError) InvalidParameter() {}
-
 func (s *imageRouter) postImagesPush(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	metaHeaders := map[string][]string{}
 	for k, v := range r.Header {
@@ -185,7 +112,7 @@ func (s *imageRouter) postImagesPush(ctx context.Context, w http.ResponseWriter,
 	} else {
 		// the old format is supported for compatibility if there was no authConfig header
 		if err := json.NewDecoder(r.Body).Decode(authConfig); err != nil {
-			return errors.Wrap(validationError{err}, "Bad parameters and missing X-Registry-Auth")
+			return errors.Wrap(errdefs.InvalidParameter(err), "Bad parameters and missing X-Registry-Auth")
 		}
 	}
 
@@ -324,7 +251,7 @@ func (s *imageRouter) postImagesTag(ctx context.Context, w http.ResponseWriter, 
 	if err := httputils.ParseForm(r); err != nil {
 		return err
 	}
-	if err := s.backend.TagImage(vars["name"], r.Form.Get("repo"), r.Form.Get("tag")); err != nil {
+	if _, err := s.backend.TagImage(vars["name"], r.Form.Get("repo"), r.Form.Get("tag")); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusCreated)

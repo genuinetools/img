@@ -1,4 +1,4 @@
-package v1
+package v1 // import "github.com/docker/docker/migrate/v1"
 
 import (
 	"errors"
@@ -89,11 +89,7 @@ func Migrate(root, driverName string, ls layer.Store, is image.Store, rs refstor
 		return err
 	}
 
-	if err := migrateRefs(root, driverName, rs, mappings); err != nil {
-		return err
-	}
-
-	return nil
+	return migrateRefs(root, driverName, rs, mappings)
 }
 
 // CalculateLayerChecksums walks an old graph directory and calculates checksums

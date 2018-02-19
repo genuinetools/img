@@ -9,7 +9,7 @@
 //       for both xfs/ext4 for kernel version >= v4.5
 //
 
-package quota
+package quota // import "github.com/docker/docker/daemon/graphdriver/quota"
 
 /*
 #include <stdlib.h>
@@ -350,11 +350,17 @@ func makeBackingFsDev(home string) (string, error) {
 	backingFsBlockDev := path.Join(home, "backingFsBlockDev")
 	// Re-create just in case someone copied the home directory over to a new device
 	unix.Unlink(backingFsBlockDev)
-	if err := unix.Mknod(backingFsBlockDev, unix.S_IFBLK|0600, int(stat.Dev)); err != nil {
+	err := unix.Mknod(backingFsBlockDev, unix.S_IFBLK|0600, int(stat.Dev))
+	switch err {
+	case nil:
+		return backingFsBlockDev, nil
+
+	case unix.ENOSYS:
+		return "", ErrQuotaNotSupported
+
+	default:
 		return "", fmt.Errorf("Failed to mknod %s: %v", backingFsBlockDev, err)
 	}
-
-	return backingFsBlockDev, nil
 }
 
 func hasQuotaSupport(backingFsBlockDev string) (bool, error) {

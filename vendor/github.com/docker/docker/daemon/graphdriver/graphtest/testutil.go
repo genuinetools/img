@@ -1,4 +1,4 @@
-package graphtest
+package graphtest // import "github.com/docker/docker/daemon/graphdriver/graphtest"
 
 import (
 	"bytes"
@@ -263,11 +263,7 @@ func addLayerFiles(drv graphdriver.Driver, layer, parent string, i int) error {
 	if err := driver.WriteFile(root, root.Join(layerDir, "layer-id"), []byte(layer), 0755); err != nil {
 		return err
 	}
-	if err := driver.WriteFile(root, root.Join(layerDir, "parent-id"), []byte(parent), 0755); err != nil {
-		return err
-	}
-
-	return nil
+	return driver.WriteFile(root, root.Join(layerDir, "parent-id"), []byte(parent), 0755)
 }
 
 func addManyLayers(drv graphdriver.Driver, baseLayer string, count int) (string, error) {

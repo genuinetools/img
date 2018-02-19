@@ -1,4 +1,4 @@
-package config
+package config // import "github.com/docker/docker/daemon/config"
 
 import (
 	"bytes"
@@ -167,7 +167,7 @@ type CommonConfig struct {
 	sync.Mutex
 	// FIXME(vdemeester) This part is not that clear and is mainly dependent on cli flags
 	// It should probably be handled outside this package.
-	ValuesSet map[string]interface{}
+	ValuesSet map[string]interface{} `json:"-"`
 
 	Experimental bool `json:"experimental"` // Experimental indicates whether experimental features should be exposed or not
 
@@ -511,11 +511,7 @@ func Validate(config *Config) error {
 	}
 
 	// validate platform-specific settings
-	if err := config.ValidatePlatformConfig(); err != nil {
-		return err
-	}
-
-	return nil
+	return config.ValidatePlatformConfig()
 }
 
 // ModifiedDiscoverySettings returns whether the discovery configuration has been modified or not.

@@ -1,6 +1,6 @@
 // Package splunk provides the log driver for forwarding server logs to
 // Splunk HTTP Event Collector endpoint.
-package splunk
+package splunk // import "github.com/docker/docker/daemon/logger/splunk"
 
 import (
 	"bytes"
@@ -22,6 +22,7 @@ import (
 
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/daemon/logger/loggerutils"
+	"github.com/docker/docker/pkg/pools"
 	"github.com/docker/docker/pkg/urlutil"
 	"github.com/sirupsen/logrus"
 )
@@ -55,6 +56,8 @@ const (
 	defaultBufferMaximum = 10 * defaultPostMessagesBatchSize
 	// Number of messages allowed to be queued in the channel
 	defaultStreamChannelSize = 4 * defaultPostMessagesBatchSize
+	// maxResponseSize is the max amount that will be read from an http response
+	maxResponseSize = 1024
 )
 
 const (
@@ -215,6 +218,7 @@ func New(info logger.Info) (logger.Logger, error) {
 
 	transport := &http.Transport{
 		TLSClientConfig: tlsConfig,
+		Proxy:           http.ProxyFromEnvironment,
 	}
 	client := &http.Client{
 		Transport: transport,
@@ -500,20 +504,22 @@ func (l *splunkLogger) tryPostMessages(ctx context.Context, messages []*splunkMe
 	if l.gzipCompression {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
-	res, err := l.client.Do(req)
+	resp, err := l.client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		var body []byte
-		body, err = ioutil.ReadAll(res.Body)
+	defer func() {
+		pools.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		rdr := io.LimitReader(resp.Body, maxResponseSize)
+		body, err := ioutil.ReadAll(rdr)
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("%s: failed to send event - %s - %s", driverName, res.Status, body)
+		return fmt.Errorf("%s: failed to send event - %s - %s", driverName, resp.Status, string(body))
 	}
-	io.Copy(ioutil.Discard, res.Body)
 	return nil
 }
 
@@ -596,20 +602,22 @@ func verifySplunkConnection(l *splunkLogger) error {
 	if err != nil {
 		return err
 	}
-	res, err := l.client.Do(req)
+	resp, err := l.client.Do(req)
 	if err != nil {
 		return err
 	}
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-	if res.StatusCode != http.StatusOK {
-		var body []byte
-		body, err = ioutil.ReadAll(res.Body)
+	defer func() {
+		pools.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		rdr := io.LimitReader(resp.Body, maxResponseSize)
+		body, err := ioutil.ReadAll(rdr)
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("%s: failed to verify connection - %s - %s", driverName, res.Status, body)
+		return fmt.Errorf("%s: failed to verify connection - %s - %s", driverName, resp.Status, string(body))
 	}
 	return nil
 }

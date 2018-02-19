@@ -1,6 +1,4 @@
-// +build linux
-
-package dmesg
+package dmesg // import "github.com/docker/docker/pkg/dmesg"
 
 import (
 	"unsafe"

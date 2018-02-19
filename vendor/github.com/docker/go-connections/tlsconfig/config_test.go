@@ -287,6 +287,44 @@ func TestConfigServerExclusiveRootPools(t *testing.T) {
 	}
 }
 
+// If we provide a modifier to the server's default TLS configuration generator, it
+// should be applied accordingly
+func TestConfigServerDefaultWithTLSMinimumModifier(t *testing.T) {
+	tlsVersions := []uint16{
+		tls.VersionTLS11,
+		tls.VersionTLS12,
+	}
+
+	for _, tlsVersion := range tlsVersions {
+		servDefault := ServerDefault(func(c *tls.Config) {
+			c.MinVersion = tlsVersion
+		})
+
+		if servDefault.MinVersion != tlsVersion {
+			t.Fatalf("Unexpected min TLS version for default server TLS config: %d", servDefault.MinVersion)
+		}
+	}
+}
+
+// If we provide a modifier to the client's default TLS configuration generator, it
+// should be applied accordingly
+func TestConfigClientDefaultWithTLSMinimumModifier(t *testing.T) {
+	tlsVersions := []uint16{
+		tls.VersionTLS11,
+		tls.VersionTLS12,
+	}
+
+	for _, tlsVersion := range tlsVersions {
+		clientDefault := ClientDefault(func(c *tls.Config) {
+			c.MinVersion = tlsVersion
+		})
+
+		if clientDefault.MinVersion != tlsVersion {
+			t.Fatalf("Unexpected min TLS version for default client TLS config: %d", clientDefault.MinVersion)
+		}
+	}
+}
+
 // If a valid minimum version is specified in the options, the server's
 // minimum version should be set accordingly
 func TestConfigServerTLSMinVersionIsSetBasedOnOptions(t *testing.T) {

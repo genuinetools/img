@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/integration-cli/daemon"
 
 import (
 	"bytes"
@@ -348,11 +348,7 @@ func (d *Daemon) Kill() error {
 		return err
 	}
 
-	if err := os.Remove(fmt.Sprintf("%s/docker.pid", d.Folder)); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Remove(fmt.Sprintf("%s/docker.pid", d.Folder))
 }
 
 // Pid returns the pid of the daemon
@@ -459,11 +455,7 @@ out2:
 
 	d.cmd.Wait()
 
-	if err := os.Remove(fmt.Sprintf("%s/docker.pid", d.Folder)); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Remove(fmt.Sprintf("%s/docker.pid", d.Folder))
 }
 
 // Restart will restart the daemon by first stopping it and the starting it.
@@ -574,7 +566,7 @@ func (d *Daemon) WaitRun(contID string) error {
 
 // Info returns the info struct for this daemon
 func (d *Daemon) Info(t require.TestingT) types.Info {
-	apiclient, err := request.NewClientForHost(d.Sock())
+	apiclient, err := client.NewClientWithOpts(client.WithHost((d.Sock())))
 	require.NoError(t, err)
 	info, err := apiclient.Info(context.Background())
 	require.NoError(t, err)

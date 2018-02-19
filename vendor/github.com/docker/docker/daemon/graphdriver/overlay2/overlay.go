@@ -1,6 +1,6 @@
 // +build linux
 
-package overlay2
+package overlay2 // import "github.com/docker/docker/daemon/graphdriver/overlay2"
 
 import (
 	"bufio"
@@ -31,6 +31,7 @@ import (
 	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/go-units"
+	rsystem "github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -200,10 +201,6 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	if err := mount.MakePrivate(home); err != nil {
-		return nil, err
-	}
-
 	d := &Driver{
 		home:          home,
 		uidMaps:       uidMaps,
@@ -334,7 +331,7 @@ func (d *Driver) GetMetadata(id string) (map[string]string, error) {
 // is being shutdown. For now, we just have to unmount the bind mounted
 // we had created.
 func (d *Driver) Cleanup() error {
-	return mount.Unmount(d.home)
+	return mount.RecursiveUnmount(d.home)
 }
 
 // CreateReadWrite creates a layer that is writable for use as a container
@@ -704,6 +701,7 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 		UIDMaps:        d.uidMaps,
 		GIDMaps:        d.gidMaps,
 		WhiteoutFormat: archive.OverlayWhiteoutFormat,
+		InUserNS:       rsystem.RunningInUserNS(),
 	}); err != nil {
 		return 0, err
 	}

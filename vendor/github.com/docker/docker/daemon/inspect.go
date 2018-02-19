@@ -1,6 +1,7 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/versions/v1p20"
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/daemon/network"
+	"github.com/docker/docker/errdefs"
 	volumestore "github.com/docker/docker/volume/store"
 	"github.com/docker/go-connections/nat"
 )
@@ -183,14 +185,24 @@ func (daemon *Daemon) getInspectData(container *container.Container) (*types.Con
 
 	contJSONBase.GraphDriver.Name = container.Driver
 
+	if container.RWLayer == nil {
+		if container.Dead {
+			return contJSONBase, nil
+		}
+		return nil, errdefs.System(errors.New("RWLayer of container " + container.ID + " is unexpectedly nil"))
+	}
+
 	graphDriverData, err := container.RWLayer.Metadata()
 	// If container is marked as Dead, the container's graphdriver metadata
 	// could have been removed, it will cause error if we try to get the metadata,
 	// we can ignore the error if the container is dead.
-	if err != nil && !container.Dead {
-		return nil, systemError{err}
+	if err != nil {
+		if !container.Dead {
+			return nil, errdefs.System(err)
+		}
+	} else {
+		contJSONBase.GraphDriver.Data = graphDriverData
 	}
-	contJSONBase.GraphDriver.Data = graphDriverData
 
 	return contJSONBase, nil
 }
@@ -232,7 +244,7 @@ func (daemon *Daemon) VolumeInspect(name string) (*types.Volume, error) {
 		if volumestore.IsNotExist(err) {
 			return nil, volumeNotFound(name)
 		}
-		return nil, systemError{err}
+		return nil, errdefs.System(err)
 	}
 	apiV := volumeToAPIType(v)
 	apiV.Mountpoint = v.Path()

@@ -72,12 +72,12 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 
 	c = containerdsnapshot.NewContentStore(mdb.ContentStore(), "buildkit", gc)
 
-	id, err := getOrCreateWorkerID(root)
+	id, err := base.ID(root)
 	if err != nil {
 		return opt, err
 	}
 
-	xlabels := createLabelsMap("oci", "overlayfs")
+	xlabels := base.Labels("oci", "overlayfs")
 
 	opt = base.WorkerOpt{
 		ID:            id,

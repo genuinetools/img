@@ -8,6 +8,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/moby/buildkit/identity"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -84,22 +85,22 @@ func (s *Session) Run(ctx context.Context, dialer Dialer) error {
 	defer cancel()
 	defer close(s.done)
 
-	/*	meta := make(map[string][]string)
-		meta[headerSessionID] = []string{s.id}
-		meta[headerSessionName] = []string{s.name}
-		meta[headerSessionSharedKey] = []string{s.sharedKey}
+	meta := make(map[string][]string)
+	meta[headerSessionID] = []string{s.id}
+	meta[headerSessionName] = []string{s.name}
+	meta[headerSessionSharedKey] = []string{s.sharedKey}
 
-		for name, svc := range s.grpcServer.GetServiceInfo() {
-			for _, method := range svc.Methods {
-				meta[headerSessionMethod] = append(meta[headerSessionMethod], MethodURL(name, method.Name))
-			}
+	for name, svc := range s.grpcServer.GetServiceInfo() {
+		for _, method := range svc.Methods {
+			meta[headerSessionMethod] = append(meta[headerSessionMethod], MethodURL(name, method.Name))
 		}
-		conn, err := dialer(ctx, "h2c", meta)
-		if err != nil {
-			return errors.Wrap(err, "failed to dial gRPC")
-		}
-		s.conn = conn
-		serve(ctx, s.grpcServer, conn)*/
+	}
+	conn, err := dialer(ctx, "h2c", meta)
+	if err != nil {
+		return errors.Wrap(err, "failed to dial gRPC")
+	}
+	s.conn = conn
+	serve(ctx, s.grpcServer, conn)
 	return nil
 }
 

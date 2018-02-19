@@ -2,7 +2,7 @@
 
 // Package journald provides the log driver for forwarding server logs
 // to endpoints that receive the systemd format.
-package journald
+package journald // import "github.com/docker/docker/daemon/logger/journald"
 
 import (
 	"fmt"
@@ -75,6 +75,7 @@ func New(info logger.Info) (logger.Logger, error) {
 		"CONTAINER_ID_FULL": info.ContainerID,
 		"CONTAINER_NAME":    info.Name(),
 		"CONTAINER_TAG":     tag,
+		"SYSLOG_IDENTIFIER": tag,
 	}
 	extraAttrs, err := info.ExtraAttributes(sanitizeKeyMod)
 	if err != nil {

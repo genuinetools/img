@@ -65,7 +65,7 @@ func NewUDPProxy(frontendAddr, backendAddr *net.UDPAddr, ops ...func(*UDPProxy))
 		frontendAddr:   listener.LocalAddr().(*net.UDPAddr),
 		backendAddr:    backendAddr,
 		connTrackTable: make(connTrackMap),
-		Logger:       &noopLogger{},
+		Logger:         &noopLogger{},
 	}
 
 	for _, op := range ops {

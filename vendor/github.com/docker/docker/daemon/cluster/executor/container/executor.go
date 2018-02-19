@@ -1,4 +1,4 @@
-package container
+package container // import "github.com/docker/docker/daemon/cluster/executor/container"
 
 import (
 	"fmt"
@@ -144,6 +144,11 @@ func (e *executor) Configure(ctx context.Context, node *api.Node) error {
 			ingressNA = na
 		}
 		attachments[na.Network.ID] = na.Addresses[0]
+	}
+
+	if (ingressNA == nil) && (node.Attachment != nil) {
+		ingressNA = node.Attachment
+		attachments[ingressNA.Network.ID] = ingressNA.Addresses[0]
 	}
 
 	if ingressNA == nil {

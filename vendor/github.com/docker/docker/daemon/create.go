@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ import (
 	containertypes "github.com/docker/docker/api/types/container"
 	networktypes "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/container"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
 	"github.com/docker/docker/pkg/idtools"
@@ -36,7 +37,7 @@ func (daemon *Daemon) ContainerCreate(params types.ContainerCreateConfig) (conta
 func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, managed bool) (containertypes.ContainerCreateCreatedBody, error) {
 	start := time.Now()
 	if params.Config == nil {
-		return containertypes.ContainerCreateCreatedBody{}, validationError{errors.New("Config cannot be empty in order to create a container")}
+		return containertypes.ContainerCreateCreatedBody{}, errdefs.InvalidParameter(errors.New("Config cannot be empty in order to create a container"))
 	}
 
 	os := runtime.GOOS
@@ -55,12 +56,12 @@ func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, manage
 
 	warnings, err := daemon.verifyContainerSettings(os, params.HostConfig, params.Config, false)
 	if err != nil {
-		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, validationError{err}
+		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, errdefs.InvalidParameter(err)
 	}
 
 	err = verifyNetworkingConfig(params.NetworkingConfig)
 	if err != nil {
-		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, validationError{err}
+		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, errdefs.InvalidParameter(err)
 	}
 
 	if params.HostConfig == nil {
@@ -68,7 +69,7 @@ func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, manage
 	}
 	err = daemon.adaptContainerSettings(params.HostConfig, params.AdjustCPUShares)
 	if err != nil {
-		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, validationError{err}
+		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, errdefs.InvalidParameter(err)
 	}
 
 	container, err := daemon.create(params, managed)
@@ -115,11 +116,11 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 	}
 
 	if err := daemon.mergeAndVerifyConfig(params.Config, img); err != nil {
-		return nil, validationError{err}
+		return nil, errdefs.InvalidParameter(err)
 	}
 
 	if err := daemon.mergeAndVerifyLogConfig(&params.HostConfig.LogConfig); err != nil {
-		return nil, validationError{err}
+		return nil, errdefs.InvalidParameter(err)
 	}
 
 	if container, err = daemon.newContainer(params.Name, os, params.Config, params.HostConfig, imgID, managed); err != nil {
@@ -158,7 +159,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 
 	// Set RWLayer for container after mount labels have been set
 	if err := daemon.setRWLayer(container); err != nil {
-		return nil, systemError{err}
+		return nil, errdefs.System(err)
 	}
 
 	rootIDs := daemon.idMappings.RootPair()
@@ -256,7 +257,7 @@ func (daemon *Daemon) generateSecurityOpt(hostConfig *containertypes.HostConfig)
 func (daemon *Daemon) setRWLayer(container *container.Container) error {
 	var layerID layer.ChainID
 	if container.ImageID != "" {
-		img, err := daemon.stores[container.OS].imageStore.Get(container.ImageID)
+		img, err := daemon.imageStore.Get(container.ImageID)
 		if err != nil {
 			return err
 		}
@@ -265,11 +266,13 @@ func (daemon *Daemon) setRWLayer(container *container.Container) error {
 
 	rwLayerOpts := &layer.CreateRWLayerOpts{
 		MountLabel: container.MountLabel,
-		InitFunc:   daemon.getLayerInit(),
+		InitFunc:   setupInitLayer(daemon.idMappings),
 		StorageOpt: container.HostConfig.StorageOpt,
 	}
 
-	rwLayer, err := daemon.stores[container.OS].layerStore.CreateRWLayer(container.ID, layerID, rwLayerOpts)
+	// Indexing by OS is safe here as validation of OS has already been performed in create() (the only
+	// caller), and guaranteed non-nil
+	rwLayer, err := daemon.layerStores[container.OS].CreateRWLayer(container.ID, layerID, rwLayerOpts)
 	if err != nil {
 		return err
 	}
@@ -319,8 +322,11 @@ func verifyNetworkingConfig(nwConfig *networktypes.NetworkingConfig) error {
 		return nil
 	}
 	if len(nwConfig.EndpointsConfig) == 1 {
-		for _, v := range nwConfig.EndpointsConfig {
-			if v != nil && v.IPAMConfig != nil {
+		for k, v := range nwConfig.EndpointsConfig {
+			if v == nil {
+				return errdefs.InvalidParameter(errors.Errorf("no EndpointSettings for %s", k))
+			}
+			if v.IPAMConfig != nil {
 				if v.IPAMConfig.IPv4Address != "" && net.ParseIP(v.IPAMConfig.IPv4Address).To4() == nil {
 					return errors.Errorf("invalid IPv4 address: %s", v.IPAMConfig.IPv4Address)
 				}

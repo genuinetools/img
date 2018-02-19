@@ -1,4 +1,4 @@
-package layer
+package layer // import "github.com/docker/docker/layer"
 
 import (
 	"fmt"
@@ -16,7 +16,6 @@ type roLayer struct {
 	size       int64
 	layerStore *layerStore
 	descriptor distribution.Descriptor
-	os         OS
 
 	referenceCount int
 	references     map[Layer]struct{}
@@ -143,11 +142,7 @@ func storeLayer(tx MetadataTransaction, layer *roLayer) error {
 			return err
 		}
 	}
-	if err := tx.SetOS(layer.os); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.setOS(layer.layerStore.os)
 }
 
 func newVerifiedReadCloser(rc io.ReadCloser, dgst digest.Digest) (io.ReadCloser, error) {

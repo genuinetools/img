@@ -16,7 +16,7 @@ import (
 )
 
 func (s *DockerSuite) TestContainersAPICreateMountsBindNamedPipe(c *check.C) {
-	testRequires(c, SameHostDaemon, DaemonIsWindowsAtLeastBuild(16210)) // Named pipe support was added in RS3
+	testRequires(c, SameHostDaemon, DaemonIsWindowsAtLeastBuild(16299)) // Named pipe support was added in RS3
 
 	// Create a host pipe to map into the container
 	hostPipeName := fmt.Sprintf(`\\.\pipe\docker-cli-test-pipe-%x`, rand.Uint64())
@@ -47,7 +47,7 @@ func (s *DockerSuite) TestContainersAPICreateMountsBindNamedPipe(c *check.C) {
 
 	name := "test-bind-npipe"
 	data := map[string]interface{}{
-		"Image":      testEnv.MinimalBaseImage(),
+		"Image":      testEnv.PlatformDefaults.BaseImage,
 		"Cmd":        []string{"cmd", "/c", cmd},
 		"HostConfig": map[string]interface{}{"Mounts": []map[string]interface{}{{"Type": "npipe", "Source": hostPipeName, "Target": containerPipeName}}},
 	}

@@ -1,4 +1,4 @@
-package layer
+package layer // import "github.com/docker/docker/layer"
 
 import (
 	"errors"
@@ -28,7 +28,6 @@ func GetLayerPath(s Store, layer ChainID) (string, error) {
 	if layerGetter, ok := ls.driver.(Getter); ok {
 		return layerGetter.GetLayerPath(rl.cacheID)
 	}
-
 	path, err := ls.driver.Get(rl.cacheID, "")
 	if err != nil {
 		return "", err

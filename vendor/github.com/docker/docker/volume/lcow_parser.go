@@ -1,8 +1,7 @@
-package volume
+package volume // import "github.com/docker/docker/volume"
 
 import (
 	"errors"
-	"fmt"
 	"path"
 
 	"github.com/docker/docker/api/types/mount"
@@ -10,7 +9,7 @@ import (
 
 var lcowSpecificValidators mountValidator = func(m *mount.Mount) error {
 	if path.Clean(m.Target) == "/" {
-		return fmt.Errorf("invalid specification: destination can't be '/'")
+		return ErrVolumeTargetIsRoot
 	}
 	if m.Type == mount.TypeNamedPipe {
 		return errors.New("Linux containers on Windows do not support named pipe mounts")
@@ -22,7 +21,7 @@ type lcowParser struct {
 	windowsParser
 }
 
-func (p *lcowParser) validateMountConfig(mnt *mount.Mount) error {
+func (p *lcowParser) ValidateMountConfig(mnt *mount.Mount) error {
 	return p.validateMountConfigReg(mnt, rxLCOWDestination, lcowSpecificValidators)
 }
 

@@ -1,6 +1,4 @@
-// +build windows
-
-package kernel
+package kernel // import "github.com/docker/docker/pkg/parsers/kernel"
 
 import (
 	"fmt"

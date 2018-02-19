@@ -1,4 +1,4 @@
-package jsonlog
+package jsonlog // import "github.com/docker/docker/daemon/logger/jsonfilelog/jsonlog"
 
 import (
 	"bytes"
@@ -29,6 +29,8 @@ func TestJSONLogsMarshalJSONBuf(t *testing.T) {
 		{Log: []byte{0x7F}}:            `^{\"log\":\"\x7f\",\"time\":`,
 		// with raw attributes
 		{Log: []byte("A log line"), RawAttrs: []byte(`{"hello":"world","value":1234}`)}: `^{\"log\":\"A log line\",\"attrs\":{\"hello\":\"world\",\"value\":1234},\"time\":`,
+		// with Tag set
+		{Log: []byte("A log line with tag"), RawAttrs: []byte(`{"hello":"world","value":1234}`)}: `^{\"log\":\"A log line with tag\",\"attrs\":{\"hello\":\"world\",\"value\":1234},\"time\":`,
 	}
 	for jsonLog, expression := range logs {
 		var buf bytes.Buffer

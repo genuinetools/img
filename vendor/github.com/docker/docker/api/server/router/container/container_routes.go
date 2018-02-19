@@ -1,4 +1,4 @@
-package container
+package container // import "github.com/docker/docker/api/server/router/container"
 
 import (
 	"encoding/json"
@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/docker/api/errdefs"
 	"github.com/docker/docker/api/server/httputils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/backend"
@@ -16,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/versions"
 	containerpkg "github.com/docker/docker/container"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/pkg/errors"
@@ -23,6 +23,45 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/websocket"
 )
+
+func (s *containerRouter) postCommit(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	if err := httputils.ParseForm(r); err != nil {
+		return err
+	}
+
+	if err := httputils.CheckForJSON(r); err != nil {
+		return err
+	}
+
+	// TODO: remove pause arg, and always pause in backend
+	pause := httputils.BoolValue(r, "pause")
+	version := httputils.VersionFromContext(ctx)
+	if r.FormValue("pause") == "" && versions.GreaterThanOrEqualTo(version, "1.13") {
+		pause = true
+	}
+
+	config, _, _, err := s.decoder.DecodeConfig(r.Body)
+	if err != nil && err != io.EOF { //Do not fail if body is empty.
+		return err
+	}
+
+	commitCfg := &backend.CreateImageConfig{
+		Pause:   pause,
+		Repo:    r.Form.Get("repo"),
+		Tag:     r.Form.Get("tag"),
+		Author:  r.Form.Get("author"),
+		Comment: r.Form.Get("comment"),
+		Config:  config,
+		Changes: r.Form["changes"],
+	}
+
+	imgID, err := s.backend.CreateImageFromContainer(r.Form.Get("container"), commitCfg)
+	if err != nil {
+		return err
+	}
+
+	return httputils.WriteJSON(w, http.StatusCreated, &types.IDResponse{ID: imgID})
+}
 
 func (s *containerRouter) getContainersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	if err := httputils.ParseForm(r); err != nil {
@@ -88,7 +127,7 @@ func (s *containerRouter) getContainersLogs(ctx context.Context, w http.Response
 	// with the appropriate status code.
 	stdout, stderr := httputils.BoolValue(r, "stdout"), httputils.BoolValue(r, "stderr")
 	if !(stdout || stderr) {
-		return validationError{errors.New("Bad parameters: you must choose at least one stream")}
+		return errdefs.InvalidParameter(errors.New("Bad parameters: you must choose at least one stream"))
 	}
 
 	containerName := vars["name"]
@@ -203,7 +242,7 @@ func (s *containerRouter) postContainersKill(ctx context.Context, w http.Respons
 	if sigStr := r.Form.Get("signal"); sigStr != "" {
 		var err error
 		if sig, err = signal.ParseSignal(sigStr); err != nil {
-			return validationError{err}
+			return errdefs.InvalidParameter(err)
 		}
 	}
 
@@ -468,11 +507,11 @@ func (s *containerRouter) postContainersResize(ctx context.Context, w http.Respo
 
 	height, err := strconv.Atoi(r.Form.Get("h"))
 	if err != nil {
-		return validationError{err}
+		return errdefs.InvalidParameter(err)
 	}
 	width, err := strconv.Atoi(r.Form.Get("w"))
 	if err != nil {
-		return validationError{err}
+		return errdefs.InvalidParameter(err)
 	}
 
 	return s.backend.ContainerResize(vars["name"], height, width)
@@ -490,7 +529,7 @@ func (s *containerRouter) postContainersAttach(ctx context.Context, w http.Respo
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		return validationError{errors.Errorf("error attaching to container %s, hijack connection missing", containerName)}
+		return errdefs.InvalidParameter(errors.Errorf("error attaching to container %s, hijack connection missing", containerName))
 	}
 
 	setupStreams := func() (io.ReadCloser, io.Writer, io.Writer, error) {
@@ -611,7 +650,7 @@ func (s *containerRouter) postContainersPrune(ctx context.Context, w http.Respon
 
 	pruneFilters, err := filters.FromJSON(r.Form.Get("filters"))
 	if err != nil {
-		return validationError{err}
+		return errdefs.InvalidParameter(err)
 	}
 
 	pruneReport, err := s.backend.ContainersPrune(ctx, pruneFilters)

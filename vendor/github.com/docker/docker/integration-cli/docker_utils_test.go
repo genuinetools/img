@@ -372,7 +372,7 @@ func waitInspectWithArgs(name, expr, expected string, timeout time.Duration, arg
 }
 
 func getInspectBody(c *check.C, version, id string) []byte {
-	cli, err := request.NewEnvClientWithVersion(version)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(version))
 	c.Assert(err, check.IsNil)
 	defer cli.Close()
 	_, body, err := cli.ContainerInspectWithRaw(context.Background(), id, false)
@@ -399,7 +399,7 @@ func runSleepingContainerInImage(c *check.C, image string, extraArgs ...string) 
 // minimalBaseImage returns the name of the minimal base image for the current
 // daemon platform.
 func minimalBaseImage() string {
-	return testEnv.MinimalBaseImage()
+	return testEnv.PlatformDefaults.BaseImage
 }
 
 func getGoroutineNumber() (int, error) {

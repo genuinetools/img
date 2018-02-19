@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"fmt"
@@ -604,7 +604,8 @@ func setMounts(daemon *Daemon, s *specs.Spec, c *container.Container, mounts []c
 		//
 		// For private volumes any root propagation value should work.
 		pFlag := mountPropagationMap[m.Propagation]
-		if pFlag == mount.SHARED || pFlag == mount.RSHARED {
+		switch pFlag {
+		case mount.SHARED, mount.RSHARED:
 			if err := ensureShared(m.Source); err != nil {
 				return err
 			}
@@ -612,13 +613,34 @@ func setMounts(daemon *Daemon, s *specs.Spec, c *container.Container, mounts []c
 			if rootpg != mount.SHARED && rootpg != mount.RSHARED {
 				s.Linux.RootfsPropagation = mountPropagationReverseMap[mount.SHARED]
 			}
-		} else if pFlag == mount.SLAVE || pFlag == mount.RSLAVE {
+		case mount.SLAVE, mount.RSLAVE:
+			var fallback bool
 			if err := ensureSharedOrSlave(m.Source); err != nil {
-				return err
+				// For backwards compatability purposes, treat mounts from the daemon root
+				// as special since we automatically add rslave propagation to these mounts
+				// when the user did not set anything, so we should fallback to the old
+				// behavior which is to use private propagation which is normally the
+				// default.
+				if !strings.HasPrefix(m.Source, daemon.root) && !strings.HasPrefix(daemon.root, m.Source) {
+					return err
+				}
+
+				cm, ok := c.MountPoints[m.Destination]
+				if !ok {
+					return err
+				}
+				if cm.Spec.BindOptions != nil && cm.Spec.BindOptions.Propagation != "" {
+					// This means the user explicitly set a propagation, do not fallback in that case.
+					return err
+				}
+				fallback = true
+				logrus.WithField("container", c.ID).WithField("source", m.Source).Warn("Falling back to default propagation for bind source in daemon root")
 			}
-			rootpg := mountPropagationMap[s.Linux.RootfsPropagation]
-			if rootpg != mount.SHARED && rootpg != mount.RSHARED && rootpg != mount.SLAVE && rootpg != mount.RSLAVE {
-				s.Linux.RootfsPropagation = mountPropagationReverseMap[mount.RSLAVE]
+			if !fallback {
+				rootpg := mountPropagationMap[s.Linux.RootfsPropagation]
+				if rootpg != mount.SHARED && rootpg != mount.RSHARED && rootpg != mount.SLAVE && rootpg != mount.RSLAVE {
+					s.Linux.RootfsPropagation = mountPropagationReverseMap[mount.RSLAVE]
+				}
 			}
 		}
 
@@ -812,6 +834,10 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 		return nil, fmt.Errorf("linux seccomp: %v", err)
 	}
 
+	if err := daemon.setupContainerMountsRoot(c); err != nil {
+		return nil, err
+	}
+
 	if err := daemon.setupIpcDirs(c); err != nil {
 		return nil, err
 	}
@@ -839,11 +865,17 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 	}
 	ms = append(ms, tmpfsMounts...)
 
-	if m := c.SecretMounts(); m != nil {
-		ms = append(ms, m...)
+	secretMounts, err := c.SecretMounts()
+	if err != nil {
+		return nil, err
 	}
+	ms = append(ms, secretMounts...)
 
-	ms = append(ms, c.ConfigMounts()...)
+	configMounts, err := c.ConfigMounts()
+	if err != nil {
+		return nil, err
+	}
+	ms = append(ms, configMounts...)
 
 	sort.Sort(mounts(ms))
 	if err := setMounts(daemon, &s, c, ms); err != nil {
@@ -852,14 +884,10 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 
 	for _, ns := range s.Linux.Namespaces {
 		if ns.Type == "network" && ns.Path == "" && !c.Config.NetworkDisabled {
-			target, err := os.Readlink(filepath.Join("/proc", strconv.Itoa(os.Getpid()), "exe"))
-			if err != nil {
-				return nil, err
-			}
-
+			target := filepath.Join("/proc", strconv.Itoa(os.Getpid()), "exe")
 			s.Hooks = &specs.Hooks{
 				Prestart: []specs.Hook{{
-					Path: target, // FIXME: cross-platform
+					Path: target,
 					Args: []string{"libnetwork-setkey", c.ID, daemon.netController.ID()},
 				}},
 			}

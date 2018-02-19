@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,8 +15,8 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/util/appcontext"
 	"github.com/moby/buildkit/worker"
-	"github.com/moby/buildkit/worker/base"
 )
 
 const buildShortHelp = `Build an image from a Dockerfile.`
@@ -64,12 +63,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return errors.New("stdin not supported for build context yet")
 	}
 
-	if cmd.dockerfilePath == "" {
-		cmd.dockerfilePath = filepath.Join(cmd.contextDir, "Dockerfile")
-	}
-
 	// Create the controller.
-	c, err := createBuildkitController()
+	c, err := createBuildkitController(cmd.contextDir, cmd.dockerfilePath)
 	if err != nil {
 		return err
 	}
@@ -85,16 +80,18 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	//	defer os.Remove(tmpTar.Name())
 
 	// Create the context.
-	ctx := context.Background()
+	ctx := appcontext.Context()
+	ref := identity.NewID()
 
 	// Solve the dockerfile.
 	resp, err := c.Solve(ctx, &controlapi.SolveRequest{
-		Ref:      identity.NewID(),
-		Exporter: "docker",
+		Ref: ref,
+		/*Exporter: "docker",
 		ExporterAttrs: map[string]string{
 			"name":   cmd.tag,
 			"output": tmpTar.Name(),
-		},
+		},*/
+		Session:  ref,
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
 			"filename": cmd.dockerfilePath,
@@ -109,7 +106,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	return nil
 }
 
-func createBuildkitController() (*control.Controller, error) {
+func createBuildkitController(contextDir, dockerfilePath string) (*control.Controller, error) {
 	// Create the runc worker.
 	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {
@@ -123,7 +120,7 @@ func createBuildkitController() (*control.Controller, error) {
 	}
 	opt.SessionManager = sessionManager
 
-	w, err := base.NewWorker(opt)
+	w, err := runc.NewWorker(opt, contextDir, dockerfilePath)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,6 @@
 // +build linux
 
-package btrfs
+package btrfs // import "github.com/docker/docker/daemon/graphdriver/btrfs"
 
 /*
 #include <stdlib.h>
@@ -29,7 +29,6 @@ import (
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/idtools"
-	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/go-units"
@@ -74,10 +73,6 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 	if err := idtools.MkdirAllAndChown(home, 0700, idtools.IDPair{UID: rootUID, GID: rootGID}); err != nil {
-		return nil, err
-	}
-
-	if err := mount.MakePrivate(home); err != nil {
 		return nil, err
 	}
 
@@ -167,7 +162,7 @@ func (d *Driver) Cleanup() error {
 		return err
 	}
 
-	return mount.Unmount(d.home)
+	return nil
 }
 
 func free(p *C.char) {
@@ -598,16 +593,10 @@ func (d *Driver) setStorageSize(dir string, driver *Driver) error {
 	if d.options.minSpace > 0 && driver.options.size < d.options.minSpace {
 		return fmt.Errorf("btrfs: storage size cannot be less than %s", units.HumanSize(float64(d.options.minSpace)))
 	}
-
 	if err := d.subvolEnableQuota(); err != nil {
 		return err
 	}
-
-	if err := subvolLimitQgroup(dir, driver.options.size); err != nil {
-		return err
-	}
-
-	return nil
+	return subvolLimitQgroup(dir, driver.options.size)
 }
 
 // Remove the filesystem with given id.
@@ -634,10 +623,7 @@ func (d *Driver) Remove(id string) error {
 	if err := system.EnsureRemoveAll(dir); err != nil {
 		return err
 	}
-	if err := d.subvolRescanQuota(); err != nil {
-		return err
-	}
-	return nil
+	return d.subvolRescanQuota()
 }
 
 // Get the requested filesystem id.

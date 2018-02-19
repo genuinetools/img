@@ -1,4 +1,4 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/container"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/volume"
 	"github.com/docker/go-connections/nat"
@@ -290,7 +291,7 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 
 	err = psFilters.WalkValues("health", func(value string) error {
 		if !container.IsValidHealthString(value) {
-			return validationError{errors.Errorf("Unrecognised filter value for health: %s", value)}
+			return errdefs.InvalidParameter(errors.Errorf("Unrecognised filter value for health: %s", value))
 		}
 
 		return nil
@@ -302,7 +303,7 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 	var beforeContFilter, sinceContFilter *container.Snapshot
 
 	err = psFilters.WalkValues("before", func(value string) error {
-		beforeContFilter, err = view.Get(value)
+		beforeContFilter, err = idOrNameFilter(view, value)
 		return err
 	})
 	if err != nil {
@@ -310,7 +311,7 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 	}
 
 	err = psFilters.WalkValues("since", func(value string) error {
-		sinceContFilter, err = view.Get(value)
+		sinceContFilter, err = idOrNameFilter(view, value)
 		return err
 	})
 	if err != nil {
@@ -322,7 +323,7 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 	if psFilters.Contains("ancestor") {
 		ancestorFilter = true
 		psFilters.WalkValues("ancestor", func(ancestor string) error {
-			id, os, err := daemon.GetImageIDAndOS(ancestor)
+			id, _, err := daemon.GetImageIDAndOS(ancestor)
 			if err != nil {
 				logrus.Warnf("Error while looking up for image %v", ancestor)
 				return nil
@@ -332,7 +333,7 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 				return nil
 			}
 			// Then walk down the graph and put the imageIds in imagesFilter
-			populateImageFilterByParents(imagesFilter, id, daemon.stores[os].imageStore.Children)
+			populateImageFilterByParents(imagesFilter, id, daemon.imageStore.Children)
 			return nil
 		})
 	}
@@ -364,6 +365,30 @@ func (daemon *Daemon) foldFilter(view container.View, config *types.ContainerLis
 		names:                view.GetAllNames(),
 	}, nil
 }
+
+func idOrNameFilter(view container.View, value string) (*container.Snapshot, error) {
+	filter, err := view.Get(value)
+	switch err.(type) {
+	case container.NoSuchContainerError:
+		// Try name search instead
+		found := ""
+		for id, idNames := range view.GetAllNames() {
+			for _, eachName := range idNames {
+				if strings.TrimPrefix(value, "/") == strings.TrimPrefix(eachName, "/") {
+					if found != "" && found != id {
+						return nil, err
+					}
+					found = id
+				}
+			}
+		}
+		if found != "" {
+			filter, err = view.Get(found)
+		}
+	}
+	return filter, err
+}
+
 func portOp(key string, filter map[nat.Port]bool) func(value string) error {
 	return func(value string) error {
 		if strings.Contains(value, ":") {
