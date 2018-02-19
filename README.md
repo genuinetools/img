@@ -20,8 +20,6 @@ Commands:
 $ img build -h
 Usage: build [OPTIONS] PATH img
 
-
-
 Flags:
 
   -f       Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
@@ -145,3 +143,7 @@ RUN [copy /src-0/certs /dest/etc/ssl/certs]
 <--- 6ljir2x800w6deqlradhw0dy2 0 <nil>
 Built and pushed image: jess/img
 ```
+
+## Acknowledgements
+
+A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). Thanks!
