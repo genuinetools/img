@@ -25,7 +25,7 @@ Flags:
   -f       Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
   -t       Name and optionally a tag in the 'name:tag' format (default: <none>)
   -target  Set the target build stage to build (default: <none>)
-  -v       enable verbose logging (default: false)
+  -d       enable debug logging (default: false)
 ```
 
 **Use just like you would `docker build`, currently it automatically pushes your image.**

@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 )
 
 var (
-	verbose = flag.Bool("v", false, "enable verbose logging")
+	debug bool
 )
 
 type command interface {
@@ -72,7 +73,7 @@ func main() {
 		if name := command.Name(); os.Args[1] == name {
 			// Build flag set with global flags in there.
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
-			fs.BoolVar(verbose, "v", false, "enable verbose logging")
+			fs.BoolVar(&debug, "d", false, "enable debug logging")
 
 			// Register the subcommand flags in there, too.
 			command.Register(fs)
@@ -84,6 +85,11 @@ func main() {
 			if err := fs.Parse(os.Args[2:]); err != nil {
 				fs.Usage()
 				os.Exit(1)
+			}
+
+			// set log level
+			if debug {
+				logrus.SetLevel(logrus.DebugLevel)
 			}
 
 			// Run the command with the post-flag-processing args.
@@ -129,11 +135,5 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, flagBlock.String())
 		}
-	}
-}
-
-func logf(format string, v ...interface{}) {
-	if *verbose {
-		log.Printf(format, v...)
 	}
 }
