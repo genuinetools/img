@@ -71,6 +71,9 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ctx := appcontext.Context()
 	ref := identity.NewID()
 
+	fmt.Printf("Building %s...\n", cmd.tag)
+	fmt.Println("Setting up the rootfs... this may take a bit.")
+
 	// Solve the dockerfile.
 	_, err = c.Solve(ctx, &controlapi.SolveRequest{
 		Ref:      ref,
