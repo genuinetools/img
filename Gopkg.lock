@@ -35,6 +35,13 @@
   revision = "cd527374f1e5bff4938207604a14f2e38a9cf512"
 
 [[projects]]
+  name = "github.com/Sirupsen/logrus"
+  packages = ["."]
+  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
+  source = "github.com/sirupsen/logrus"
+  version = "v1.0.3"
+
+[[projects]]
   name = "github.com/boltdb/bolt"
   packages = ["."]
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
@@ -82,7 +89,7 @@
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
-    "snapshots/naive",
+    "snapshots/overlay",
     "snapshots/storage",
     "sys"
   ]
@@ -537,6 +544,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a909c8f2b7a42eac2e32a8cd0bf0dc10aaacd837dc80c6ea4e21d247c29aed46"
+  inputs-digest = "cccb4f2e263cdbf2f666ff785bfbe966ab76ab190ec70d4ea9c76e9482e51c96"
   solver-name = "gps-cdcl"
   solver-version = 1
