@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/jessfraz/img/source/containerimage"
+	"github.com/jessfraz/img/source/local"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/cacheimport"
 	"github.com/moby/buildkit/cache/instructioncache"
@@ -22,10 +24,8 @@ import (
 	"github.com/moby/buildkit/solver/llbop"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/source"
-	"github.com/moby/buildkit/source/containerimage"
 	"github.com/moby/buildkit/source/git"
 	"github.com/moby/buildkit/source/http"
-	"github.com/moby/buildkit/source/local"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
 	digest "github.com/opencontainers/go-digest"
@@ -45,7 +45,7 @@ type Worker struct {
 }
 
 // NewWorker instantiates a local worker.
-func NewWorker(opt base.WorkerOpt, contextDir, dockerfilePath string) (*Worker, error) {
+func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error) {
 	cm, err := cache.NewManager(cache.ManagerOpt{
 		Snapshotter:   opt.Snapshotter,
 		MetadataStore: opt.MetadataStore,
@@ -101,8 +101,7 @@ func NewWorker(opt base.WorkerOpt, contextDir, dockerfilePath string) (*Worker, 
 		SessionManager: opt.SessionManager,
 		CacheAccessor:  cm,
 		MetadataStore:  opt.MetadataStore,
-		ContextDir:     contextDir,
-		DockerfilePath: dockerfilePath,
+		LocalDirs:      localDirs,
 	})
 	if err != nil {
 		return nil, err

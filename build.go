@@ -4,8 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/jessfraz/img/runc"
@@ -64,20 +62,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	}
 
 	// Create the controller.
-	c, err := createBuildkitController(cmd.contextDir, cmd.dockerfilePath)
+	c, err := createBuildkitController(cmd)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("controller: %#v\n", c)
-
-	// Create a temporary directory for the tar output.
-	tmpTar, err := ioutil.TempFile("", "buldkit-build-using-dockerfile")
-	if err != nil {
-		return err
-	}
-	fmt.Printf("tmpTar: %s\n", tmpTar.Name())
-	tmpTar.Close()
-	//	defer os.Remove(tmpTar.Name())
 
 	// Create the context.
 	ctx := appcontext.Context()
@@ -85,12 +73,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// Solve the dockerfile.
 	resp, err := c.Solve(ctx, &controlapi.SolveRequest{
-		Ref: ref,
-		/*Exporter: "docker",
-		ExporterAttrs: map[string]string{
-			"name":   cmd.tag,
-			"output": tmpTar.Name(),
-		},*/
+		Ref:      ref,
 		Session:  ref,
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
@@ -106,7 +89,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	return nil
 }
 
-func createBuildkitController(contextDir, dockerfilePath string) (*control.Controller, error) {
+func createBuildkitController(cmd *buildCommand) (*control.Controller, error) {
 	// Create the runc worker.
 	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {
@@ -120,7 +103,9 @@ func createBuildkitController(contextDir, dockerfilePath string) (*control.Contr
 	}
 	opt.SessionManager = sessionManager
 
-	w, err := runc.NewWorker(opt, contextDir, dockerfilePath)
+	localDirs := getLocalDirs(cmd)
+
+	w, err := runc.NewWorker(opt, localDirs)
 	if err != nil {
 		return nil, err
 	}
@@ -145,10 +130,14 @@ func createBuildkitController(contextDir, dockerfilePath string) (*control.Contr
 	})
 }
 
-func defaultSessionName() string {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "unknown"
+func getLocalDirs(cmd *buildCommand) map[string]string {
+	file := cmd.dockerfilePath
+	if file == "" {
+		file = filepath.Join(cmd.contextDir, "Dockerfile")
 	}
-	return filepath.Base(wd)
+
+	return map[string]string{
+		"context":    cmd.contextDir,
+		"dockerfile": filepath.Dir(file),
+	}
 }
