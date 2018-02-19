@@ -4,7 +4,7 @@ Standalone, Daemonless Dockerfile and OCI compatible container image builder.
 
 **Goals: Runs completely in userspace. Currently not possible with FUSE problems, but working on it.**
 
-### Usage
+## Usage
 
 ```console
 $ img -h
