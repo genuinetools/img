@@ -2,15 +2,23 @@ package fsutils
 
 import (
 	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/moby/buildkit/session/filesync"
+	"github.com/moby/buildkit/source"
+	"github.com/tonistiigi/fsutil"
+	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
 )
 
-// CopieFile copies a file source to destination.
-func CopyFile(source string, dest string) error {
-	sf, err := os.Open(source)
+// CopieFile copies a file src to destination.
+func CopyFile(src, dest string) error {
+	sf, err := os.Open(src)
 	if err != nil {
 		return err
 	}
@@ -26,7 +34,7 @@ func CopyFile(source string, dest string) error {
 		return err
 	}
 
-	si, err := os.Stat(source)
+	si, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
@@ -34,21 +42,30 @@ func CopyFile(source string, dest string) error {
 	return os.Chmod(dest, si.Mode())
 }
 
-// CopyDIr recursively copies a directory tree, attempting to preserve permissions.
-// Source directory must exist, destination directory must *not* exist.
-func CopyDir(source string, dest string) error {
-	// Get the properties of the source directory.
-	fi, err := os.Stat(source)
+// CopyDir recursively copies a directory tree, attempting to preserve permissions.
+// src directory must exist, destination directory must *not* exist.
+func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdater) error {
+	st := time.Now()
+	defer func() {
+		logrus.Debugf("copydir took: %v", time.Since(st))
+	}()
+
+	// Setup the context.
+	g, ctx := errgroup.WithContext(context.Background())
+
+	// Get the properties of the src directory.
+	fi, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
 
 	if !fi.IsDir() {
-		return errors.New("CopyDir: Source is not a directory")
+		return errors.New("CopyDir: src is not a directory")
 	}
 
 	if _, err = os.Open(dest); !os.IsNotExist(err) && !DirIsEmpty(dest) {
-		return errors.New("CopyDir: Destination already exists")
+		logrus.Warnf("destination already exists: %s", dest)
+		//return errors.New("CopyDir: Destination already exists")
 	}
 
 	// Create the destination directory
@@ -56,30 +73,80 @@ func CopyDir(source string, dest string) error {
 		return err
 	}
 
-	entries, err := ioutil.ReadDir(source)
+	var cf fsutil.ChangeFunc
+	var ch fsutil.ContentHasher
+	if cu != nil {
+		cu.MarkSupported(true)
+		cf = cu.HandleChange
+		ch = cu.ContentHasher()
+	}
+
+	syncDataFunc := func(ctx context.Context, p string, wc io.WriteCloser) error {
+		dfp := filepath.Join(dest, p)
+		sfp := filepath.Join(src, p)
+
+		r, err := os.Open(sfp)
+		if err != nil {
+			return err
+		}
+
+		// perform copy
+		if _, err := io.Copy(wc, r); err != nil {
+			return fmt.Errorf("copy file %s -> %s failed:", sfp, dfp, err)
+		}
+
+		return wc.Close()
+	}
+
+	dw, err := fsutil.NewDiskWriter(ctx, dest, fsutil.DiskWriterOpt{
+		SyncDataCb:    syncDataFunc,
+		NotifyCb:      cf,
+		ContentHasher: ch,
+	})
 	if err != nil {
 		return err
 	}
 
-	for _, entry := range entries {
-		sfp := source + "/" + entry.Name()
-		dfp := dest + "/" + entry.Name()
-		if entry.IsDir() {
-			err = CopyDir(sfp, dfp)
-			if err != nil {
-				log.Println("copyDir:", err)
+	w := newDynamicWalker()
+
+	g.Go(func() (retErr error) {
+		defer func() {
+			if retErr != nil {
+				logrus.Errorf("fsutils doubleWalkDiff return error: %v", retErr)
 			}
-		} else {
-			// perform copy
-			err = CopyFile(sfp, dfp)
-			if err != nil {
-				log.Println("copyDir:", err)
-			}
+		}()
+
+		destWalker := getWalkerFn(dest)
+		if err := doubleWalkDiff(ctx, dw.HandleChange, destWalker, w.fill); err != nil {
+			return err
 		}
 
+		return nil
+	})
+
+	err = fsutil.Walk(ctx, src, &fsutil.WalkOpt{IncludePatterns: li.IncludePatterns, ExcludePatterns: li.ExcludePatterns}, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			if err := w.update(nil); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		cp := &currentPath{path: path, f: info}
+		if err := w.update(cp); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// Close the channel or we will wait here for eternity.
+	close(w.walkChan)
+
+	return g.Wait()
 }
 
 // DirIsEmpty checks if the directory is empty.
