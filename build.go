@@ -19,8 +19,9 @@ import (
 )
 
 const buildShortHelp = `Build an image from a Dockerfile.`
-const buildLongHelp = `
-`
+
+// TODO: make the long help actually useful
+const buildLongHelp = `Build an image from a Dockerfile.`
 
 func (cmd *buildCommand) Name() string      { return "build" }
 func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }

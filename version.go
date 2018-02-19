@@ -9,7 +9,7 @@ import (
 	"github.com/jessfraz/img/version"
 )
 
-const versionHelp = `Show the version information`
+const versionHelp = `Show the version information.`
 
 func (cmd *versionCommand) Name() string { return "version" }
 func (cmd *versionCommand) Args() string {

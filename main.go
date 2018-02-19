@@ -126,7 +126,7 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 	})
 	flagWriter.Flush()
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", name, args, os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", os.Args[0], name, args)
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, strings.TrimSpace(longHelp))
 		fmt.Fprintln(os.Stderr)
