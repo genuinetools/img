@@ -114,7 +114,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 func createBuildkitController(cmd *buildCommand, ref string) (*control.Controller, error) {
 	// Create the runc worker.
-	opt, err := runc.NewWorkerOpt(filepath.Join(defaultStateDirectory, ref))
+	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}

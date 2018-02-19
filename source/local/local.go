@@ -149,6 +149,8 @@ func (ls *localSourceHandler) Snapshot(ctx context.Context) (out cache.Immutable
 		return nil, err
 	}
 
+	// TODO: actually have this update the content adressible hash in the metadata.
+	// See: https://github.com/moby/buildkit/blob/master/source/local/local.go#L164
 	if err := fsutils.CopyDir(ls.ld[ls.src.Name], dest); err != nil {
 		return nil, err
 	}
