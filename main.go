@@ -12,16 +12,8 @@ import (
 
 const (
 	defaultDockerRegistry = "https://registry-1.docker.io"
-	// TODO: change this from tmpfs
-	defaultLocalRegistry = "/tmp/img-local-registry"
-
 	// TODO: change this to not be tmpfs
 	defaultStateDirectory = "/tmp/img"
-
-	// simultaneousLayerPullWindow is the size of the parallel layer pull window.
-	// A layer may not be pulled until the layer preceeding it by the length of the
-	// pull window has been successfully pulled.
-	simultaneousLayerPullWindow = 4
 )
 
 var (
@@ -42,7 +34,6 @@ func main() {
 	// Build the list of available commands.
 	commands := []command{
 		&buildCommand{},
-		&pullCommand{},
 		&versionCommand{},
 	}
 
