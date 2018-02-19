@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/source"
+	"github.com/sirupsen/logrus"
 	"github.com/tonistiigi/fsutil"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
