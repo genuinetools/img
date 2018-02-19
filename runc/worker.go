@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	imageexporter "github.com/jessfraz/img/exporter/containerimage"
 	"github.com/jessfraz/img/source/containerimage"
 	"github.com/jessfraz/img/source/local"
 	"github.com/moby/buildkit/cache"
@@ -17,7 +18,6 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/exporter"
-	imageexporter "github.com/moby/buildkit/exporter/containerimage"
 	localexporter "github.com/moby/buildkit/exporter/local"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/solver"
@@ -136,26 +136,6 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 		return nil, err
 	}
 	exporters[client.ExporterLocal] = localExporter
-
-	/*ociExporter, err := ociexporter.New(ociexporter.Opt{
-		SessionManager: opt.SessionManager,
-		ImageWriter:    iw,
-		Variant:        ociexporter.VariantOCI,
-	})
-	if err != nil {
-		return nil, err
-	}
-	exporters[client.ExporterOCI] = ociExporter
-
-	dockerExporter, err := ociexporter.New(ociexporter.Opt{
-		SessionManager: opt.SessionManager,
-		ImageWriter:    iw,
-		Variant:        ociexporter.VariantDocker,
-	})
-	if err != nil {
-		return nil, err
-	}
-	exporters[client.ExporterDocker] = dockerExporter*/
 
 	ce := cacheimport.NewCacheExporter(cacheimport.ExporterOpt{
 		Snapshotter:    opt.Snapshotter,

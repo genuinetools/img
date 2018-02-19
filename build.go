@@ -75,6 +75,11 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	resp, err := c.Solve(ctx, &controlapi.SolveRequest{
 		Ref:      ref,
 		Session:  ref,
+		Exporter: "image",
+		ExporterAttrs: map[string]string{
+			"push": "true",
+			"name": cmd.tag,
+		},
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
 			"filename": cmd.dockerfilePath,

@@ -16,9 +16,9 @@ import (
 	"github.com/containerd/containerd/remotes/docker/schema1"
 	"github.com/containerd/containerd/rootfs"
 	"github.com/containerd/containerd/snapshots"
+	"github.com/jessfraz/img/auth"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/flightcontrol"
@@ -72,17 +72,13 @@ func (is *imageSource) getCredentialsFromSession(ctx context.Context) func(strin
 		return nil
 	}
 	return func(host string) (string, string, error) {
-		// TODO(jessfraz): make this actually work
-		return "", "", nil
-		timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		caller, err := is.SessionManager.Get(timeoutCtx, id)
+		auth := auth.NewDockerAuthProvider()
+		creds, err := auth.Credentials(host)
 		if err != nil {
 			return "", "", err
 		}
 
-		return auth.CredentialsFunc(tracing.ContextWithSpanFromContext(context.TODO(), ctx), caller)(host)
+		return creds.Username, creds.Secret, nil
 	}
 }
 
