@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	defaultDockerRegistry = "https://registry-1.docker.io"
 	// TODO: change this to not be tmpfs
 	defaultStateDirectory = "/tmp/img"
 )
@@ -28,6 +27,18 @@ type command interface {
 	Register(*flag.FlagSet) // command-specific flags
 	Hidden() bool           // indicates whether the command should be hidden from help output
 	Run([]string) error
+}
+
+// stringSlice is a slice of strings
+type stringSlice []string
+
+// implement the flag interface for stringSlice
+func (s *stringSlice) String() string {
+	return fmt.Sprintf("%s", *s)
+}
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
 }
 
 func main() {
