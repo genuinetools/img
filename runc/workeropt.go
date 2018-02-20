@@ -78,6 +78,10 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 		return opt, fuseserver, err
 	}
 
+	// Create the image store.
+	imageStore := ctdmetadata.NewImageStore(mdb)
+
+	// Create the garbage collector.
 	gc := func(ctx context.Context) error {
 		_, err := mdb.GarbageCollect(ctx)
 		return err
@@ -101,7 +105,7 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 		ContentStore:  c,
 		Applier:       apply.NewFileSystemApplier(c),
 		Differ:        walking.NewWalkingDiff(c),
-		ImageStore:    nil, // explicitly
+		ImageStore:    imageStore,
 	}
 	return opt, fuseserver, nil
 }

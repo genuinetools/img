@@ -46,7 +46,7 @@ type ImageWriter struct {
 }
 
 // Commit takes an image reference and commits it to the cache.
-func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte) (*ocispec.Descriptor, error) {
+func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte, targetName string) (*ocispec.Descriptor, error) {
 	layersDone := oneOffProgress(ctx, "exporting layers")
 	diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref)
 	if err != nil {
@@ -87,6 +87,7 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 
 	labels := map[string]string{
 		"containerd.io/gc.ref.content.0": configDigest.String(),
+		"name": targetName,
 	}
 
 	for i, dp := range diffPairs {

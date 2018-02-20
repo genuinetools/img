@@ -6,8 +6,11 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
 	controlapi "github.com/moby/buildkit/api/services/control"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
 )
 
@@ -33,6 +36,9 @@ type listCommand struct {
 func (cmd *listCommand) Run(args []string) (err error) {
 	// Create the context.
 	ctx := appcontext.Context()
+	id := identity.NewID()
+	ctx = session.NewContext(ctx, id)
+	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
 	// Create the controller.
 	c, fuseserver, err := createController(cmd)

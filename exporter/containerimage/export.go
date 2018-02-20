@@ -9,6 +9,7 @@ import (
 	"github.com/jessfraz/img/util/push"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,38 +73,42 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 	if config, ok := opt[exporterImageConfig]; ok {
 		e.config = config
 	}
-	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config)
+
+	if e.targetName == "" {
+		return errors.New("target name cannot be empty")
+	}
+
+	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config, e.targetName)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		e.opt.ImageWriter.ContentStore().Delete(context.TODO(), desc.Digest)
-	}()
+	if e.opt.Images == nil {
+		return errors.New("image store is nil")
+	}
 
-	if e.targetName != "" {
-		if e.opt.Images != nil {
-			tagDone := oneOffProgress(ctx, "naming to "+e.targetName)
-			img := images.Image{
-				Name:      e.targetName,
-				Target:    *desc,
-				CreatedAt: time.Now(),
-			}
+	tagDone := oneOffProgress(ctx, "naming to "+e.targetName)
+	img := images.Image{
+		Name:      e.targetName,
+		Target:    *desc,
+		CreatedAt: time.Now(),
+	}
 
-			if _, err := e.opt.Images.Update(ctx, img); err != nil {
-				if !errdefs.IsNotFound(err) {
-					return tagDone(err)
-				}
-
-				if _, err := e.opt.Images.Create(ctx, img); err != nil {
-					return tagDone(err)
-				}
-			}
-			tagDone(nil)
+	if _, err := e.opt.Images.Update(ctx, img); err != nil {
+		if !errdefs.IsNotFound(err) {
+			return tagDone(err)
 		}
-		if e.push {
-			return push.Push(ctx, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure)
+
+		if _, err := e.opt.Images.Create(ctx, img); err != nil {
+			return tagDone(err)
 		}
+	}
+
+	tagDone(nil)
+
+	// We can push here if it's requested.
+	if e.push {
+		return push.Push(ctx, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure)
 	}
 
 	return nil

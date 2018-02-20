@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/containerd/containerd/namespaces"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
@@ -59,10 +60,16 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return errors.New("stdin not supported for build context yet")
 	}
 
+	// Add the latest lag if they did not provide one.
+	if !strings.Contains(cmd.tag, ":") {
+		cmd.tag += ":latest"
+	}
+
 	// Create the context.
 	ctx := appcontext.Context()
-	ref := identity.NewID()
-	ctx = session.NewContext(ctx, ref)
+	id := identity.NewID()
+	ctx = session.NewContext(ctx, id)
+	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
 	// Create the controller.
 	c, fuseserver, err := createController(cmd)
@@ -87,16 +94,15 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 
-	fmt.Printf("Building %s...\n", cmd.tag)
+	fmt.Printf("Building %s\n", cmd.tag)
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
 	// Solve the dockerfile.
 	_, err = c.Solve(ctx, &controlapi.SolveRequest{
-		Ref:      ref,
-		Session:  ref,
+		Ref:      id,
+		Session:  id,
 		Exporter: "image",
 		ExporterAttrs: map[string]string{
-			"push": "true",
 			"name": cmd.tag,
 		},
 		Frontend:      "dockerfile.v0",
@@ -106,7 +112,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return fmt.Errorf("solving failed: %v", err)
 	}
 
-	fmt.Printf("Built and pushed image: %s\n", cmd.tag)
+	fmt.Printf("Built image %s\n", cmd.tag)
 
 	return nil
 }

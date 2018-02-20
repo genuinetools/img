@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/runc"
 	"github.com/jessfraz/img/source/containerimage"
 	"github.com/moby/buildkit/cache"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/appcontext"
 )
@@ -45,6 +48,9 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 	// Create the context.
 	ctx := appcontext.Context()
+	id := identity.NewID()
+	ctx = session.NewContext(ctx, id)
+	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
 	// Get the identifier for the image.
 	identifier, err := source.NewImageIdentifier(cmd.image)
