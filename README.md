@@ -10,6 +10,9 @@ in progress so hang tight.**
 
 You might also be interested in reading the [original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
 
+The default backend is currently set to `overlayfs` and requires privileges
+since it is a lot more stable than the `fuse` backend.
+
 * [Installation](#installation)
     - [Binaries](#binaries)
     - [Via Go](#via-go)
