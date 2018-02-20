@@ -46,6 +46,7 @@ Commands:
   build    Build an image from a Dockerfile.
   du       Show image disk usage.
   ls       List images and digests.
+  login    Log in to a Docker registry.
   pull     Pull an image or a repository from a registry.
   push     Push an image or a repository to a registry.
   version  Show the version information.
@@ -195,6 +196,24 @@ sha256:db193011cbfc238d622d65c4099750758df83d74571e8d7498392b17df381207 true    
 wn4m5i5swdcjvt1ud5bvtr75h*                                              true            4.204KiB        local source for dockerfile
 Reclaimable:    1.08GiB
 Total:          1.08GiB
+```
+
+### Login to a Registry
+
+```console
+$ img login -h
+Usage: img login [OPTIONS] [SERVER]
+
+Log in to a Docker registry.
+If no server is specified, the default (https://index.docker.io/v1/) is used.
+
+Flags:
+
+  -backend         backend for snapshots (default: overlayfs)
+  -d               enable debug logging (default: false)
+  -p               Password (default: <none>)
+  -password-stdin  Take the password from stdin (default: false)
+  -u               Username (default: <none>)
 ```
 
 ## Acknowledgements
