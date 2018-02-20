@@ -276,6 +276,16 @@
   source = "github.com/tonistiigi/grpc-opentracing"
 
 [[projects]]
+  name = "github.com/hanwen/go-fuse"
+  packages = [
+    "fuse",
+    "fuse/nodefs",
+    "fuse/pathfs",
+    "splice"
+  ]
+  revision = "master"
+
+[[projects]]
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
   revision = "826af9ccf0feeee615d546d69b11f8e98da8c8f1"
@@ -537,6 +547,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "18e72c32eef323fa4a539e92e37c9a4584ef48232e60720a5a5edfd4814c84d0"
+  inputs-digest = "3218a20c01e1ab41cc1da010e4de2d01201f3f7ccb1906100345d4a4a9883733"
   solver-name = "gps-cdcl"
   solver-version = 1

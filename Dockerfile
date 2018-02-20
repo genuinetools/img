@@ -1,11 +1,12 @@
-FROM golang:alpine as builder
+FROM golang:alpine
 MAINTAINER Jessica Frazelle <jess@linux.com>
 
 ENV PATH /go/bin:/usr/local/go/bin:$PATH
 ENV GOPATH /go
 
 RUN	apk add --no-cache \
-	ca-certificates
+	ca-certificates \
+	fuse
 
 COPY . /go/src/github.com/jessfraz/img
 
@@ -30,12 +31,6 @@ RUN set -x \
 	&& apk del .build-deps \
 	&& rm -rf /go \
 	&& echo "Build complete."
-
-FROM scratch
-
-COPY --from=builder /usr/bin/img /usr/bin/img
-COPY --from=builder /usr/bin/runc /usr/bin/runc
-COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs
 
 ENTRYPOINT [ "img" ]
 CMD [ "--help" ]

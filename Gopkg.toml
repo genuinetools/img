@@ -33,6 +33,10 @@
   revision = "master"
 
 [[override]]
+  name = "github.com/hanwen/go-fuse"
+  revision = "master"
+
+[[override]]
   name = "github.com/grpc-ecosystem/grpc-opentracing"
   revision = "420e5c3331a082e0c873adeeab1819fe1749dd0b"
   source = "github.com/tonistiigi/grpc-opentracing"
