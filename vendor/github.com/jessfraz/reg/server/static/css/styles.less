@@ -1,0 +1,226 @@
+
+@import url('http://fonts.googleapis.com/css?family=Open+Sans:400,300');
+/* Have to use @import for the font, as you can only specify a single stylesheet */
+* {
+	margin:0;
+	padding:0;
+	-webkit-box-sizing:border-box;
+	   -moz-box-sizing:border-box;
+	       box-sizing: border-box; 
+}
+
+html {
+	min-height:100%;
+	border-top:10px solid #ECEEF1;
+	border-bottom:10px solid #ECEEF1;
+	color:#61666c;
+	font-weight:300;
+	font-size:1em;
+	font-family:'Open Sans', sans-serif;
+	line-height:2em;
+}
+body {
+	padding:20px;
+	-webkit-backface-visibility:hidden;
+}
+code {
+	font-family:Inconsolata,monospace;	
+}
+a {
+	color:#61666c;
+	text-decoration:none;
+}
+a:hover {
+	color:#2a2a2a;
+}
+/*------------------------------------*\
+    Wrapper
+\*------------------------------------*/
+.wrapper {
+	margin:0 auto;
+	padding-top:20px;
+	max-width:800px;
+}
+/*------------------------------------*\
+    Demo block
+\*------------------------------------*/
+.block {
+	font-size:.875em;
+	margin:20px 0;
+	padding:20px;
+	color:#9099A3;
+}
+
+h1 {
+	font-weight:200;
+	text-align:center;
+	font-size:1.4em;
+	line-height:3em;
+	font-family:'Museo Slab','Open Sans',monospace;
+}
+form {
+	text-align:center;
+}
+input {
+	margin: 0 auto;
+	font-size: 100%;
+	vertical-align: middle;
+	*overflow: visible;
+	line-height: normal;
+	font-family:'Open Sans', sans-serif;
+	font-size: 12px;
+	font-weight: 300;
+	line-height: 18px;
+	color:#555555;
+	display: inline-block;
+	height: 20px;
+	padding: 4px 32px 4px 6px;
+	margin-bottom: 9px;
+	font-size: 14px;
+	line-height: 20px;
+	color: #555555;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	width: 196px;
+	background-color: #ffffff;
+	border: 1px solid #cccccc;
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	-moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	-webkit-transition: border linear .2s, box-shadow linear .2s;
+	-moz-transition: border linear .2s, box-shadow linear .2s;
+	-o-transition: border linear .2s, box-shadow linear .2s;
+	transition: border linear .2s, box-shadow linear .2s;
+	background: url('search.svg') no-repeat 211px center;
+    background-size:auto 20px;
+}
+
+input:focus {
+	border-color: rgba(82, 168, 236, 0.8);
+	outline: 0;
+	outline: thin dotted \9;
+	/* IE6-9 */
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+	-moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+input::-moz-focus-inner {
+	padding: 0;
+	border: 0;
+}
+
+input[type="search"] {
+	margin-top: 20px;
+	-webkit-box-sizing: content-box;
+	-moz-box-sizing: content-box;
+	box-sizing: content-box;
+	-webkit-appearance: textfield;
+	-webkit-transition:all 300ms ease-in;
+	   -moz-transition:all 300ms ease-in;
+	    -ms-transition:all 300ms ease-in;
+	     -o-transition:all 300ms ease-in;
+	        transition:all 300ms ease-in;
+}
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button {
+	-webkit-appearance: none;
+}
+a.clear, a.clear:link, a.clear:visited {
+	color:#666;
+	padding:2px 0 2px 0;
+	font-weight: 400;
+	font-size: 14px;
+	margin:0px 0 0 20px;
+	line-height: 14px;
+	display: inline-block;
+	border-bottom: transparent 1px solid;
+	vertical-align: -10px;
+	-webkit-transition:all 300ms ease-in;
+	   -moz-transition:all 300ms ease-in;
+	    -ms-transition:all 300ms ease-in;
+	     -o-transition:all 300ms ease-in;
+	        transition:all 300ms ease-in;
+}
+a.clear:hover {
+	text-decoration: none;
+	color:#333;
+	cursor: pointer;
+}
+/*------------------------------------*\
+    Table (directory listing)
+\*------------------------------------*/
+table {
+	border-collapse:collapse;
+	font-size:.875em;
+	max-width:100%;
+	margin:20px auto 0px auto;
+}
+tr {
+	outline:0;
+	border:0;
+}
+tr:hover td {
+	background:#f6f6f6;
+}
+th {
+	text-align:left;
+	font-size:.75em;
+	padding-right:20px;
+}
+/* 2nd Column: Filename */
+th + th {
+	width:65%;
+}
+/* 3rd Column: Last Modified */
+th + th + th {
+}
+/* 4th Column: Size */
+th + th + th + th {
+	width:5%;
+}
+tr td:first-of-type {
+	padding-left:10px;
+	padding-right:10px;
+}
+td {
+	padding:5px 0;
+	outline:0;
+	border:0;
+	border-bottom:1px solid #edf1f5;
+	vertical-align:middle;
+	text-align:left;
+	-webkit-transition:background 300ms ease-in;
+	   -moz-transition:background 300ms ease-in;
+	    -ms-transition:background 300ms ease-in;
+	     -o-transition:background 300ms ease-in;
+	        transition:background 300ms ease-in;
+}
+td:last-child, th:last-child {
+	text-align:right;
+	padding-right:0px;
+}
+td a{
+	display: block;
+}
+tr.parent a {
+	color:#9099A3;
+}
+.parent a:hover {
+	color:#2a2a2a;
+}
+/*------------------------------------*\
+    Footer
+\*------------------------------------*/
+.footer {
+	text-align:center;
+	font-size:.75em;
+	margin-top:50px;
+}
+img {
+	outline:none;
+	border:none;
+    max-height:16px;
+}

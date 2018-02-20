@@ -141,6 +141,8 @@
     ".",
     "digestset",
     "manifest",
+    "manifest/manifestlist",
+    "manifest/schema1",
     "manifest/schema2",
     "metrics",
     "reference",
@@ -243,6 +245,12 @@
   revision = "822e5b59d346b7ad0735df2c8e445e9787320e67"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/docker/libtrust"
+  packages = ["."]
+  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -312,6 +320,12 @@
   name = "github.com/hashicorp/golang-lru"
   packages = ["simplelru"]
   revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jessfraz/reg"
+  packages = ["registry"]
+  revision = "9f7b2358497106ab05b0ad1e28d0eee00c8da497"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -433,6 +447,12 @@
   ]
   revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
   version = "v1.0.2"
+
+[[projects]]
+  name = "github.com/peterhellberg/link"
+  packages = ["."]
+  revision = "d1cebc7ea14a5fc0de7cb4a45acae773161642c6"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -605,6 +625,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b1cdbd1c4f7e0930771014c6d42424cab054510c8f31a6326495c66e8994875b"
+  inputs-digest = "333042c31cd62e646a090abc3ad51e87f0f2a1e9dc9c42404d221ded07ae5854"
   solver-name = "gps-cdcl"
   solver-version = 1

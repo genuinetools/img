@@ -83,3 +83,7 @@
 [[constraint]]
   name = "github.com/docker/distribution"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/jessfraz/reg"
+  branch = "master"

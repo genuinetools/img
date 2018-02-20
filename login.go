@@ -2,23 +2,20 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/docker/api/types"
-	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
+	registryapi "github.com/jessfraz/reg/registry"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,15 +79,15 @@ func (cmd *loginCommand) Run(args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	resp, err := registryLogin(authConfig)
+	token, err := registryLogin(authConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting registry token failed: %v", err)
 	}
 
 	// Configure the token.
-	if resp.IdentityToken != "" {
+	if token != "" {
 		authConfig.Password = ""
-		authConfig.IdentityToken = resp.IdentityToken
+		authConfig.IdentityToken = token
 	}
 
 	// Save the config value.
@@ -98,43 +95,18 @@ func (cmd *loginCommand) Run(args []string) error {
 		return fmt.Errorf("saving credentials failed: %v", err)
 	}
 
-	if resp.Status != "" {
-		logrus.Infof("Registry login status: %s", resp.Status)
-	}
+	fmt.Println("Login succeeded.")
+
 	return nil
 }
 
-func registryLogin(auth types.AuthConfig) (authResponse registrytypes.AuthenticateOKBody, err error) {
-	// Encode the body.
-	b := bytes.NewBuffer(nil)
-	if err := json.NewEncoder(b).Encode(auth); err != nil {
-		return authResponse, err
-	}
-
-	// Create the request.
-	client := http.DefaultClient
-	url := strings.TrimSuffix(auth.ServerAddress, "/") + "/auth"
-	req, err := http.NewRequest("POST", url, b)
+func registryLogin(auth types.AuthConfig) (string, error) {
+	r, err := registryapi.New(auth, debug)
 	if err != nil {
-		return authResponse, fmt.Errorf("creating POST request to %s failed: %v", url, err)
+		return "", err
 	}
 
-	// Add the headers.
-	req.Header.Add("Content-Type", "application/json")
-
-	// Do the request.
-	resp, err := client.Do(req)
-	if err != nil {
-		return authResponse, fmt.Errorf("doing POST request to %s failed: %v", url, err)
-	}
-	defer resp.Body.Close()
-
-	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&authResponse); err != nil {
-		return authResponse, err
-	}
-
-	return authResponse, nil
+	return r.Token(auth.ServerAddress)
 }
 
 // configureAuth returns an types.AuthConfig from the specified user, password and server.
@@ -149,10 +121,10 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 	}
 	authConfig, err := dcfg.GetAuthConfig(serverAddress)
 	if err != nil {
-		return dcfg, authConfig, fmt.Errorf("getting auth config for %s failed: %v", err)
+		return dcfg, authConfig, fmt.Errorf("getting auth config for %s failed: %v", serverAddress, err)
 	}
 
-	fd, isTerminal := term.GetFdInfo(os.Stdin)
+	_, isTerminal := term.GetFdInfo(os.Stdin)
 	if flPassword == "" && !isTerminal {
 		return dcfg, authConfig, errors.New("cannot perform an interactive login from a non TTY device")
 	}
@@ -165,7 +137,7 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 			fmt.Printf("Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.")
 		}
 		promptWithDefault(os.Stdout, "Username", authConfig.Username)
-		flUser = readInput(os.Stdin, os.Stdout)
+		flUser = readInput(os.Stdin)
 		flUser = strings.TrimSpace(flUser)
 		if flUser == "" {
 			flUser = authConfig.Username
@@ -175,17 +147,19 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 		return dcfg, authConfig, fmt.Errorf("Username cannot be empty")
 	}
 	if flPassword == "" {
-		oldState, err := term.SaveState(fd)
+		oldState, err := term.SaveState(os.Stdin.Fd())
 		if err != nil {
 			return dcfg, authConfig, err
 		}
 		fmt.Fprintf(os.Stdout, "Password: ")
-		term.DisableEcho(fd, oldState)
+		term.DisableEcho(os.Stdin.Fd(), oldState)
 
-		flPassword = readInput(os.Stdin, os.Stdout)
+		flPassword = readInput(os.Stdin)
 		fmt.Fprint(os.Stdout, "\n")
 
-		term.RestoreTerminal(fd, oldState)
+		if err := term.RestoreTerminal(os.Stdin.Fd(), oldState); err != nil {
+			return dcfg, authConfig, fmt.Errorf("restoring old terminal failed: %v", err)
+		}
 		if flPassword == "" {
 			return dcfg, authConfig, fmt.Errorf("Password is required")
 		}
@@ -199,11 +173,11 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 	return dcfg, authConfig, nil
 }
 
-func readInput(in io.Reader, out io.Writer) string {
+func readInput(in io.Reader) string {
 	reader := bufio.NewReader(in)
 	line, _, err := reader.ReadLine()
 	if err != nil {
-		fmt.Fprintln(out, err.Error())
+		fmt.Fprintf(os.Stderr, "reading input failed: %v", err)
 		os.Exit(1)
 	}
 
