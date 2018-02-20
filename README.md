@@ -234,7 +234,7 @@ Flags:
 
 ## Contributing
 
-Please do! This is a new project and can use some love <3 Checkout the [issues](https://github.com/jessfraz/img/issues).
+Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/jessfraz/img/issues).
 
 ## Acknowledgements
 
