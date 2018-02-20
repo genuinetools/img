@@ -4,18 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"path/filepath"
 	"strings"
 
-	"github.com/jessfraz/img/runc"
 	controlapi "github.com/moby/buildkit/api/services/control"
-	"github.com/moby/buildkit/control"
-	"github.com/moby/buildkit/frontend"
-	"github.com/moby/buildkit/frontend/dockerfile"
 	"github.com/moby/buildkit/identity"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
-	"github.com/moby/buildkit/worker"
 )
 
 const buildShortHelp = `Build an image from a Dockerfile.`
@@ -70,7 +63,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ref := identity.NewID()
 
 	// Create the controller.
-	c, err := createBuildkitController(cmd, ref)
+	c, err := createController(cmd, ref)
 	if err != nil {
 		return err
 	}
@@ -111,57 +104,4 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	fmt.Printf("Built and pushed image: %s\n", cmd.tag)
 	return nil
-}
-
-func createBuildkitController(cmd *buildCommand, ref string) (*control.Controller, error) {
-	// Create the runc worker.
-	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
-	if err != nil {
-		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
-	}
-
-	// Set the session manager.
-	sessionManager, err := session.NewManager()
-	if err != nil {
-		return nil, fmt.Errorf("creating session manager failed: %v", err)
-	}
-	opt.SessionManager = sessionManager
-
-	localDirs := getLocalDirs(cmd)
-
-	w, err := runc.NewWorker(opt, localDirs)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the worker controller.
-	wc := &worker.Controller{}
-	if err = wc.Add(w); err != nil {
-		return nil, err
-	}
-
-	// Add the frontends.
-	frontends := map[string]frontend.Frontend{}
-	frontends["dockerfile.v0"] = dockerfile.NewDockerfileFrontend()
-
-	// Create the controller.
-	return control.NewController(control.Opt{
-		SessionManager:   sessionManager,
-		WorkerController: wc,
-		Frontends:        frontends,
-		CacheExporter:    w.CacheExporter,
-		CacheImporter:    w.CacheImporter,
-	})
-}
-
-func getLocalDirs(cmd *buildCommand) map[string]string {
-	file := cmd.dockerfilePath
-	if file == "" {
-		file = filepath.Join(cmd.contextDir, "Dockerfile")
-	}
-
-	return map[string]string{
-		"context":    cmd.contextDir,
-		"dockerfile": filepath.Dir(file),
-	}
 }
