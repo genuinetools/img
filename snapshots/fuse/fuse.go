@@ -392,11 +392,7 @@ func newSnapshotDir(root string) error {
 			return err
 		}
 
-		if err := os.Mkdir(root, 0755); err != nil {
-			return err
-		}
-
-		return nil
+		return os.Mkdir(root, 0755)
 	}
 
 	// Check if it's already mounted (if we exited poorly) and unmount it.
