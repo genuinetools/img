@@ -27,7 +27,7 @@ For the FUSE backend, you will also need `fusermount` installed.
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/jessfraz/img/releases/download/v0.0.0/img-linux-amd64)
+- **linux** [amd64](https://github.com/jessfraz/img/releases/download/v0.1.0/img-linux-amd64)
 
 #### Via Go
 
