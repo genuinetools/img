@@ -43,16 +43,10 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 	if err := newSnapshotDir(root); err != nil {
 		return nil, nil, err
 	}
-	var (
-		// TODO: make these not temp dir
-		ro = filepath.Join(os.TempDir(), "img", "fuse-ro")
-		rw = filepath.Join(os.TempDir(), "img", "fuse-rw")
-	)
 
-	for _, path := range []string{
-		ro,
-		rw,
-	} {
+	ro := filepath.Join(filepath.Dir(root), "fuse-ro")
+	rw := filepath.Join(filepath.Dir(root), "fuse-rw")
+	for _, path := range []string{ro, rw} {
 		if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
 			return nil, nil, err
 		}
