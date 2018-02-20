@@ -6,10 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/containerd/containerd/log"
@@ -95,18 +93,6 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("FUSE mount to root %s failed: %v", root, err)
 	}
-
-	// On ^C, or SIGTERM handle exit.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	go func() {
-		for sig := range c {
-			state.Unmount()
-			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
-			os.Exit(1)
-		}
-	}()
 
 	go func() {
 		logrus.Infof("Starting FUSE server...")

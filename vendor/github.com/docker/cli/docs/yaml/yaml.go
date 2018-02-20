@@ -15,14 +15,17 @@ import (
 )
 
 type cmdOption struct {
-	Option        string
-	Shorthand     string `yaml:",omitempty"`
-	ValueType     string `yaml:"value_type,omitempty"`
-	DefaultValue  string `yaml:"default_value,omitempty"`
-	Description   string `yaml:",omitempty"`
-	Deprecated    bool
-	MinAPIVersion string `yaml:"min_api_version,omitempty"`
-	Experimental  bool
+	Option          string
+	Shorthand       string `yaml:",omitempty"`
+	ValueType       string `yaml:"value_type,omitempty"`
+	DefaultValue    string `yaml:"default_value,omitempty"`
+	Description     string `yaml:",omitempty"`
+	Deprecated      bool
+	MinAPIVersion   string `yaml:"min_api_version,omitempty"`
+	Experimental    bool
+	ExperimentalCLI bool
+	Kubernetes      bool
+	Swarm           bool
 }
 
 type cmdDoc struct {
@@ -43,6 +46,9 @@ type cmdDoc struct {
 	Deprecated       bool
 	MinAPIVersion    string `yaml:"min_api_version,omitempty"`
 	Experimental     bool
+	ExperimentalCLI  bool
+	Kubernetes       bool
+	Swarm            bool
 }
 
 // GenYamlTree creates yaml structured ref files
@@ -73,10 +79,7 @@ func GenYamlTreeCustom(cmd *cobra.Command, dir string, filePrepender func(string
 	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
 		return err
 	}
-	if err := GenYamlCustom(cmd, f); err != nil {
-		return err
-	}
-	return nil
+	return GenYamlCustom(cmd, f)
 }
 
 // GenYamlCustom creates custom yaml output
@@ -109,6 +112,15 @@ func GenYamlCustom(cmd *cobra.Command, w io.Writer) error {
 		}
 		if _, ok := curr.Annotations["experimental"]; ok && !cliDoc.Experimental {
 			cliDoc.Experimental = true
+		}
+		if _, ok := curr.Annotations["experimentalCLI"]; ok && !cliDoc.ExperimentalCLI {
+			cliDoc.ExperimentalCLI = true
+		}
+		if _, ok := curr.Annotations["kubernetes"]; ok && !cliDoc.Kubernetes {
+			cliDoc.Kubernetes = true
+		}
+		if _, ok := curr.Annotations["swarm"]; ok && !cliDoc.Swarm {
+			cliDoc.Swarm = true
 		}
 	}
 
@@ -186,6 +198,15 @@ func genFlagResult(flags *pflag.FlagSet) []cmdOption {
 		if v, ok := flag.Annotations["version"]; ok {
 			opt.MinAPIVersion = v[0]
 		}
+		if _, ok := flag.Annotations["experimentalCLI"]; ok {
+			opt.ExperimentalCLI = true
+		}
+		if _, ok := flag.Annotations["kubernetes"]; ok {
+			opt.Kubernetes = true
+		}
+		if _, ok := flag.Annotations["swarm"]; ok {
+			opt.Swarm = true
+		}
 
 		result = append(result, opt)
 	})
@@ -220,10 +241,10 @@ func parseMDContent(mdString string) (description string, examples string) {
 	parsedContent := strings.Split(mdString, "\n## ")
 	for _, s := range parsedContent {
 		if strings.Index(s, "Description") == 0 {
-			description = strings.Trim(s, "Description\n")
+			description = strings.TrimSpace(strings.TrimPrefix(s, "Description"))
 		}
 		if strings.Index(s, "Examples") == 0 {
-			examples = strings.Trim(s, "Examples\n")
+			examples = strings.TrimSpace(strings.TrimPrefix(s, "Examples"))
 		}
 	}
 	return description, examples

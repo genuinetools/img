@@ -27,6 +27,7 @@
 [[override]]
   name = "github.com/docker/docker"
   source = "github.com/moby/moby"
+  revision = "master"
 
 [[override]]
   name = "github.com/moby/buildkit"
@@ -57,6 +58,14 @@
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
+  branch = "master"
+
+[[override]]
+  name = "github.com/docker/libnetwork"
+  revision = "822e5b59d346b7ad0735df2c8e445e9787320e67"
+
+[[override]]
+  name = "github.com/prometheus/client_golang"
   branch = "master"
 
 [[override]]

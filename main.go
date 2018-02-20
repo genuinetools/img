@@ -13,7 +13,7 @@ import (
 
 const (
 	// TODO: change this to not be tmpfs
-	defaultStateDirectory = "/tmp/img"
+	defaultStateDirectory = "/tmp/img2"
 )
 
 var (

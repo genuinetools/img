@@ -767,6 +767,30 @@ publish the port when running the container, use the `-p` flag on `docker run`
 to publish and map one or more ports, or the `-P` flag to publish all exposed
 ports and map them to high-order ports.
 
+By default, `EXPOSE` assumes TCP. You can also specify UDP:
+
+```Dockerfile
+EXPOSE 80/udp
+```
+
+To expose on both TCP and UDP, include two lines:
+
+```Dockerfile
+EXPOSE 80/tcp
+EXPOSE 80/udp
+```
+
+In this case, if you use `-P` with `docker run`, the port will be exposed once
+for TCP and once for UDP. Remember that `-P` uses an ephemeral high-ordered host
+port on the host, so the port will not be the same for TCP and UDP.
+
+Regardless of the `EXPOSE` settings, you can override them at runtime by using
+the `-p` flag. For example
+
+```bash
+docker run -p 80:80/tcp -p 80:80/udp ...
+```
+
 To set up port redirection on the host system, see [using the -P
 flag](run.md#expose-incoming-ports). The `docker network` command supports
 creating networks for communication among containers without the need to
@@ -781,14 +805,15 @@ see the
     ENV <key>=<value> ...
 
 The `ENV` instruction sets the environment variable `<key>` to the value
-`<value>`. This value will be in the environment of all "descendant"
-`Dockerfile` commands and can be [replaced inline](#environment-replacement) in
+`<value>`. This value will be in the environment for all subsequent instructions
+in the build stage and can be [replaced inline](#environment-replacement) in
 many as well.
 
 The `ENV` instruction has two forms. The first form, `ENV <key> <value>`,
 will set a single variable to a value. The entire string after the first
-space will be treated as the `<value>` - including characters such as
-spaces and quotes.
+space will be treated as the `<value>` - including whitespace characters. The
+value will be interpreted for other environment variables, so quote characters
+will be removed if they are not escaped.
 
 The second form, `ENV <key>=<value> ...`, allows for multiple variables to
 be set at one time. Notice that the second form uses the equals sign (=)
@@ -806,8 +831,7 @@ and
     ENV myDog Rex The Dog
     ENV myCat fluffy
 
-will yield the same net results in the final image, but the first form
-is preferred because it produces a single cache layer.
+will yield the same net results in the final image.
 
 The environment variables set using `ENV` will persist when a container is run
 from the resulting image. You can view the values using `docker inspect`, and
@@ -831,7 +855,7 @@ whitespace)
 > The `--chown` feature is only supported on Dockerfiles used to build Linux containers,
 > and will not work on Windows containers. Since user and group ownership concepts do
 > not translate between Linux and Windows, the use of `/etc/passwd` and `/etc/group` for
-> translating user and group names to IDs restricts this feature to only be viable for
+> translating user and group names to IDs restricts this feature to only be viable
 > for Linux OS-based containers.
 
 The `ADD` instruction copies new files, directories or remote file URLs from `<src>`
@@ -979,7 +1003,7 @@ whitespace)
 > and will not work on Windows containers. Since user and group ownership concepts do
 > not translate between Linux and Windows, the use of `/etc/passwd` and `/etc/group` for
 > translating user and group names to IDs restricts this feature to only be viable for
-> for Linux OS-based containers.
+> Linux OS-based containers.
 
 The `COPY` instruction copies new files or directories from `<src>`
 and adds them to the filesystem of the container at the path `<dest>`.
@@ -1821,7 +1845,7 @@ all previous `SHELL` instructions, and affects all subsequent instructions. For 
     RUN Write-Host hello
 
     # Executed as cmd /S /C echo hello
-    SHELL ["cmd", "/S"", "/C"]
+    SHELL ["cmd", "/S", "/C"]
     RUN echo hello
 
 The following instructions can be affected by the `SHELL` instruction when the

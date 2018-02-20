@@ -142,6 +142,19 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		InsecureSkipVerify: false,
 	}
 
+	// Sanitize some entries before trying to decode parameters with mapstructure
+	// TenantID and Tenant when integers only and passed as ENV variables
+	// are considered as integer and not string. The parser fails in this
+	// case.
+	_, ok := parameters["tenant"]
+	if ok {
+		parameters["tenant"] = fmt.Sprint(parameters["tenant"])
+	}
+	_, ok = parameters["tenantid"]
+	if ok {
+		parameters["tenantid"] = fmt.Sprint(parameters["tenantid"])
+	}
+
 	if err := mapstructure.Decode(parameters, &params); err != nil {
 		return nil, err
 	}
@@ -642,6 +655,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	}
 
 	return tempURL, nil
+}
+
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
 func (d *driver) swiftPath(path string) string {

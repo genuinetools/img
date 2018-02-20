@@ -48,26 +48,26 @@ func WithTempMount(ctx context.Context, mounts []Mount, f func(root string) erro
 	// from the mounted dir.
 	// For details, please refer to #1868 #1785.
 	defer func() {
-		if uerr = os.Remove(root); uerr != nil {
+		if uerr = os.RemoveAll(root); uerr != nil {
 			log.G(ctx).WithError(uerr).WithField("dir", root).Errorf("failed to remove mount temp dir")
 		}
 	}()
 
 	// We should do defer first, if not we will not do Unmount when only a part of Mounts are failed.
-/*	defer func() {
-		if uerr = UnmountAll(root, 0); uerr != nil {
-			uerr = errors.Wrapf(uerr, "failed to unmount %s", root)
-			if err == nil {
-				err = uerr
-			} else {
-				err = errors.Wrap(err, uerr.Error())
+	/*	defer func() {
+			if uerr = UnmountAll(root, 0); uerr != nil {
+				uerr = errors.Wrapf(uerr, "failed to unmount %s", root)
+				if err == nil {
+					err = uerr
+				} else {
+					err = errors.Wrap(err, uerr.Error())
+				}
 			}
+		}()
+		if uerr = All(mounts, root); uerr != nil {
+			return errors.Wrapf(uerr, "failed to mount %s", root)
 		}
-	}()
-	if uerr = All(mounts, root); uerr != nil {
-		return errors.Wrapf(uerr, "failed to mount %s", root)
-	}
-*/
+	*/
 
 	return errors.Wrapf(f(root), "mount callback failed on %s", root)
 }

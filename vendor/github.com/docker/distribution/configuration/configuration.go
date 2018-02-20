@@ -114,6 +114,10 @@ type Configuration struct {
 
 				// Email is the email to use during Let's Encrypt registration
 				Email string `yaml:"email,omitempty"`
+
+				// Hosts specifies the hosts which are allowed to obtain Let's
+				// Encrypt certificates.
+				Hosts []string `yaml:"hosts,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
@@ -129,6 +133,11 @@ type Configuration struct {
 		Debug struct {
 			// Addr specifies the bind address for the debug server.
 			Addr string `yaml:"addr,omitempty"`
+			// Prometheus configures the Prometheus telemetry endpoint.
+			Prometheus struct {
+				Enabled bool   `yaml:"enabled,omitempty"`
+				Path    string `yaml:"path,omitempty"`
+			} `yaml:"prometheus,omitempty"`
 		} `yaml:"debug,omitempty"`
 
 		// HTTP2 configuration options

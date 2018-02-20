@@ -353,22 +353,21 @@ func (c *credentialSpecOpt) Value() *swarm.CredentialSpec {
 	return c.value
 }
 
-func convertNetworks(ctx context.Context, apiClient client.NetworkAPIClient, networks opts.NetworkOpt) ([]swarm.NetworkAttachmentConfig, error) {
+func resolveNetworkID(ctx context.Context, apiClient client.NetworkAPIClient, networkIDOrName string) (string, error) {
+	nw, err := apiClient.NetworkInspect(ctx, networkIDOrName, types.NetworkInspectOptions{Scope: "swarm"})
+	return nw.ID, err
+}
+
+func convertNetworks(networks opts.NetworkOpt) []swarm.NetworkAttachmentConfig {
 	var netAttach []swarm.NetworkAttachmentConfig
 	for _, net := range networks.Value() {
-		networkIDOrName := net.Target
-		_, err := apiClient.NetworkInspect(ctx, networkIDOrName, types.NetworkInspectOptions{Scope: "swarm"})
-		if err != nil {
-			return nil, err
-		}
 		netAttach = append(netAttach, swarm.NetworkAttachmentConfig{
 			Target:     net.Target,
 			Aliases:    net.Aliases,
 			DriverOpts: net.DriverOpts,
 		})
 	}
-	sort.Sort(byNetworkTarget(netAttach))
-	return netAttach, nil
+	return netAttach
 }
 
 type endpointOptions struct {
@@ -561,7 +560,7 @@ func (options *serviceOptions) ToStopGracePeriod(flags *pflag.FlagSet) *time.Dur
 func (options *serviceOptions) ToService(ctx context.Context, apiClient client.NetworkAPIClient, flags *pflag.FlagSet) (swarm.ServiceSpec, error) {
 	var service swarm.ServiceSpec
 
-	envVariables, err := opts.ReadKVStrings(options.envFile.GetAll(), options.env.GetAll())
+	envVariables, err := opts.ReadKVEnvStrings(options.envFile.GetAll(), options.env.GetAll())
 	if err != nil {
 		return service, err
 	}
@@ -590,10 +589,15 @@ func (options *serviceOptions) ToService(ctx context.Context, apiClient client.N
 		return service, err
 	}
 
-	networks, err := convertNetworks(ctx, apiClient, options.networks)
-	if err != nil {
-		return service, err
+	networks := convertNetworks(options.networks)
+	for i, net := range networks {
+		nwID, err := resolveNetworkID(ctx, apiClient, net.Target)
+		if err != nil {
+			return service, err
+		}
+		networks[i].Target = nwID
 	}
+	sort.Sort(byNetworkTarget(networks))
 
 	resources, err := options.resources.ToResourceRequirements()
 	if err != nil {

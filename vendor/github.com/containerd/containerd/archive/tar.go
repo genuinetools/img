@@ -373,10 +373,10 @@ func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header
 
 	// Lchown is not supported on Windows.
 	if runtime.GOOS != "windows" {
-/*		if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
-			return err
-		}
-*/
+		/*		if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
+					return err
+				}
+		*/
 	}
 
 	for key, value := range hdr.PAXRecords {

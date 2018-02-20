@@ -21,6 +21,16 @@ type fakeClient struct {
 	containerStatPathFunc func(container, path string) (types.ContainerPathStat, error)
 	containerCopyFromFunc func(container, srcPath string) (io.ReadCloser, types.ContainerPathStat, error)
 	logFunc               func(string, types.ContainerLogsOptions) (io.ReadCloser, error)
+	waitFunc              func(string) (<-chan container.ContainerWaitOKBody, <-chan error)
+	containerListFunc     func(types.ContainerListOptions) ([]types.Container, error)
+	Version               string
+}
+
+func (f *fakeClient) ContainerList(_ context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	if f.containerListFunc != nil {
+		return f.containerListFunc(options)
+	}
+	return []types.Container{}, nil
 }
 
 func (f *fakeClient) ContainerInspect(_ context.Context, containerID string) (types.ContainerJSON, error) {
@@ -92,6 +102,17 @@ func (f *fakeClient) CopyFromContainer(_ context.Context, container, srcPath str
 func (f *fakeClient) ContainerLogs(_ context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 	if f.logFunc != nil {
 		return f.logFunc(container, options)
+	}
+	return nil, nil
+}
+
+func (f *fakeClient) ClientVersion() string {
+	return f.Version
+}
+
+func (f *fakeClient) ContainerWait(_ context.Context, container string, _ container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	if f.waitFunc != nil {
+		return f.waitFunc(container)
 	}
 	return nil, nil
 }

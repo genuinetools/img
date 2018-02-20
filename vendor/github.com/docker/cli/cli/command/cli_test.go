@@ -1,17 +1,18 @@
 package command
 
 import (
+	"crypto/x509"
 	"os"
 	"testing"
 
-	"crypto/x509"
-
+	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/cli/internal/test/testutil"
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/gotestyourself/gotestyourself/fs"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,9 +125,151 @@ func TestInitializeFromClient(t *testing.T) {
 
 			cli := &DockerCli{client: apiclient}
 			cli.initializeFromClient()
-			assert.Equal(t, defaultVersion, cli.defaultVersion)
-			assert.Equal(t, testcase.expectedServer, cli.server)
+			assert.Equal(t, testcase.expectedServer, cli.serverInfo)
 			assert.Equal(t, testcase.negotiated, apiclient.negotiated)
+		})
+	}
+}
+
+func TestExperimentalCLI(t *testing.T) {
+	defaultVersion := "v1.55"
+
+	var testcases = []struct {
+		doc                     string
+		configfile              string
+		expectedExperimentalCLI bool
+	}{
+		{
+			doc:                     "default",
+			configfile:              `{}`,
+			expectedExperimentalCLI: false,
+		},
+		{
+			doc: "experimental",
+			configfile: `{
+	"experimental": "enabled"
+}`,
+			expectedExperimentalCLI: true,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.doc, func(t *testing.T) {
+			dir := fs.NewDir(t, testcase.doc, fs.WithFile("config.json", testcase.configfile))
+			defer dir.Remove()
+			apiclient := &fakeClient{
+				version: defaultVersion,
+			}
+
+			cli := &DockerCli{client: apiclient, err: os.Stderr}
+			cliconfig.SetDir(dir.Path())
+			err := cli.Initialize(flags.NewClientOptions())
+			assert.NoError(t, err)
+			assert.Equal(t, testcase.expectedExperimentalCLI, cli.ClientInfo().HasExperimental)
+		})
+	}
+}
+
+func TestOrchestratorSwitch(t *testing.T) {
+	defaultVersion := "v0.00"
+
+	var testcases = []struct {
+		doc                  string
+		configfile           string
+		envOrchestrator      string
+		flagOrchestrator     string
+		expectedOrchestrator string
+		expectedKubernetes   bool
+	}{
+		{
+			doc: "default",
+			configfile: `{
+				"experimental": "enabled"
+			}`,
+			expectedOrchestrator: "swarm",
+			expectedKubernetes:   false,
+		},
+		{
+			doc: "kubernetesIsExperimental",
+			configfile: `{
+				"experimental": "disabled",
+				"orchestrator": "kubernetes"
+			}`,
+			envOrchestrator:      "kubernetes",
+			flagOrchestrator:     "kubernetes",
+			expectedOrchestrator: "swarm",
+			expectedKubernetes:   false,
+		},
+		{
+			doc: "kubernetesConfigFile",
+			configfile: `{
+				"experimental": "enabled",
+				"orchestrator": "kubernetes"
+			}`,
+			expectedOrchestrator: "kubernetes",
+			expectedKubernetes:   true,
+		},
+		{
+			doc: "kubernetesEnv",
+			configfile: `{
+				"experimental": "enabled"
+			}`,
+			envOrchestrator:      "kubernetes",
+			expectedOrchestrator: "kubernetes",
+			expectedKubernetes:   true,
+		},
+		{
+			doc: "kubernetesFlag",
+			configfile: `{
+				"experimental": "enabled"
+			}`,
+			flagOrchestrator:     "kubernetes",
+			expectedOrchestrator: "kubernetes",
+			expectedKubernetes:   true,
+		},
+		{
+			doc: "envOverridesConfigFile",
+			configfile: `{
+				"experimental": "enabled",
+				"orchestrator": "kubernetes"
+			}`,
+			envOrchestrator:      "swarm",
+			expectedOrchestrator: "swarm",
+			expectedKubernetes:   false,
+		},
+		{
+			doc: "flagOverridesEnv",
+			configfile: `{
+				"experimental": "enabled"
+			}`,
+			envOrchestrator:      "kubernetes",
+			flagOrchestrator:     "swarm",
+			expectedOrchestrator: "swarm",
+			expectedKubernetes:   false,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.doc, func(t *testing.T) {
+			dir := fs.NewDir(t, testcase.doc, fs.WithFile("config.json", testcase.configfile))
+			defer dir.Remove()
+			apiclient := &fakeClient{
+				version: defaultVersion,
+			}
+			if testcase.envOrchestrator != "" {
+				defer patchEnvVariable(t, "DOCKER_ORCHESTRATOR", testcase.envOrchestrator)()
+			}
+
+			cli := &DockerCli{client: apiclient, err: os.Stderr}
+			cliconfig.SetDir(dir.Path())
+			options := flags.NewClientOptions()
+			if testcase.flagOrchestrator != "" {
+				options.Common.Orchestrator = testcase.flagOrchestrator
+			}
+			err := cli.Initialize(options)
+			assert.NoError(t, err)
+			assert.Equal(t, testcase.expectedKubernetes, cli.ClientInfo().HasKubernetes())
+			assert.Equal(t, testcase.expectedOrchestrator, string(cli.ClientInfo().Orchestrator))
 		})
 	}
 }
