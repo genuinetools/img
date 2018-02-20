@@ -1,12 +1,16 @@
 # img
 
-Standalone, Daemonless Dockerfile and OCI compatible container image builder.
+Standalone, Daemon-less, unprivileged (with FUSE) Dockerfile and OCI compatible
+container image builder.
 
-**Goals: Runs completely in userspace. Currently not possible with FUSE problems, but working on it.**
+**The FUSE backend runs completely in userspace. It is a bit buggy and a work
+in progress so hang tight.**
 
 ## Installation
 
-You also need to have `fusermount` and `runc` installed.
+You need to have `runc` installed.
+
+For the FUSE backend, you will also need `fusermount` installed.
 
 #### Binaries
 
@@ -25,6 +29,8 @@ $ docker run -rm -it \
     --name img \
     --volume $(pwd):/src \
     --workdir /src \
+    --privileged \
+    --volume "${HOME}/.docker:/root/.docker:ro" \
     r.j3ss.co/img build -t user/myimage .
 ```
 
@@ -51,6 +57,7 @@ Build an image from a Dockerfile.
 
 Flags:
 
+  -backend    backend for snapshots (default: overlayfs)
   -build-arg  Set build-time variables (default: [])
   -d          enable debug logging (default: false)
   -f          Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
@@ -102,12 +109,13 @@ List images and digests.
 
 Flags:
 
+  -backend    backend for snapshots (default: overlayfs)
   -d  enable debug logging (default: false)
   -f  Filter output based on conditions provided (snapshot ID supported) (default: <none>)
 ```
 
 ```console
-$ img ls
+$ img ls --backend=fuse
 ID                                                                      RECLAIMABLE     SIZE            LAST ACCESSED
 sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6 true            365.9KiB
 sha256:aa74a6c91df06c8a41629caf62cc5f2dbb8f6a8f278aff042bd45ad1cc573b8d true            297.9KiB
@@ -147,11 +155,12 @@ Pull an image or a repository from a registry.
 
 Flags:
 
+  -backend    backend for snapshots (default: overlayfs)
   -d  enable debug logging (default: false)
 ```
 
 ```console
-$ img pull r.j3ss.co/stress
+$ img pull --backend=fuse r.j3ss.co/stress
 Pulling r.j3ss.co/stress:latest...
 Snapshot ref: sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6
 Size: 365.9KiB

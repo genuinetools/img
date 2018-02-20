@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
@@ -13,9 +12,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	defaultBackend = "overlayfs"
+)
+
 var (
-	debug                 bool
+	backend string
+	debug   bool
+
 	defaultStateDirectory = "/tmp/img"
+
+	validBackends = []string{defaultBackend, "fuse"}
 )
 
 func init() {
@@ -83,6 +90,7 @@ func main() {
 			// Build flag set with global flags in there.
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
 			fs.BoolVar(&debug, "d", false, "enable debug logging")
+			fs.StringVar(&backend, "backend", defaultBackend, "backend for snapshots")
 
 			// Register the subcommand flags in there, too.
 			command.Register(fs)
@@ -99,6 +107,18 @@ func main() {
 			// set log level
 			if debug {
 				logrus.SetLevel(logrus.DebugLevel)
+			}
+
+			// Make sure we have a valid backend.
+			found := false
+			for _, vb := range validBackends {
+				if vb == backend {
+					found = true
+					break
+				}
+			}
+			if !found {
+				logrus.Fatalf("%s is not a valid snapshots backend", backend)
 			}
 
 			// Run the command with the post-flag-processing args.
@@ -145,17 +165,4 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 			fmt.Fprintln(os.Stderr, flagBlock.String())
 		}
 	}
-}
-
-func getHomeDir() (string, error) {
-	home := os.Getenv(homeKey)
-	if home != "" {
-		return home, nil
-	}
-
-	u, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-	return u.HomeDir, nil
 }

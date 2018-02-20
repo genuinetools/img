@@ -4,14 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 	"text/tabwriter"
 
 	units "github.com/docker/go-units"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/util/appcontext"
-	"github.com/sirupsen/logrus"
 )
 
 const listShortHelp = `List images and digests.`
@@ -39,23 +36,11 @@ func (cmd *listCommand) Run(args []string) (err error) {
 
 	// Create the controller.
 	c, fuseserver, err := createController(cmd)
+	defer unmount(fuseserver)
 	if err != nil {
 		return err
 	}
-	defer fuseserver.Unmount()
-	// On ^C, or SIGTERM handle exit.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	signal.Notify(ch, syscall.SIGTERM)
-	go func() {
-		for sig := range ch {
-			if err := fuseserver.Unmount(); err != nil {
-				logrus.Errorf("Unmounting FUSE server failed: %v", err)
-			}
-			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
-			os.Exit(1)
-		}
-	}()
+	handleSignals(fuseserver)
 
 	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filter})
 	if err != nil {
@@ -97,11 +82,6 @@ func (cmd *listCommand) Run(args []string) (err error) {
 		fmt.Fprintf(tw, "Reclaimable:\t%s\n", units.BytesSize(float64(reclaimable)))
 		fmt.Fprintf(tw, "Total:\t%s\n", units.BytesSize(float64(total)))
 		tw.Flush()
-	}
-
-	// Unmount the fuseserver.
-	if err := fuseserver.Unmount(); err != nil {
-		return fmt.Errorf("Unmounting FUSE server failed: %v", err)
 	}
 
 	return nil

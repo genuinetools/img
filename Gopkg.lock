@@ -53,7 +53,7 @@
   revision = "84eeaae905fa414d03e07bcd6c8d3f19e7cf180e"
 
 [[projects]]
-  branch = "drop-privs"
+  branch = "master"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -65,6 +65,8 @@
     "diff/apply",
     "diff/walking",
     "errdefs",
+    "events",
+    "events/exchange",
     "filters",
     "gc",
     "identifiers",
@@ -79,34 +81,39 @@
     "namespaces",
     "oci",
     "platforms",
+    "plugin",
     "reference",
     "remotes",
     "remotes/docker",
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
+    "snapshots/overlay",
     "snapshots/storage",
     "sys"
   ]
-  revision = "5aa14535cffa99b7cbdbe277f3e74273f9fccddd"
-  source = "github.com/jessfraz/containerd"
+  revision = "5a86e83d83f2313338f7530d2ee2b87bf3d50bb7"
 
 [[projects]]
-  branch = "drop-privs"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
     "pathdriver",
     "sysx"
   ]
-  revision = "a03e9da26a1389f8bdb3bc90fbe27a4688cc2a56"
-  source = "github.com/jessfraz/continuity"
+  revision = "992a5f112bd2211d0983a1cc8562d2882848f3a3"
 
 [[projects]]
   branch = "master"
   name = "github.com/containerd/go-runc"
   packages = ["."]
   revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containerd/typeurl"
+  packages = ["."]
+  revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
 
 [[projects]]
   branch = "go1.10"
@@ -123,7 +130,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "f56265ae3e58b3e4b1809a9f85b0959216fb0405"
+  revision = "e34ca9740eca8bab9db1a0ddaf830dc994736eb7"
 
 [[projects]]
   branch = "master"
@@ -147,6 +154,7 @@
   revision = "6664ec703991875e14419ff4960921cce7678bab"
 
 [[projects]]
+  branch = "master"
   name = "github.com/docker/docker"
   packages = [
     "api/types",
@@ -182,7 +190,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "master"
+  revision = "eb033c11753872c6269304d8127dbfe7315e476f"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -204,6 +212,12 @@
   ]
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/docker/go-events"
+  packages = ["."]
+  revision = "9461782956ad83b30282bf90e31fa6a70c255ba9"
 
 [[projects]]
   branch = "master"
@@ -589,6 +603,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "61a6440522b179012263499e59840d423de0a74b99ea4391b7f0d397e1aad744"
+  inputs-digest = "dbd8fe74927a7e0045210375812e79f2d290bd4e674c68877111af60bf92041a"
   solver-name = "gps-cdcl"
   solver-version = 1

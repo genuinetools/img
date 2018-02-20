@@ -2,9 +2,11 @@ package mount
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 
+	"github.com/containerd/containerd/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // Mount is the lingua franca of containerd. A mount represents a
@@ -34,7 +36,7 @@ func All(mounts []Mount, target string) error {
 // The mounts are valid during the call to the f.
 // Finally we will unmount and remove the temp dir regardless of the result of f.
 func WithTempMount(ctx context.Context, mounts []Mount, f func(root string) error) (err error) {
-	/*root, uerr := ioutil.TempDir("", "containerd-WithTempMount")
+	root, uerr := ioutil.TempDir("", "containerd-WithTempMount")
 	if uerr != nil {
 		return errors.Wrapf(uerr, "failed to create temp dir")
 	}
@@ -46,29 +48,25 @@ func WithTempMount(ctx context.Context, mounts []Mount, f func(root string) erro
 	// from the mounted dir.
 	// For details, please refer to #1868 #1785.
 	defer func() {
-		if uerr = os.RemoveAll(root); uerr != nil {
+		if uerr = os.Remove(root); uerr != nil {
 			log.G(ctx).WithError(uerr).WithField("dir", root).Errorf("failed to remove mount temp dir")
 		}
-	}()*/
+	}()
 
-	if len(mounts) > 1 {
-		logrus.Fatalf("mounts (%d): %#v", len(mounts), mounts)
-	}
 	// We should do defer first, if not we will not do Unmount when only a part of Mounts are failed.
-	/*	defer func() {
-			if uerr = UnmountAll(root, 0); uerr != nil {
-				uerr = errors.Wrapf(uerr, "failed to unmount %s", root)
-				if err == nil {
-					err = uerr
-				} else {
-					err = errors.Wrap(err, uerr.Error())
-				}
+	defer func() {
+		if uerr = UnmountAll(root, 0); uerr != nil {
+			uerr = errors.Wrapf(uerr, "failed to unmount %s", root)
+			if err == nil {
+				err = uerr
+			} else {
+				err = errors.Wrap(err, uerr.Error())
 			}
-		}()
-		if uerr = All(mounts, root); uerr != nil {
-			return errors.Wrapf(uerr, "failed to mount %s", root)
 		}
-	*/
+	}()
+	if uerr = All(mounts, root); uerr != nil {
+		return errors.Wrapf(uerr, "failed to mount %s", root)
+	}
 
-	return errors.Wrapf(f(mounts[0].Source), "mount callback failed on %s", mounts[0].Source)
+	return errors.Wrapf(f(root), "mount callback failed on %s", root)
 }

@@ -3,10 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	units "github.com/docker/go-units"
 	"github.com/hanwen/go-fuse/fuse"
@@ -15,7 +12,6 @@ import (
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/appcontext"
-	"github.com/sirupsen/logrus"
 )
 
 const pullShortHelp = `Pull an image or a repository from a registry.`
@@ -58,23 +54,11 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 	// Create the source manager.
 	sm, fuseserver, err := createSouceManager()
+	defer unmount(fuseserver)
 	if err != nil {
 		return err
 	}
-	defer fuseserver.Unmount()
-	// On ^C, or SIGTERM handle exit.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	go func() {
-		for sig := range c {
-			if err := fuseserver.Unmount(); err != nil {
-				logrus.Errorf("Unmounting FUSE server failed: %v", err)
-			}
-			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
-			os.Exit(1)
-		}
-	}()
+	handleSignals(fuseserver)
 
 	// Resolve (ie. pull) the image.
 	si, err := sm.Resolve(ctx, identifier)
@@ -98,17 +82,12 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	}
 	fmt.Printf("Size: %s\n", units.BytesSize(float64(size)))
 
-	// Unmount the fuseserver.
-	if err := fuseserver.Unmount(); err != nil {
-		return fmt.Errorf("Unmounting FUSE server failed: %v", err)
-	}
-
 	return nil
 }
 
 func createSouceManager() (*source.Manager, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory)
+	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
 	if err != nil {
 		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}

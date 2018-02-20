@@ -1,4 +1,4 @@
-// +build freebsd openbsd solaris
+// +build freebsd solaris
 
 package sysx
 

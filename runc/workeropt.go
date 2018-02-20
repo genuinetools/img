@@ -12,6 +12,7 @@ import (
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
+	"github.com/containerd/containerd/snapshots/overlay"
 	libfuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/snapshots/fuse"
 	"github.com/moby/buildkit/cache/metadata"
@@ -20,11 +21,11 @@ import (
 )
 
 // NewWorkerOpt creates a WorkerOpt.
-func NewWorkerOpt(root string) (opt base.WorkerOpt, fuseserver *libfuse.Server, err error) {
-	name := "runc-fuse"
+func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse.Server, err error) {
+	name := "runc"
 
 	// Create the root/
-	root = filepath.Join(root, name)
+	root = filepath.Join(root, name, backend)
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return opt, nil, err
 	}
@@ -42,9 +43,19 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, fuseserver *libfuse.Server, 
 	}
 
 	// Create the snapshotter.
-	s, fuseserver, err := fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
+	var (
+		s ctdsnapshot.Snapshotter
+	)
+	switch backend {
+	case "fuse":
+		s, fuseserver, err = fuse.NewSnapshotter(root)
+	case "overlayfs":
+		s, err = overlay.NewSnapshotter(root)
+	default:
+		return opt, nil, fmt.Errorf("%s is not a valid snapshots backend", backend)
+	}
 	if err != nil {
-		return opt, fuseserver, fmt.Errorf("creating snapshotter failed: %v", err)
+		return opt, fuseserver, fmt.Errorf("creating %s snapshotter failed: %v", backend, err)
 	}
 
 	// Create the content store locally.
@@ -61,7 +72,7 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, fuseserver *libfuse.Server, 
 
 	// Create the new database for metadata.
 	mdb := ctdmetadata.NewDB(db, c, map[string]ctdsnapshot.Snapshotter{
-		"fuse": s,
+		backend: s,
 	})
 	if err := mdb.Init(context.TODO()); err != nil {
 		return opt, fuseserver, err
@@ -79,14 +90,14 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, fuseserver *libfuse.Server, 
 		return opt, fuseserver, err
 	}
 
-	xlabels := base.Labels("oci", "fuse")
+	xlabels := base.Labels("oci", backend)
 
 	opt = base.WorkerOpt{
 		ID:            id,
 		Labels:        xlabels,
 		MetadataStore: md,
 		Executor:      exe,
-		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter("fuse"), c, md, "buildkit", gc),
+		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter(backend), c, md, "buildkit", gc),
 		ContentStore:  c,
 		Applier:       apply.NewFileSystemApplier(c),
 		Differ:        walking.NewWalkingDiff(c),

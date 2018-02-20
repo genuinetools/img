@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"os/user"
 	"path/filepath"
+	"syscall"
 
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/runc"
@@ -10,11 +14,12 @@ import (
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/dockerfile"
 	"github.com/moby/buildkit/worker"
+	"github.com/sirupsen/logrus"
 )
 
 func createController(cmd command) (*control.Controller, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory)
+	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
 	if err != nil {
 		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
@@ -61,5 +66,53 @@ func getLocalDirs(c command) map[string]string {
 	return map[string]string{
 		"context":    cmd.contextDir,
 		"dockerfile": filepath.Dir(file),
+	}
+}
+
+func getHomeDir() (string, error) {
+	home := os.Getenv(homeKey)
+	if home != "" {
+		return home, nil
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return u.HomeDir, nil
+}
+
+// On ^C, SIGTERM, etc handle exit.
+func handleSignals(fuseserver *fuse.Server) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGQUIT)
+	go func() {
+		for sig := range ch {
+			if fuseserver == nil {
+				logrus.Infof("Received %s, shutting down", sig.String())
+				os.Exit(1)
+			}
+
+			if err := fuseserver.Unmount(); err != nil {
+				logrus.Errorf("Unmounting FUSE server failed: %v", err)
+			}
+			logrus.Infof("Received %s, unmounting FUSE Server", sig.String())
+			os.Exit(1)
+		}
+	}()
+}
+
+// Unmount the fuseserver.
+func unmount(fuseserver *fuse.Server) {
+	if fuseserver == nil {
+		return
+	}
+
+	if err := fuseserver.Unmount(); err != nil {
+		logrus.Errorf("Unmounting FUSE server failed: %v", err)
 	}
 }

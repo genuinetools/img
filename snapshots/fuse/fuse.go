@@ -31,10 +31,6 @@ type snapshotter struct {
 	server *fuse.Server
 }
 
-type snapshotFs struct {
-	pathfs.FileSystem
-}
-
 // NewSnapshotter returns a Snapshotter using fuse, which copies layers on the underlying
 // file system. A metadata file is stored under the root.
 // Root needs to be a mount point of fuse.
@@ -56,8 +52,8 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 	debug := logrus.GetLevel() == logrus.DebugLevel
 
 	ufsOptions := unionfs.UnionFsOptions{
-		DeletionCacheTTL: time.Duration(5 * time.Second),
-		BranchCacheTTL:   time.Duration(5 * time.Second),
+		DeletionCacheTTL: 5 * time.Second,
+		BranchCacheTTL:   5 * time.Second,
 		DeletionDirName:  "GOUNIONFS_DELETIONS",
 	}
 	ufs, err := unionfs.NewUnionFsFromRoots([]string{rw, ro}, &ufsOptions, true)
@@ -66,9 +62,9 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 	}
 	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true, Debug: debug})
 	mOpts := nodefs.Options{
-		EntryTimeout:    time.Duration(10 * time.Second),
-		AttrTimeout:     time.Duration(10 * time.Second),
-		NegativeTimeout: time.Duration(10 * time.Second),
+		EntryTimeout:    10 * time.Second,
+		AttrTimeout:     10 * time.Second,
+		NegativeTimeout: 10 * time.Second,
 		PortableInodes:  false, // Use sequential 32-bit inode numbers.
 		Debug:           debug,
 	}
