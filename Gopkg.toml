@@ -52,7 +52,8 @@
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  branch = "master"
+  branch = "drop-privs"
+  source = "github.com/jessfraz/containerd"
 
 [[constraint]]
   name = "github.com/opencontainers/runc"

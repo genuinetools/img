@@ -47,7 +47,7 @@
   revision = "84eeaae905fa414d03e07bcd6c8d3f19e7cf180e"
 
 [[projects]]
-  branch = "master"
+  branch = "drop-privs"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -85,7 +85,8 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "6a50dca19687386b966a486e6ec7ca1e940580ee"
+  revision = "fd181a824bb602fbb52f8dd2b4863080153b4b7b"
+  source = "github.com/jessfraz/containerd"
 
 [[projects]]
   name = "github.com/containerd/continuity"
@@ -547,6 +548,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e01e46010eceb7dafbf2080b6f03a45783a03265c98c4446224c438d63fb800c"
+  inputs-digest = "58e5ff94f2dfd8481d2213db7409f08530c4993c28d1788434a9ae2cb8bb8aaa"
   solver-name = "gps-cdcl"
   solver-version = 1
