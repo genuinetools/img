@@ -12,8 +12,6 @@ import (
 
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/mount"
-	"github.com/containerd/containerd/platforms"
-	"github.com/containerd/containerd/plugin"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/storage"
 	"github.com/containerd/continuity/fs"
@@ -24,18 +22,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	plugin.Register(&plugin.Registration{
-		Type: plugin.SnapshotPlugin,
-		ID:   "fuse",
-		InitFn: func(ic *plugin.InitContext) (interface{}, error) {
-			ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
-			ic.Meta.Exports = map[string]string{"root": ic.Root}
-			return NewSnapshotter(ic.Root)
-		},
-	})
-}
 
 type snapshotter struct {
 	device string // device of the root
@@ -52,10 +38,10 @@ type snapshotFs struct {
 // NewSnapshotter returns a Snapshotter using fuse, which copies layers on the underlying
 // file system. A metadata file is stored under the root.
 // Root needs to be a mount point of fuse.
-func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
+func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 	// Check if the directory exists.
 	if err := newSnapshotDir(root); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var (
 		ro = filepath.Join(os.TempDir(), "img", "fuse-ro")
@@ -67,7 +53,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 		rw,
 	} {
 		if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -81,7 +67,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	}
 	ufs, err := unionfs.NewUnionFsFromRoots([]string{rw, ro}, &ufsOptions, true)
 	if err != nil {
-		return nil, fmt.Errorf("Create FUSE UnionFS failed: %v", err)
+		return nil, nil, fmt.Errorf("Create FUSE UnionFS failed: %v", err)
 	}
 	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true, Debug: debug})
 	mOpts := nodefs.Options{
@@ -93,7 +79,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	}
 	state, _, err := nodefs.MountRoot(root, nodeFs.Root(), &mOpts)
 	if err != nil {
-		return nil, fmt.Errorf("FUSE mount to root %s failed: %v", root, err)
+		return nil, state, fmt.Errorf("FUSE mount to root %s failed: %v", root, err)
 	}
 
 	go func() {
@@ -103,19 +89,19 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 
 	mnt, err := mount.Lookup(root)
 	if err != nil {
-		return nil, err
+		return nil, state, err
 	}
 	if mnt.FSType != "fuse.pathfs.pathInode" {
-		return nil, fmt.Errorf("path %s must be a fuse filesystem to be used with the fuse snapshotter, got %s", root, mnt.FSType)
+		return nil, state, fmt.Errorf("path %s must be a fuse filesystem to be used with the fuse snapshotter, got %s", root, mnt.FSType)
 	}
 
 	if err := os.Mkdir(filepath.Join(root, "snapshots"), 0755); err != nil && !os.IsExist(err) {
-		return nil, err
+		return nil, state, err
 	}
 
 	ms, err := storage.NewMetaStore(filepath.Join(root, "metadata.db"))
 	if err != nil {
-		return nil, err
+		return nil, state, err
 	}
 
 	return &snapshotter{
@@ -124,7 +110,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 		ms:     ms,
 		fs:     nodeFs,
 		server: state,
-	}, nil
+	}, state, nil
 }
 
 // Stat returns the info for an active or committed snapshot by name or

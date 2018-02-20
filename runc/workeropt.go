@@ -12,6 +12,7 @@ import (
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
+	libfuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/snapshots/fuse"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
@@ -19,43 +20,43 @@ import (
 )
 
 // NewWorkerOpt creates a WorkerOpt.
-func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
+func NewWorkerOpt(root string) (opt base.WorkerOpt, fuseserver *libfuse.Server, err error) {
 	name := "runc-fuse"
 
 	// Create the root/
 	root = filepath.Join(root, name)
 	if err := os.MkdirAll(root, 0700); err != nil {
-		return opt, err
+		return opt, nil, err
 	}
 
 	// Create the metadata store.
 	md, err := metadata.NewStore(filepath.Join(root, "metadata.db"))
 	if err != nil {
-		return opt, err
+		return opt, nil, err
 	}
 
 	// Create the runc executor.
 	exe, err := newExecutor(filepath.Join(root, "executor"))
 	if err != nil {
-		return opt, err
+		return opt, nil, err
 	}
 
 	// Create the snapshotter.
-	s, err := fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
+	s, fuseserver, err := fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
 	if err != nil {
-		return opt, fmt.Errorf("creating snapshotter failed: %v", err)
+		return opt, fuseserver, fmt.Errorf("creating snapshotter failed: %v", err)
 	}
 
 	// Create the content store locally.
 	c, err := local.NewStore(filepath.Join(root, "content"))
 	if err != nil {
-		return opt, err
+		return opt, fuseserver, err
 	}
 
 	// Open the bolt database for metadata.
 	db, err := bolt.Open(filepath.Join(root, "containerdmeta.db"), 0644, nil)
 	if err != nil {
-		return opt, err
+		return opt, fuseserver, err
 	}
 
 	// Create the new database for metadata.
@@ -63,7 +64,7 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 		"fuse": s,
 	})
 	if err := mdb.Init(context.TODO()); err != nil {
-		return opt, err
+		return opt, fuseserver, err
 	}
 
 	gc := func(ctx context.Context) error {
@@ -75,7 +76,7 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 
 	id, err := base.ID(root)
 	if err != nil {
-		return opt, err
+		return opt, fuseserver, err
 	}
 
 	xlabels := base.Labels("oci", "fuse")
@@ -91,5 +92,5 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 		Differ:        walking.NewWalkingDiff(c),
 		ImageStore:    nil, // explicitly
 	}
-	return opt, nil
+	return opt, fuseserver, nil
 }

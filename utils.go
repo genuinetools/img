@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/runc"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
@@ -11,24 +12,24 @@ import (
 	"github.com/moby/buildkit/worker"
 )
 
-func createController(cmd command) (*control.Controller, error) {
+func createController(cmd command) (*control.Controller, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
+	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
+		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
 
 	localDirs := getLocalDirs(cmd)
 
 	w, err := runc.NewWorker(opt, localDirs)
 	if err != nil {
-		return nil, err
+		return nil, fuseserver, err
 	}
 
 	// Create the worker controller.
 	wc := &worker.Controller{}
 	if err = wc.Add(w); err != nil {
-		return nil, err
+		return nil, fuseserver, err
 	}
 
 	// Add the frontends.
@@ -36,12 +37,13 @@ func createController(cmd command) (*control.Controller, error) {
 	frontends["dockerfile.v0"] = dockerfile.NewDockerfileFrontend()
 
 	// Create the controller.
-	return control.NewController(control.Opt{
+	controller, err := control.NewController(control.Opt{
 		WorkerController: wc,
 		Frontends:        frontends,
 		CacheExporter:    w.CacheExporter,
 		CacheImporter:    w.CacheImporter,
 	})
+	return controller, fuseserver, err
 }
 
 func getLocalDirs(c command) map[string]string {

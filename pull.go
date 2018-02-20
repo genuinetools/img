@@ -3,14 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	units "github.com/docker/go-units"
+	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/runc"
 	"github.com/jessfraz/img/source/containerimage"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/appcontext"
+	"github.com/sirupsen/logrus"
 )
 
 const pullShortHelp = `Pull an image or a repository from a registry.`
@@ -52,10 +57,24 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	}
 
 	// Create the source manager.
-	sm, err := createSouceManager()
+	sm, fuseserver, err := createSouceManager()
+	defer fuseserver.Unmount()
 	if err != nil {
 		return err
 	}
+	// On ^C, or SIGTERM handle exit.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			if err := fuseserver.Unmount(); err != nil {
+				logrus.Errorf("Unmounting FUSE server failed: %v", err)
+			}
+			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
+			os.Exit(1)
+		}
+	}()
 
 	// Resolve (ie. pull) the image.
 	si, err := sm.Resolve(ctx, identifier)
@@ -79,14 +98,19 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	}
 	fmt.Printf("Size: %s\n", units.BytesSize(float64(size)))
 
+	// Unmount the fuseserver.
+	if err := fuseserver.Unmount(); err != nil {
+		return fmt.Errorf("Unmounting FUSE server failed: %v", err)
+	}
+
 	return nil
 }
 
-func createSouceManager() (*source.Manager, error) {
+func createSouceManager() (*source.Manager, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
+	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
+		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
 
 	cm, err := cache.NewManager(cache.ManagerOpt{
@@ -94,12 +118,12 @@ func createSouceManager() (*source.Manager, error) {
 		MetadataStore: opt.MetadataStore,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fuseserver, err
 	}
 
 	sm, err := source.NewManager()
 	if err != nil {
-		return nil, err
+		return nil, fuseserver, err
 	}
 
 	is, err := containerimage.NewSource(containerimage.SourceOpt{
@@ -109,10 +133,10 @@ func createSouceManager() (*source.Manager, error) {
 		CacheAccessor: cm,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fuseserver, err
 	}
 
 	sm.Register(is)
 
-	return sm, nil
+	return sm, fuseserver, nil
 }

@@ -4,12 +4,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"github.com/sirupsen/logrus"
 )
 
 const buildShortHelp = `Build an image from a Dockerfile.`
@@ -65,10 +69,24 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, ref)
 
 	// Create the controller.
-	c, err := createController(cmd)
+	c, fuseserver, err := createController(cmd)
+	defer fuseserver.Unmount()
 	if err != nil {
 		return err
 	}
+	// On ^C, or SIGTERM handle exit.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	signal.Notify(ch, syscall.SIGTERM)
+	go func() {
+		for sig := range ch {
+			if err := fuseserver.Unmount(); err != nil {
+				logrus.Errorf("Unmounting FUSE server failed: %v", err)
+			}
+			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
+			os.Exit(1)
+		}
+	}()
 
 	// Create the frontend attrs.
 	frontendAttrs := map[string]string{
@@ -105,5 +123,11 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	}
 
 	fmt.Printf("Built and pushed image: %s\n", cmd.tag)
+
+	// Unmount the fuseserver.
+	if err := fuseserver.Unmount(); err != nil {
+		return fmt.Errorf("Unmounting FUSE server failed: %v", err)
+	}
+
 	return nil
 }
