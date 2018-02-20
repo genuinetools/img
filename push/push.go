@@ -28,8 +28,7 @@ func getCredentialsFunc(ctx context.Context, sm *session.Manager) func(string) (
 		return nil
 	}
 	return func(host string) (string, string, error) {
-		auth := auth.NewDockerAuthProvider()
-		creds, err := auth.Credentials(host)
+		creds, err := auth.DockerAuthCredentials(host)
 		if err != nil {
 			return "", "", err
 		}
@@ -38,8 +37,8 @@ func getCredentialsFunc(ctx context.Context, sm *session.Manager) func(string) (
 	}
 }
 
+// Push takes a digest and pushes it to a registry.
 func Push(ctx context.Context, sm *session.Manager, cs content.Store, dgst digest.Digest, ref string, insecure bool) error {
-
 	parsed, err := reference.ParseNormalizedNamed(ref)
 	if err != nil {
 		return err

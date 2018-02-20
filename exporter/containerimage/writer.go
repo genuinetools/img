@@ -28,20 +28,24 @@ const (
 	emptyGZLayer = digest.Digest("sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1")
 )
 
+// WriterOpt contains the options for the writer.
 type WriterOpt struct {
 	Snapshotter  snapshot.Snapshotter
 	ContentStore content.Store
 	Differ       diff.Comparer
 }
 
+// NewImageWriter returns a new ImageWriter.
 func NewImageWriter(opt WriterOpt) (*ImageWriter, error) {
 	return &ImageWriter{opt: opt}, nil
 }
 
+// ImageWriter holds the information about an ImageWriter.
 type ImageWriter struct {
 	opt WriterOpt
 }
 
+// Commit takes an image reference and commits it to the cache.
 func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte) (*ocispec.Descriptor, error) {
 	layersDone := oneOffProgress(ctx, "exporting layers")
 	diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref)
@@ -130,6 +134,7 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 	}, nil
 }
 
+// ContentStore returns the content store.
 func (ic *ImageWriter) ContentStore() content.Store {
 	return ic.opt.ContentStore
 }
@@ -194,7 +199,7 @@ func normalizeLayersAndHistory(diffs []blobs.DiffPair, history []ocispec.History
 	var historyLayers int
 	for _, h := range history {
 		if !h.EmptyLayer {
-			historyLayers += 1
+			historyLayers++
 		}
 	}
 	if historyLayers > len(diffs) {

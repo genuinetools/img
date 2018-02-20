@@ -31,9 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: break apart containerd specifics like contentstore so the resolver
-// code can be used with any implementation
-
+// SourceOpt contains the options for the container image source.
 type SourceOpt struct {
 	SessionManager *session.Manager
 	Snapshotter    snapshot.Snapshotter
@@ -47,6 +45,7 @@ type imageSource struct {
 	g flightcontrol.Group
 }
 
+// NewSource returns a new source object.
 func NewSource(opt SourceOpt) (source.Source, error) {
 	is := &imageSource{
 		SourceOpt: opt,
@@ -72,8 +71,7 @@ func (is *imageSource) getCredentialsFromSession(ctx context.Context) func(strin
 		return nil
 	}
 	return func(host string) (string, string, error) {
-		auth := auth.NewDockerAuthProvider()
-		creds, err := auth.Credentials(host)
+		creds, err := auth.DockerAuthCredentials(host)
 		if err != nil {
 			return "", "", err
 		}

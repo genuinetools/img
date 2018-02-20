@@ -164,14 +164,17 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 	}, nil
 }
 
+// ID returns the worker ID.
 func (w *Worker) ID() string {
 	return w.WorkerOpt.ID
 }
 
+// Labels returns the worker labels.
 func (w *Worker) Labels() map[string]string {
 	return w.WorkerOpt.Labels
 }
 
+// ResolveOp resolves a vertex returning an option.
 func (w *Worker) ResolveOp(v solver.Vertex, s worker.SubBuilder) (solver.Op, error) {
 	switch op := v.Sys().(type) {
 	case *pb.Op_Source:
@@ -185,6 +188,7 @@ func (w *Worker) ResolveOp(v solver.Vertex, s worker.SubBuilder) (solver.Op, err
 	}
 }
 
+// ResolveImageConfig resolves an image config.
 func (w *Worker) ResolveImageConfig(ctx context.Context, ref string) (digest.Digest, []byte, error) {
 	// ImageSource is typically source/containerimage
 	resolveImageConfig, ok := w.ImageSource.(resolveImageConfig)
@@ -198,6 +202,7 @@ type resolveImageConfig interface {
 	ResolveImageConfig(ctx context.Context, ref string) (digest.Digest, []byte, error)
 }
 
+// Exec executes a worker.
 func (w *Worker) Exec(ctx context.Context, meta executor.Meta, rootFS cache.ImmutableRef, stdin io.ReadCloser, stdout, stderr io.WriteCloser) error {
 	active, err := w.CacheManager.New(ctx, rootFS)
 	if err != nil {
@@ -207,14 +212,17 @@ func (w *Worker) Exec(ctx context.Context, meta executor.Meta, rootFS cache.Immu
 	return w.Executor.Exec(ctx, meta, active, nil, stdin, stdout, stderr)
 }
 
+// DiskUsage returns the disk usage.
 func (w *Worker) DiskUsage(ctx context.Context, opt client.DiskUsageInfo) ([]*client.UsageInfo, error) {
 	return w.CacheManager.DiskUsage(ctx, opt)
 }
 
+// Prune cleans the cache.
 func (w *Worker) Prune(ctx context.Context, ch chan client.UsageInfo) error {
 	return w.CacheManager.Prune(ctx, ch)
 }
 
+// Exporter returns a given exporter that matches the name that is passed.
 func (w *Worker) Exporter(name string) (exporter.Exporter, error) {
 	exp, ok := w.Exporters[name]
 	if !ok {
@@ -223,11 +231,12 @@ func (w *Worker) Exporter(name string) (exporter.Exporter, error) {
 	return exp, nil
 }
 
+// InstructionCache returns the cache.
 func (w *Worker) InstructionCache() instructioncache.InstructionCache {
 	return w.cache
 }
 
-// utility function. could be moved to the constructor logic?
+// Labels is autility function to create the runtime specific label opject applied to a worker.
 func Labels(executor, snapshotter string) map[string]string {
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -244,7 +253,7 @@ func Labels(executor, snapshotter string) map[string]string {
 }
 
 // ID reads the worker id from the `workerid` file.
-// If not exist, it creates a random one,
+// If it does not exist, it creates a random one,
 func ID(root string) (string, error) {
 	f := filepath.Join(root, "workerid")
 	b, err := ioutil.ReadFile(f)
@@ -253,9 +262,10 @@ func ID(root string) (string, error) {
 			id := identity.NewID()
 			err := ioutil.WriteFile(f, []byte(id), 0400)
 			return id, err
-		} else {
-			return "", err
 		}
+
+		return "", err
 	}
+
 	return string(b), nil
 }

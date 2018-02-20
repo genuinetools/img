@@ -4,28 +4,22 @@ import (
 	"io/ioutil"
 
 	"github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
 	"github.com/moby/buildkit/session/auth"
 )
 
-func NewDockerAuthProvider() *authProvider {
-	return &authProvider{
-		config: config.LoadDefaultConfigFile(ioutil.Discard),
-	}
-}
-
-type authProvider struct {
-	config *configfile.ConfigFile
-}
-
-func (ap *authProvider) Credentials(host string) (*auth.CredentialsResponse, error) {
+// DockerAuthCredentials returns the authentication credentials for the registry host passed..
+func DockerAuthCredentials(host string) (*auth.CredentialsResponse, error) {
 	if host == "registry-1.docker.io" {
 		host = "https://index.docker.io/v1/"
 	}
-	ac, err := ap.config.GetAuthConfig(host)
+
+	c := config.LoadDefaultConfigFile(ioutil.Discard)
+
+	ac, err := c.GetAuthConfig(host)
 	if err != nil {
 		return nil, err
 	}
+
 	res := &auth.CredentialsResponse{}
 	if ac.IdentityToken != "" {
 		res.Secret = ac.IdentityToken
@@ -33,5 +27,6 @@ func (ap *authProvider) Credentials(host string) (*auth.CredentialsResponse, err
 		res.Username = ac.Username
 		res.Secret = ac.Password
 	}
+
 	return res, nil
 }

@@ -53,7 +53,6 @@ func (w *dynamicWalker) fill(ctx context.Context, pathC chan<- *currentPath) err
 			return ctx.Err()
 		}
 	}
-	return nil
 }
 
 func getWalkerFn(root string) walkerFn {

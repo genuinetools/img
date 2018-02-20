@@ -20,6 +20,7 @@ const (
 	exporterImageConfig = "containerimage.config"
 )
 
+// Opt contains the options for the container image exporter.
 type Opt struct {
 	SessionManager *session.Manager
 	ImageWriter    *ImageWriter
@@ -30,11 +31,13 @@ type imageExporter struct {
 	opt Opt
 }
 
+// New returns a new container image exporter.
 func New(opt Opt) (exporter.Exporter, error) {
 	im := &imageExporter{opt: opt}
 	return im, nil
 }
 
+// Resolve returns an exporter instance.
 func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exporter.ExporterInstance, error) {
 	i := &imageExporterInstance{imageExporter: e}
 	for k, v := range opt {
@@ -66,6 +69,7 @@ func (e *imageExporterInstance) Name() string {
 	return "exporting to image"
 }
 
+// Export commits the image and pushes it to a registry if that option is passed.
 func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) error {
 	if config, ok := opt[exporterImageConfig]; ok {
 		e.config = config

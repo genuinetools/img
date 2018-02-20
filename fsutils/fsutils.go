@@ -16,34 +16,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// CopieFile copies a file src to destination.
-func CopyFile(src, dest string) error {
-	sf, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sf.Close()
-
-	df, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer df.Close()
-
-	if _, err = io.Copy(df, sf); err != nil {
-		return err
-	}
-
-	si, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	return os.Chmod(dest, si.Mode())
-}
-
 // CopyDir recursively copies a directory tree, attempting to preserve permissions.
-// src directory must exist, destination directory must *not* exist.
+// The source directory must exist, destination directory should *not* exist, unless we are updating the cache.
 func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdater) error {
 	st := time.Now()
 	defer func() {
@@ -92,7 +66,7 @@ func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdat
 
 		// perform copy
 		if _, err := io.Copy(wc, r); err != nil {
-			return fmt.Errorf("copy file %s -> %s failed:", sfp, dfp, err)
+			return fmt.Errorf("copy file %s -> %s failed: %v", sfp, dfp, err)
 		}
 
 		return wc.Close()
