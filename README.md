@@ -73,7 +73,7 @@ Flags:
 
 ```console
 $ sudo img build -t jess/img .
-Building jess/img...
+Building jess/img
 Setting up the rootfs... this may take a bit.
 RUN [/bin/sh -c apk add --no-cache      ca-certificates]
 --->

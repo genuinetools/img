@@ -92,7 +92,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "5a86e83d83f2313338f7530d2ee2b87bf3d50bb7"
+  revision = "129167132c5e0dbd1b031badae201a432d1bd681"
 
 [[projects]]
   branch = "drop-privs"
@@ -132,7 +132,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "e34ca9740eca8bab9db1a0ddaf830dc994736eb7"
+  revision = "bbe7f84540098a99c60b8f2c7514a7141da56d9b"
 
 [[projects]]
   branch = "master"
@@ -192,7 +192,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "eb033c11753872c6269304d8127dbfe7315e476f"
+  revision = "ee9abc212032353e19e5b0f5e6410ad67a0cc9b1"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -410,7 +410,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "a618ab5a0186905949ee463dbb762c3d23e12a80"
+  revision = "595bea022f077a9e17d7473b34fbaf1adaed9e43"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -605,6 +605,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9d6a3c0d8fabe9f31f781fd926c4f77ba74daa95fca95450eb06e199dc6c5c48"
+  inputs-digest = "d5324eb0e218180f068e719014e3aa885e038926f3c5bf1478668250f2624c29"
   solver-name = "gps-cdcl"
   solver-version = 1
