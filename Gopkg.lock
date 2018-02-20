@@ -95,13 +95,15 @@
   revision = "5a86e83d83f2313338f7530d2ee2b87bf3d50bb7"
 
 [[projects]]
+  branch = "drop-privs"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
     "pathdriver",
     "sysx"
   ]
-  revision = "992a5f112bd2211d0983a1cc8562d2882848f3a3"
+  revision = "a03e9da26a1389f8bdb3bc90fbe27a4688cc2a56"
+  source = "github.com/jessfraz/continuity"
 
 [[projects]]
   branch = "master"
@@ -603,6 +605,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dbd8fe74927a7e0045210375812e79f2d290bd4e674c68877111af60bf92041a"
+  inputs-digest = "9d6a3c0d8fabe9f31f781fd926c4f77ba74daa95fca95450eb06e199dc6c5c48"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -65,7 +65,8 @@
 
 [[override]]
   name = "github.com/containerd/continuity"
-  revision = "992a5f112bd2211d0983a1cc8562d2882848f3a3"
+  branch = "drop-privs"
+  source = "github.com/jessfraz/continuity"
 
 [[override]]
   name = "github.com/docker/libnetwork"
