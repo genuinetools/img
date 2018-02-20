@@ -1,6 +1,6 @@
 # img
 
-Standalone, Daemon-less, unprivileged (with FUSE) Dockerfile and OCI compatible
+Standalone, daemon-less, unprivileged (with FUSE) Dockerfile and OCI compatible
 container image builder.
 
 **The FUSE backend runs completely in userspace. It is a bit buggy and a work
