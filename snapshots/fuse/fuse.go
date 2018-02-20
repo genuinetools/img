@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/platforms"
@@ -21,6 +20,7 @@ import (
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/hanwen/go-fuse/unionfs"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {

@@ -33,37 +33,7 @@
       secure: "C78vOwW6YqKqSRYr+z2Rus2UsWaq57ntFKuORFo8UKw4eK5Nfbr4ysx5n47j0nyGE6SFGEGzlSQZtoHHQFzv6KTkK8PIkrewYLK8ESeEr09EjTgUjeU0olDHioMiI5z3xrb1rbLEVfOY/axyqRovKgqlTIRf8eRm0jdlNaFJ9v8bgxNMylKG24sezNhO+ORon66lYXrsZ10bd9mPyC4zYr5pV1OQjbxV1VB0ym3abRVSvlOtTUkG98ILLuO6FpHPbVYJcnnrDoTWvt2JxPkIECM2WShOlsiQdncO33CbOca6z6B6VYUAzPo1uzzsGn71MqeQV/wnqIZNj31F1wdSu72LxdjUfJSrKFnKckJGdxiS56OhFmC6v5YZeylruucUGM5dwpoKtH6SiR9QpoGWEkhrhTHyGa2QAoQovk1XRw0WQ7GrzpYK1LPOstuL37dPQLhENZ0O9yd0Tsm3YBzFSDP9J5lCyRuZv4ENDutxWs/oiGTNRp47PHYdANH7USG83UOpwSImZGQWBzWdSwfsWeGV4E0T0LLNSwVi5HeBSdTa+YAd62/PHaB5u+hDmcKEUodjWwMwUylO1m4wjqCinegC/RGkSLH2h3j8kUlWOSnyTrKhczyEaISixQsYBf1qwIj9nRf3XMHzXyxuBlqmNeHb9OZjD8lw8mLEmtlbBeI="
     file:
       - cross/img-linux-amd64.md5
-      - cross/img-windows-386.sha256
-      - cross/img-linux-arm
-      - cross/img-darwin-amd64.md5
-      - cross/img-darwin-amd64
-      - cross/img-solaris-amd64.md5
-      - cross/img-linux-arm64.sha256
-      - cross/img-linux-arm.sha256
-      - cross/img-linux-386.sha256
-      - cross/img-darwin-386.md5
-      - cross/img-windows-386.md5
-      - cross/img-freebsd-amd64.md5
-      - cross/img-linux-arm64.md5
-      - cross/img-linux-arm64
-      - cross/img-freebsd-amd64.sha256
-      - cross/img-freebsd-386.md5
       - cross/img-linux-amd64.sha256
-      - cross/img-linux-386.md5
-      - cross/img-freebsd-386
-      - cross/img-solaris-amd64.sha256
-      - cross/img-windows-amd64
-      - cross/img-windows-amd64.md5
-      - cross/img-windows-amd64.sha256
-      - cross/img-linux-arm.md5
-      - cross/img-darwin-386.sha256
-      - cross/img-darwin-amd64.sha256
-      - cross/img-windows-386
-      - cross/img-solaris-amd64
-      - cross/img-darwin-386
-      - cross/img-linux-386
-      - cross/img-freebsd-amd64
-      - cross/img-freebsd-386.sha256
       - cross/img-linux-amd64
     skip_cleanup: true
     on:

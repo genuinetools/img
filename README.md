@@ -4,6 +4,30 @@ Standalone, Daemonless Dockerfile and OCI compatible container image builder.
 
 **Goals: Runs completely in userspace. Currently not possible with FUSE problems, but working on it.**
 
+## Installation
+
+You also need to have `fusermount` and `runc` installed.
+
+#### Binaries
+
+- **linux** [amd64](https://github.com/jessfraz/img/releases/download/v0.0.0/img-linux-amd64)
+
+#### Via Go
+
+```bash
+$ go get github.com/jessfraz/img
+```
+
+#### Running with Docker
+
+```console
+$ docker run -rm -it \
+    --name img \
+    --volume $(pwd):/src \
+    --workdir /src \
+    r.j3ss.co/img build -t user/myimage .
+```
+
 ## Usage
 
 ```console
