@@ -48,9 +48,9 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 	)
 	switch backend {
 	case "fuse":
-		s, fuseserver, err = fuse.NewSnapshotter(root)
+		s, fuseserver, err = fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
 	case "overlayfs":
-		s, err = overlay.NewSnapshotter(root)
+		s, err = overlay.NewSnapshotter(filepath.Join(root, "snapshots"))
 	default:
 		return opt, nil, fmt.Errorf("%s is not a valid snapshots backend", backend)
 	}
