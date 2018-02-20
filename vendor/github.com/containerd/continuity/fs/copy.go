@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var bufferPool = &sync.Pool{
@@ -50,7 +51,8 @@ func copyDirectory(dst, src string, inodes map[uint64]string) error {
 	}
 
 	if err := copyFileInfo(stat, dst); err != nil {
-		return errors.Wrapf(err, "failed to copy file info for %s", dst)
+		logrus.Warnf("failed to copy file info for %s: %v", dst, err)
+		// return errors.Wrapf(err, "failed to copy file info for %s", dst)
 	}
 
 	for _, fi := range fis {
@@ -96,7 +98,8 @@ func copyDirectory(dst, src string, inodes map[uint64]string) error {
 		}
 
 		if err := copyXAttrs(target, source); err != nil {
-			return errors.Wrap(err, "failed to copy xattrs")
+			logrus.Warnf("failed to copy xattrs: %v", err)
+			// return errors.Wrap(err, "failed to copy xattrs")
 		}
 	}
 

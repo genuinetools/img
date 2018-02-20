@@ -71,7 +71,9 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 		}
 	}
 
-	// TODO: turn off debug output
+	// Set debug based off logrus.
+	debug := logrus.GetLevel() == logrus.DebugLevel
+
 	ufsOptions := unionfs.UnionFsOptions{
 		DeletionCacheTTL: time.Duration(5 * time.Second),
 		BranchCacheTTL:   time.Duration(5 * time.Second),
@@ -81,13 +83,13 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Create FUSE UnionFS failed: %v", err)
 	}
-	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true})
+	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true, Debug: debug})
 	mOpts := nodefs.Options{
 		EntryTimeout:    time.Duration(1 * time.Second),
 		AttrTimeout:     time.Duration(1 * time.Second),
 		NegativeTimeout: time.Duration(1 * time.Second),
 		PortableInodes:  false, // Use sequential 32-bit inode numbers.
-		Debug:           true,
+		Debug:           debug,
 	}
 	state, _, err := nodefs.MountRoot(root, nodeFs.Root(), &mOpts)
 	if err != nil {

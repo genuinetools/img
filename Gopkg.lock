@@ -25,8 +25,8 @@
 [[projects]]
   name = "github.com/Microsoft/hcsshim"
   packages = ["."]
-  revision = "45ef15484298b76abeb9513ea0ea0abd2b5b84b3"
-  version = "v0.6.8"
+  revision = "34a629f78a5d50f7de07727e41a948685c45e026"
+  version = "v0.6.7"
 
 [[projects]]
   branch = "master"
@@ -91,18 +91,19 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "cab1c40da1331da20ef4601bd3a6a1f4bebc6ab3"
+  revision = "5aa14535cffa99b7cbdbe277f3e74273f9fccddd"
   source = "github.com/jessfraz/containerd"
 
 [[projects]]
-  branch = "master"
+  branch = "drop-privs"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
     "pathdriver",
     "sysx"
   ]
-  revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
+  revision = "a1edcb62c8bb1067982251a32dbd69fcfc5f8958"
+  source = "github.com/jessfraz/continuity"
 
 [[projects]]
   branch = "master"
@@ -603,6 +604,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4cf4c8dea293d5876694825019edec08d057f264048d48bc60bfb541767f179b"
+  inputs-digest = "e372eff2f63715f1138ca2ef9314580181bf74c63b0e74bc0e6d02cba55b59d2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -57,6 +57,11 @@
   source = "github.com/jessfraz/containerd"
 
 [[constraint]]
+  name = "github.com/containerd/continuity"
+  branch = "drop-privs"
+  source = "github.com/jessfraz/continuity"
+
+[[constraint]]
   name = "github.com/opencontainers/runc"
   branch = "master"
 
