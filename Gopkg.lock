@@ -132,7 +132,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "bbe7f84540098a99c60b8f2c7514a7141da56d9b"
+  revision = "02e8dc6bfcf283322a767f711b3058c4032fb507"
 
 [[projects]]
   branch = "master"
@@ -605,6 +605,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d5324eb0e218180f068e719014e3aa885e038926f3c5bf1478668250f2624c29"
+  inputs-digest = "b1cdbd1c4f7e0930771014c6d42424cab054510c8f31a6326495c66e8994875b"
   solver-name = "gps-cdcl"
   solver-version = 1

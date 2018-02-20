@@ -16,15 +16,12 @@ import (
 	"github.com/moby/buildkit/util/appcontext"
 )
 
-const listShortHelp = `List images and digests.`
-
-// TODO: make the long help actually useful
-const listLongHelp = `List images and digests.`
+const listHelp = `List images and digests.`
 
 func (cmd *listCommand) Name() string      { return "ls" }
 func (cmd *listCommand) Args() string      { return "[OPTIONS]" }
-func (cmd *listCommand) ShortHelp() string { return listShortHelp }
-func (cmd *listCommand) LongHelp() string  { return listLongHelp }
+func (cmd *listCommand) ShortHelp() string { return listHelp }
+func (cmd *listCommand) LongHelp() string  { return listHelp }
 func (cmd *listCommand) Hidden() bool      { return false }
 
 func (cmd *listCommand) Register(fs *flag.FlagSet) {

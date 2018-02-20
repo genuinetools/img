@@ -75,3 +75,11 @@
 [[override]]
   name = "github.com/prometheus/client_golang"
   branch = "master"
+
+[[override]]
+  name = "github.com/docker/cli"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/docker/distribution"
+  branch = "master"

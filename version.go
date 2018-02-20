@@ -11,10 +11,8 @@ import (
 
 const versionHelp = `Show the version information.`
 
-func (cmd *versionCommand) Name() string { return "version" }
-func (cmd *versionCommand) Args() string {
-	return ""
-}
+func (cmd *versionCommand) Name() string      { return "version" }
+func (cmd *versionCommand) Args() string      { return "" }
 func (cmd *versionCommand) ShortHelp() string { return versionHelp }
 func (cmd *versionCommand) LongHelp() string  { return versionHelp }
 func (cmd *versionCommand) Hidden() bool      { return false }

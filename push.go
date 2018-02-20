@@ -16,15 +16,12 @@ import (
 	"github.com/moby/buildkit/util/appcontext"
 )
 
-const pushShortHelp = `Push an image or a repository to a registry.`
-
-// TODO: make the long help actually useful
-const pushLongHelp = `Push an image or a repository to a registry.`
+const pushHelp = `Push an image or a repository to a registry.`
 
 func (cmd *pushCommand) Name() string      { return "push" }
 func (cmd *pushCommand) Args() string      { return "[OPTIONS] NAME[:TAG]" }
-func (cmd *pushCommand) ShortHelp() string { return pushShortHelp }
-func (cmd *pushCommand) LongHelp() string  { return pushLongHelp }
+func (cmd *pushCommand) ShortHelp() string { return pushHelp }
+func (cmd *pushCommand) LongHelp() string  { return pushHelp }
 func (cmd *pushCommand) Hidden() bool      { return false }
 
 func (cmd *pushCommand) Register(fs *flag.FlagSet) {}

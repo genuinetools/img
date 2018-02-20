@@ -13,15 +13,12 @@ import (
 	"github.com/moby/buildkit/util/appcontext"
 )
 
-const buildShortHelp = `Build an image from a Dockerfile.`
-
-// TODO: make the long help actually useful
-const buildLongHelp = `Build an image from a Dockerfile.`
+const buildHelp = `Build an image from a Dockerfile.`
 
 func (cmd *buildCommand) Name() string      { return "build" }
 func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }
-func (cmd *buildCommand) ShortHelp() string { return buildShortHelp }
-func (cmd *buildCommand) LongHelp() string  { return buildLongHelp }
+func (cmd *buildCommand) ShortHelp() string { return buildHelp }
+func (cmd *buildCommand) LongHelp() string  { return buildHelp }
 func (cmd *buildCommand) Hidden() bool      { return false }
 
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
@@ -33,10 +30,11 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 
 type buildCommand struct {
 	buildArgs      stringSlice
-	contextDir     string
 	dockerfilePath string
 	target         string
 	tag            string
+
+	contextDir string
 }
 
 func (cmd *buildCommand) Run(args []string) (err error) {

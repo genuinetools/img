@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	defaultBackend = "overlayfs"
+	defaultBackend        = "overlayfs"
+	defaultDockerRegistry = "https://index.docker.io/v1/"
 )
 
 var (
@@ -62,6 +63,7 @@ func main() {
 		&buildCommand{},
 		&diskUsageCommand{},
 		&listCommand{},
+		&loginCommand{},
 		&pullCommand{},
 		&pushCommand{},
 		&versionCommand{},
