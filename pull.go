@@ -58,10 +58,10 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 	// Create the source manager.
 	sm, fuseserver, err := createSouceManager()
-	defer fuseserver.Unmount()
 	if err != nil {
 		return err
 	}
+	defer fuseserver.Unmount()
 	// On ^C, or SIGTERM handle exit.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

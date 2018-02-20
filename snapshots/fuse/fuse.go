@@ -412,11 +412,10 @@ func newSnapshotDir(root string) error {
 // unmount checks if root is already mounted (if we exited poorly) and unmounts it.
 func unmount(root string) {
 	_, err := mount.Lookup(root)
-	logrus.Printf("mount err %#v", err)
 	if err == nil {
 		cmd := exec.Command("fusermount", "-u", root)
 		out, err := cmd.CombinedOutput()
-		if err != nil {
+		if err != nil && !strings.Contains(string(out), "not found in /etc/mtab") {
 			logrus.Warnf("Calling `fusermount -u %s` failed: %s %v", root, string(out), err)
 		}
 	}

@@ -5,20 +5,27 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// TODO: change this to not be tmpfs
+var (
+	debug                 bool
 	defaultStateDirectory = "/tmp/img"
 )
 
-var (
-	debug bool
-)
+func init() {
+	home, err := getHomeDir()
+	if err != nil {
+		logrus.Warnf("Using (%s) as default state directory, getting home directory failed: %v", defaultStateDirectory, err)
+		return
+	}
+	defaultStateDirectory = filepath.Join(home, ".img")
+}
 
 type command interface {
 	Name() string           // "foobar"
@@ -138,4 +145,17 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 			fmt.Fprintln(os.Stderr, flagBlock.String())
 		}
 	}
+}
+
+func getHomeDir() (string, error) {
+	home := os.Getenv(homeKey)
+	if home != "" {
+		return home, nil
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return u.HomeDir, nil
 }

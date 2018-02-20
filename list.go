@@ -39,10 +39,10 @@ func (cmd *listCommand) Run(args []string) (err error) {
 
 	// Create the controller.
 	c, fuseserver, err := createController(cmd)
-	defer fuseserver.Unmount()
 	if err != nil {
 		return err
 	}
+	defer fuseserver.Unmount()
 	// On ^C, or SIGTERM handle exit.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
