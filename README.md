@@ -1,5 +1,7 @@
 # img
 
+[![Build Status](https://travis-ci.org/jessfraz/img.svg?branch=master)](https://travis-ci.org/jessfraz/img)
+
 Standalone, daemon-less, unprivileged (with FUSE) Dockerfile and OCI compatible
 container image builder.
 
