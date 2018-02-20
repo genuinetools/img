@@ -19,6 +19,7 @@ in progress so hang tight.**
     + [Push an Image](#push-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
+* [Contributing](#contributing)
 * [Acknowledgements](#acknowledgements)
 
 ## Installation
@@ -230,6 +231,10 @@ Flags:
   -password-stdin  Take the password from stdin (default: false)
   -u               Username (default: <none>)
 ```
+
+## Contributing
+
+Please do! This is a new project and can use some love <3 Checkout the [issues](https://github.com/jessfraz/img/issues).
 
 ## Acknowledgements
 
