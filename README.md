@@ -83,7 +83,7 @@ Flags:
 ```
 
 ```console
-$ sudo img ls
+$ img ls
 ID                                                                      RECLAIMABLE     SIZE            LAST ACCESSED
 sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6 true            365.9KiB
 sha256:aa74a6c91df06c8a41629caf62cc5f2dbb8f6a8f278aff042bd45ad1cc573b8d true            297.9KiB
