@@ -6,6 +6,19 @@ container image builder.
 **The FUSE backend runs completely in userspace. It is a bit buggy and a work
 in progress so hang tight.**
 
+* [Installation](#installation)
+    - [Binaries](#binaries)
+    - [Via Go](#via-go)
+    - [Running with Docker](#running-with-docker)
+* [Usage](#usage)
+    + [Build an Image](#build-an-image)
+    + [List Image Layers](#list-image-layers)
+    + [Pull an Image](#pull-an-image)
+    + [Push an Image](#push-an-image)
+    + [Disk Usage](#disk-usage)
+    + [Login to a Registry](#login-to-a-registry)
+* [Acknowledgements](#acknowledgements)
+
 ## Installation
 
 You need to have `runc` installed.
