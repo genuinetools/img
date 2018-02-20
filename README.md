@@ -25,8 +25,9 @@ $ go get github.com/jessfraz/img
 #### Running with Docker
 
 ```console
-$ docker run -rm -it \
+$ docker run --rm -it \
     --name img \
+    --volume /tmp/state:/root/.img \
     --volume $(pwd):/src \
     --workdir /src \
     --privileged \

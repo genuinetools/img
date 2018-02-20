@@ -141,11 +141,9 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		return fmt.Errorf("failed to create directory at %s: %v", newp, err)
 	}
 
+	// TODO: Current is not implemented everywhere.
 	curUser, err := user.Current()
-	if err != nil {
-		return err
-	}
-	if curUser.Uid != "0" {
+	if err == nil && curUser != nil && curUser.Uid != "0" {
 		// Make sure the spec is rootless.
 		// Only if we are not running as root.
 		specconv.ToRootless(spec)
