@@ -50,11 +50,36 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	if debug {
 		printDebug(tw, resp.Record)
 	} else {
-		printTable(tw, resp.Record)
+		fmt.Fprintln(tw, "ID\tRECLAIMABLE\tSIZE\tLAST ACCESSED")
+
+		for _, di := range resp.Record {
+			id := di.ID
+			if di.Mutable {
+				id += "*"
+			}
+			fmt.Fprintf(tw, "%-71s\t%-11v\t%s\t\n", id, !di.InUse, units.BytesSize(float64(di.Size_)))
+		}
+
+		tw.Flush()
 	}
 
 	if cmd.filter == "" {
-		printSummary(tw, resp.Record)
+		total := int64(0)
+		reclaimable := int64(0)
+
+		for _, di := range resp.Record {
+			if di.Size_ > 0 {
+				total += di.Size_
+				if !di.InUse {
+					reclaimable += di.Size_
+				}
+			}
+		}
+
+		tw = tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)
+		fmt.Fprintf(tw, "Reclaimable:\t%s\n", units.BytesSize(float64(reclaimable)))
+		fmt.Fprintf(tw, "Total:\t%s\n", units.BytesSize(float64(total)))
+		tw.Flush()
 	}
 
 	return nil
@@ -81,38 +106,5 @@ func printDebug(tw *tabwriter.Writer, du []*controlapi.UsageRecord) {
 		fmt.Fprintf(tw, "\n")
 	}
 
-	tw.Flush()
-}
-
-func printTable(tw *tabwriter.Writer, du []*controlapi.UsageRecord) {
-	fmt.Fprintln(tw, "ID\tRECLAIMABLE\tSIZE\tLAST ACCESSED")
-
-	for _, di := range du {
-		id := di.ID
-		if di.Mutable {
-			id += "*"
-		}
-		fmt.Fprintf(tw, "%-71s\t%-11v\t%s\t\n", id, !di.InUse, units.BytesSize(float64(di.Size_)))
-	}
-
-	tw.Flush()
-}
-
-func printSummary(tw *tabwriter.Writer, du []*controlapi.UsageRecord) {
-	total := int64(0)
-	reclaimable := int64(0)
-
-	for _, di := range du {
-		if di.Size_ > 0 {
-			total += di.Size_
-			if !di.InUse {
-				reclaimable += di.Size_
-			}
-		}
-	}
-
-	tw = tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)
-	fmt.Fprintf(tw, "Reclaimable:\t%s\n", units.BytesSize(float64(reclaimable)))
-	fmt.Fprintf(tw, "Total:\t%s\n", units.BytesSize(float64(total)))
 	tw.Flush()
 }

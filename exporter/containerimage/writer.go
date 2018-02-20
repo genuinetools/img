@@ -254,7 +254,7 @@ func getRefDesciptions(ref cache.ImmutableRef, limit int) []string {
 	}
 	defaultMsg := "created by buildkit" // shouldn't happen but don't fail build
 	if ref == nil {
-		strings.Repeat(defaultMsg, limit)
+		_ = strings.Repeat(defaultMsg, limit)
 	}
 	descr := cache.GetDescription(ref.Metadata())
 	if descr == "" {
