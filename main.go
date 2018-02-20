@@ -60,6 +60,7 @@ func main() {
 	// Build the list of available commands.
 	commands := []command{
 		&buildCommand{},
+		&diskUsageCommand{},
 		&listCommand{},
 		&pullCommand{},
 		&pushCommand{},

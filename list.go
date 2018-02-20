@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
-	controlapi "github.com/moby/buildkit/api/services/control"
+	"github.com/jessfraz/img/runc"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
@@ -26,11 +28,11 @@ func (cmd *listCommand) LongHelp() string  { return listLongHelp }
 func (cmd *listCommand) Hidden() bool      { return false }
 
 func (cmd *listCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.filter, "f", "", "Filter output based on conditions provided (snapshot ID supported)")
+	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
 }
 
 type listCommand struct {
-	filter string
+	filters stringSlice
 }
 
 func (cmd *listCommand) Run(args []string) (err error) {
@@ -40,79 +42,34 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the controller.
-	c, fuseserver, err := createController(cmd)
+	// Create the runc worker options.
+	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
 	defer unmount(fuseserver)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
 	handleSignals(fuseserver)
 
-	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filter})
+	images, err := opt.ImageStore.List(ctx, cmd.filters...)
 	if err != nil {
-		return err
+		return fmt.Errorf("listing images with filters (%s) failed: %v", strings.Join(cmd.filters, ", "), err)
 	}
 
 	tw := tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)
 
-	if debug {
-		printDebug(tw, resp.Record)
-	} else {
-		fmt.Fprintln(tw, "ID\tRECLAIMABLE\tSIZE\tLAST ACCESSED")
+	fmt.Fprintln(tw, "NAME\tSIZE\tCREATED AT\tUPDATED AT\tDIGEST")
 
-		for _, di := range resp.Record {
-			id := di.ID
-			if di.Mutable {
-				id += "*"
-			}
-			fmt.Fprintf(tw, "%-71s\t%-11v\t%s\t\n", id, !di.InUse, units.BytesSize(float64(di.Size_)))
-		}
-
-		tw.Flush()
-	}
-
-	if cmd.filter == "" {
-		total := int64(0)
-		reclaimable := int64(0)
-
-		for _, di := range resp.Record {
-			if di.Size_ > 0 {
-				total += di.Size_
-				if !di.InUse {
-					reclaimable += di.Size_
-				}
-			}
-		}
-
-		tw = tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)
-		fmt.Fprintf(tw, "Reclaimable:\t%s\n", units.BytesSize(float64(reclaimable)))
-		fmt.Fprintf(tw, "Total:\t%s\n", units.BytesSize(float64(total)))
-		tw.Flush()
-	}
-
-	return nil
-}
-
-func printDebug(tw *tabwriter.Writer, du []*controlapi.UsageRecord) {
-	for _, di := range du {
-		fmt.Fprintf(tw, "%s:\t%v\n", "ID", di.ID)
-		if di.Parent != "" {
-			fmt.Fprintf(tw, "%s:\t%v\n", "Parent", di.Parent)
-		}
-		fmt.Fprintf(tw, "%s:\t%v\n", "Created at", di.CreatedAt)
-		fmt.Fprintf(tw, "%s:\t%v\n", "Mutable", di.Mutable)
-		fmt.Fprintf(tw, "%s:\t%v\n", "Reclaimable", !di.InUse)
-		fmt.Fprintf(tw, "%s:\t%s\n", "Size", units.BytesSize(float64(di.Size_)))
-		if di.Description != "" {
-			fmt.Fprintf(tw, "%s:\t%v\n", "Description", di.Description)
-		}
-		fmt.Fprintf(tw, "%s:\t%d\n", "Usage count", di.UsageCount)
-		if di.LastUsedAt != nil {
-			fmt.Fprintf(tw, "%s:\t%v\n", "Last used", di.LastUsedAt)
-		}
-
-		fmt.Fprintf(tw, "\n")
+	for _, image := range images {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+			image.Name,
+			units.BytesSize(float64(image.Target.Size)),
+			units.HumanDuration(time.Now().UTC().Sub(image.CreatedAt))+" ago",
+			units.HumanDuration(time.Now().UTC().Sub(image.UpdatedAt))+" ago",
+			image.Target.Digest,
+		)
 	}
 
 	tw.Flush()
+
+	return nil
 }
