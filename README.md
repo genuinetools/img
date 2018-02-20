@@ -38,13 +38,16 @@ $ docker run --rm -it \
 ## Usage
 
 ```console
+$ img -h
 Usage: img <command>
 
 Commands:
 
   build    Build an image from a Dockerfile.
+  du       Show image disk usage.
   ls       List images and digests.
   pull     Pull an image or a repository from a registry.
+  push     Push an image or a repository to a registry.
   version  Show the version information.
 ```
 
@@ -110,40 +113,16 @@ List images and digests.
 
 Flags:
 
-  -backend    backend for snapshots (default: overlayfs)
-  -d  enable debug logging (default: false)
-  -f  Filter output based on conditions provided (snapshot ID supported) (default: <none>)
+  -backend  backend for snapshots (default: overlayfs)
+  -d        enable debug logging (default: false)
+  -f        Filter output based on conditions provided (default: [])
 ```
 
 ```console
 $ img ls --backend=fuse
-ID                                                                      RECLAIMABLE     SIZE            LAST ACCESSED
-sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6 true            365.9KiB
-sha256:aa74a6c91df06c8a41629caf62cc5f2dbb8f6a8f278aff042bd45ad1cc573b8d true            297.9KiB
-sha256:e706942da64d71182be53550aca301898157f19999706c7f7e895151d512224f true            9.051KiB
-sha256:6b0518a7493b951bc13dd85b9c27f72912fdf1871674c869cd7881c4235a29e2 true            1.44MiB
-9fya41x2qhytrqkcsbd4c0qq1*                                              true            154.5MiB
-sha256:cd7100a72410606589a54b932cabd804a17f9ae5b42a1882bd56d263e02b6215 true            6.258MiB
-af61bkht0jb3dhfd2qkqftwg6                                               true            420.8KiB
-dfh29u56whf6aem91edvume8m                                               true            154.6MiB
-khp847rbw1we6uc2h8m6xlyqp*                                              true            5.039KiB
-utpsw3cgpxsqg5ih7e3rqrzyg                                               true            1.075MiB
-sha256:ae4ecac23119cc920f9e44847334815d32bdf82f6678069d8a8be103c1ee2891 true            148.9MiB
-c1yqlb3e05crmll7v0lvltfuc*                                              true            4KiB
-sha256:db193011cbfc238d622d65c4099750758df83d74571e8d7498392b17df381207 true            467.2MiB
-vr535b5pvgcanvuttw8lx1lfw*                                              true            4.204KiB
-sha256:c4151b5a5de5b7e272b2b6a3a4518c980d6e7f580f39c85370330a1bff5821f1 true            472.3KiB
-sha256:d9a48086f223d28a838263a6c04705c8009fab1dd67cc82c0ee821545de3bf7c true            911.8KiB
-vxzb27136nn8934gs88857ezj                                               true            10.48MiB
-w75mt1b5ho9ck968ebgp3l27w                                               true            17.92MiB
-l60avgz32ot9jw2okw7lb1u24*                                              true            73.22MiB
-ne7zasdkxi41q6f0dnnclh7dj                                               true            56.38KiB
-sha256:46b4a1f9227b1b8aa0948d2ed39beb3a74de0f34c4f9fd9bf7e4a5f00e781bd6 true            16.12KiB
-tsvyai0nrdfweeptigv9nb3di*                                              true            4KiB
-sha256:2f648eb75764cf89e8a6327da5e5b0b61c31785e7fd15f206298a42544a7e4e5 true            217.5KiB
-sha256:9f131fba0383a6aaf25ecd78bd5f37003e41a4385d7f38c3b0cde352ad7676da true            958.6KiB
-Reclaimable:    1.015GiB
-Total:          1.015GiB
+NAME                    SIZE            CREATED AT      UPDATED AT      DIGEST
+jess/img:latest         1.534KiB        9 seconds ago   9 seconds ago   sha256:27d862ac32022946d61afbb91ddfc6a1fa2341a78a0da11ff9595a85f651d51e
+jess/thing:latest       591B            30 minutes ago  30 minutes ago  sha256:d664b4e9b9cd8b3067e122ef68180e95dd4494fd4cb01d05632b6e77ce19118e
 ```
 
 ### Pull an Image
@@ -185,6 +164,37 @@ Flags:
 $ img push --backend=fuse jess/thing
 Pushing jess/thing:latest...
 Successfully pushed jess/thing:latest
+```
+
+### Disk Usage
+
+```console
+$ img du -h
+Usage: img du [OPTIONS]
+
+Show image disk usage.
+
+Flags:
+
+  -backend  backend for snapshots (default: overlayfs)
+  -d        enable debug logging (default: false)
+  -f        Filter output based on conditions provided (snapshot ID supported) (default: <none>)
+```
+
+```console
+$ img du --backend=fuse
+ID                                                                      RECLAIMABLE     SIZE            DESCRIPTION
+sha256:d9a48086f223d28a838263a6c04705c8009fab1dd67cc82c0ee821545de3bf7c true            911.8KiB        pulled from docker.io/tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e
+7ia86xm2e4hzn2u947iqh9ph2                                               true            203.2MiB        mount /dest from exec copy /src-0 /dest/go/src/github.com/jessfraz/img
+...
+sha256:9f131fba0383a6aaf25ecd78bd5f37003e41a4385d7f38c3b0cde352ad7676da true            958.6KiB        pulled from docker.io/library/golang:alpine@sha256:a0045fbb52a7ef318937e84cf7ad3301b4d2ba6cecc2d01804f428a1e39d1dfc
+sha256:c4151b5a5de5b7e272b2b6a3a4518c980d6e7f580f39c85370330a1bff5821f1 true            472.3KiB        pulled from docker.io/tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e
+sha256:ae4ecac23119cc920f9e44847334815d32bdf82f6678069d8a8be103c1ee2891 true            148.9MiB        pulled from docker.io/library/debian:buster@sha256:a7789365b226786a0cb9e0f142c515f9f2ede7164a6f6be4a1dc4bfe19d5ec9c
+bkrjrzv3nvp7lvzd5cw9vzut7*                                              true            4.879KiB        local source for dockerfile
+sha256:db193011cbfc238d622d65c4099750758df83d74571e8d7498392b17df381207 true            467.2MiB        pulled from docker.io/library/golang:alpine@sha256:a0045fbb52a7ef318937e84cf7ad3301b4d2ba6cecc2d01804f428a1e39d1dfc
+wn4m5i5swdcjvt1ud5bvtr75h*                                              true            4.204KiB        local source for dockerfile
+Reclaimable:    1.08GiB
+Total:          1.08GiB
 ```
 
 ## Acknowledgements
