@@ -44,6 +44,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 		return nil, nil, err
 	}
 	var (
+		// TODO: make these not temp dir
 		ro = filepath.Join(os.TempDir(), "img", "fuse-ro")
 		rw = filepath.Join(os.TempDir(), "img", "fuse-rw")
 	)
@@ -71,9 +72,9 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 	}
 	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true, Debug: debug})
 	mOpts := nodefs.Options{
-		EntryTimeout:    time.Duration(1 * time.Second),
-		AttrTimeout:     time.Duration(1 * time.Second),
-		NegativeTimeout: time.Duration(1 * time.Second),
+		EntryTimeout:    time.Duration(10 * time.Second),
+		AttrTimeout:     time.Duration(10 * time.Second),
+		NegativeTimeout: time.Duration(10 * time.Second),
 		PortableInodes:  false, // Use sequential 32-bit inode numbers.
 		Debug:           debug,
 	}
@@ -82,10 +83,11 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, *fuse.Server, error) {
 		return nil, state, fmt.Errorf("FUSE mount to root %s failed: %v", root, err)
 	}
 
-	go func() {
-		logrus.Infof("Starting FUSE server...")
-		state.Serve()
-	}()
+	logrus.Infof("Starting FUSE server...")
+	go state.Serve()
+	if err := state.WaitMount(); err != nil {
+		return nil, state, fmt.Errorf("Waiting for FUSE mount failed: %v", err)
+	}
 
 	mnt, err := mount.Lookup(root)
 	if err != nil {

@@ -51,7 +51,7 @@ func copyDirectory(dst, src string, inodes map[uint64]string) error {
 	}
 
 	if err := copyFileInfo(stat, dst); err != nil {
-		logrus.Warnf("failed to copy file info for %s: %v", dst, err)
+		logrus.Debugf("failed to copy file info for %s: %v", dst, err)
 		// return errors.Wrapf(err, "failed to copy file info for %s", dst)
 	}
 
@@ -98,7 +98,7 @@ func copyDirectory(dst, src string, inodes map[uint64]string) error {
 		}
 
 		if err := copyXAttrs(target, source); err != nil {
-			logrus.Warnf("failed to copy xattrs: %v", err)
+			logrus.Debugf("failed to copy xattrs: %v", err)
 			// return errors.Wrap(err, "failed to copy xattrs")
 		}
 	}

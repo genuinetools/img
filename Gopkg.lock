@@ -25,8 +25,8 @@
 [[projects]]
   name = "github.com/Microsoft/hcsshim"
   packages = ["."]
-  revision = "34a629f78a5d50f7de07727e41a948685c45e026"
-  version = "v0.6.7"
+  revision = "45ef15484298b76abeb9513ea0ea0abd2b5b84b3"
+  version = "v0.6.8"
 
 [[projects]]
   branch = "master"
@@ -65,8 +65,6 @@
     "diff/apply",
     "diff/walking",
     "errdefs",
-    "events",
-    "events/exchange",
     "filters",
     "gc",
     "identifiers",
@@ -81,7 +79,6 @@
     "namespaces",
     "oci",
     "platforms",
-    "plugin",
     "reference",
     "remotes",
     "remotes/docker",
@@ -102,7 +99,7 @@
     "pathdriver",
     "sysx"
   ]
-  revision = "a1edcb62c8bb1067982251a32dbd69fcfc5f8958"
+  revision = "a03e9da26a1389f8bdb3bc90fbe27a4688cc2a56"
   source = "github.com/jessfraz/continuity"
 
 [[projects]]
@@ -110,12 +107,6 @@
   name = "github.com/containerd/go-runc"
   packages = ["."]
   revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/containerd/typeurl"
-  packages = ["."]
-  revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
 
 [[projects]]
   branch = "go1.10"
@@ -213,12 +204,6 @@
   ]
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   version = "v0.3.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/docker/go-events"
-  packages = ["."]
-  revision = "9461782956ad83b30282bf90e31fa6a70c255ba9"
 
 [[projects]]
   branch = "master"
@@ -604,6 +589,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e372eff2f63715f1138ca2ef9314580181bf74c63b0e74bc0e6d02cba55b59d2"
+  inputs-digest = "61a6440522b179012263499e59840d423de0a74b99ea4391b7f0d397e1aad744"
   solver-name = "gps-cdcl"
   solver-version = 1
