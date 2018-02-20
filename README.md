@@ -168,4 +168,4 @@ Size: 365.9KiB
 
 ## Acknowledgements
 
-A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). Thanks!
+A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). Thanks [@tonistiigi](https://github.com/tonistiigi)!
