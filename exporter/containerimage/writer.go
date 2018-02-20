@@ -16,7 +16,6 @@ import (
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/snapshot"
-	"github.com/moby/buildkit/util/progress"
 	"github.com/moby/buildkit/util/system"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -47,12 +46,11 @@ type ImageWriter struct {
 
 // Commit takes an image reference and commits it to the cache.
 func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte, targetName string) (*ocispec.Descriptor, error) {
-	layersDone := oneOffProgress(ctx, "exporting layers")
+	logrus.Info("exporting layers")
 	diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed calculaing diff pairs for exported snapshot")
 	}
-	layersDone(nil)
 
 	if len(config) == 0 {
 		config, err = emptyImageConfig()
@@ -109,19 +107,17 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 	}
 
 	mfstDigest := digest.FromBytes(mfstJSON)
-	mfstDone := oneOffProgress(ctx, "exporting manifest "+mfstDigest.String())
+	logrus.Infof("exporting manifest %s", mfstDigest.String())
 
 	if err := content.WriteBlob(ctx, ic.opt.ContentStore, mfstDigest.String(), bytes.NewReader(mfstJSON), int64(len(mfstJSON)), mfstDigest, content.WithLabels(labels)); err != nil {
-		return nil, mfstDone(errors.Wrapf(err, "error writing manifest blob %s", mfstDigest))
+		return nil, errors.Wrapf(err, "error writing manifest blob %s", mfstDigest)
 	}
-	mfstDone(nil)
 
-	configDone := oneOffProgress(ctx, "exporting config "+configDigest.String())
+	logrus.Infof("exporting config %s", configDigest.String())
 
 	if err := content.WriteBlob(ctx, ic.opt.ContentStore, configDigest.String(), bytes.NewReader(config), int64(len(config)), configDigest); err != nil {
-		return nil, configDone(errors.Wrap(err, "error writing config blob"))
+		return nil, errors.Wrap(err, "error writing config blob")
 	}
-	configDone(nil)
 
 	// delete config root. config will remain linked to the manifest
 	if err := ic.opt.ContentStore.Delete(context.TODO(), configDigest); err != nil {
@@ -266,21 +262,4 @@ func getRefDesciptions(ref cache.ImmutableRef, limit int) []string {
 		defer p.Release(context.TODO())
 	}
 	return append(getRefDesciptions(p, limit-1), descr)
-}
-
-func oneOffProgress(ctx context.Context, id string) func(err error) error {
-	pw, _, _ := progress.FromContext(ctx)
-	now := time.Now()
-	st := progress.Status{
-		Started: &now,
-	}
-	pw.Write(id, st)
-	return func(err error) error {
-		// TODO: set error on status
-		now := time.Now()
-		st.Completed = &now
-		pw.Write(id, st)
-		pw.Close()
-		return err
-	}
 }

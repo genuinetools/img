@@ -8,7 +8,6 @@ import (
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
@@ -22,12 +21,12 @@ import (
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/flightcontrol"
 	"github.com/moby/buildkit/util/imageutil"
-	"github.com/moby/buildkit/util/progress"
 	"github.com/moby/buildkit/util/tracing"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // SourceOpt contains the options for the container image source.
@@ -119,7 +118,7 @@ type puller struct {
 
 func (p *puller) resolve(ctx context.Context) error {
 	p.resolveOnce.Do(func() {
-		resolveProgressDone := oneOffProgress(ctx, "resolve "+p.src.Reference.String())
+		logrus.Infof("resolving %s", p.src.Reference.String())
 
 		dgst := p.src.Reference.Digest()
 		if dgst != "" {
@@ -135,7 +134,6 @@ func (p *puller) resolve(ctx context.Context) error {
 							Digest:    dgst,
 							MediaType: mt,
 						}
-						resolveProgressDone(nil)
 						return
 					}
 				}
@@ -145,12 +143,10 @@ func (p *puller) resolve(ctx context.Context) error {
 		ref, desc, err := p.resolver.Resolve(ctx, p.src.Reference.String())
 		if err != nil {
 			p.resolveErr = err
-			resolveProgressDone(err)
 			return
 		}
 		p.desc = desc
 		p.ref = ref
-		resolveProgressDone(nil)
 	})
 	return p.resolveErr
 }
@@ -169,13 +165,8 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 
 	ongoing := newJobs(p.ref)
 
-	pctx, stopProgress := context.WithCancel(ctx)
-
-	go showProgress(pctx, ongoing, p.is.ContentStore)
-
 	fetcher, err := p.resolver.Fetcher(ctx, p.ref)
 	if err != nil {
-		stopProgress()
 		return nil, err
 	}
 
@@ -207,10 +198,8 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 	}
 
 	if err := images.Dispatch(ctx, images.Handlers(handlers...), p.desc); err != nil {
-		stopProgress()
 		return nil, err
 	}
-	stopProgress()
 
 	if schema1Converter != nil {
 		p.desc, err = schema1Converter.Convert(ctx)
@@ -253,12 +242,11 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 		}
 	}
 
-	unpackProgressDone := oneOffProgress(ctx, "unpacking "+p.src.Reference.String())
+	logrus.Infof("unpacking %s", p.src.Reference.String())
 	chainid, err := p.is.unpack(ctx, p.desc)
 	if err != nil {
-		return nil, unpackProgressDone(err)
+		return nil, err
 	}
-	unpackProgressDone(nil)
 
 	return p.is.CacheAccessor.Get(ctx, chainid, cache.WithDescription(fmt.Sprintf("pulled from %s", p.ref)))
 }
@@ -329,100 +317,6 @@ func getLayers(ctx context.Context, provider content.Provider, desc ocispec.Desc
 	return layers, nil
 }
 
-func showProgress(ctx context.Context, ongoing *jobs, cs content.Store) {
-	var (
-		ticker   = time.NewTicker(100 * time.Millisecond)
-		statuses = map[string]statusInfo{}
-		done     bool
-	)
-	defer ticker.Stop()
-
-	pw, _, ctx := progress.FromContext(ctx)
-	defer pw.Close()
-
-	for {
-		select {
-		case <-ticker.C:
-		case <-ctx.Done():
-			done = true
-		}
-
-		resolved := "resolved"
-		if !ongoing.isResolved() {
-			resolved = "resolving"
-		}
-		statuses[ongoing.name] = statusInfo{
-			Ref:    ongoing.name,
-			Status: resolved,
-		}
-
-		actives := make(map[string]statusInfo)
-
-		if !done {
-			active, err := cs.ListStatuses(ctx, "")
-			if err != nil {
-				// log.G(ctx).WithError(err).Error("active check failed")
-				continue
-			}
-			// update status of active entries!
-			for _, active := range active {
-				actives[active.Ref] = statusInfo{
-					Ref:       active.Ref,
-					Status:    "downloading",
-					Offset:    active.Offset,
-					Total:     active.Total,
-					StartedAt: active.StartedAt,
-					UpdatedAt: active.UpdatedAt,
-				}
-			}
-		}
-
-		// now, update the items in jobs that are not in active
-		for _, j := range ongoing.jobs() {
-			refKey := remotes.MakeRefKey(ctx, j.Descriptor)
-			if a, ok := actives[refKey]; ok {
-				started := j.started
-				pw.Write(j.Digest.String(), progress.Status{
-					Action:  a.Status,
-					Total:   int(a.Total),
-					Current: int(a.Offset),
-					Started: &started,
-				})
-				continue
-			}
-
-			if !j.done {
-				info, err := cs.Info(context.TODO(), j.Digest)
-				if err != nil {
-					if errdefs.IsNotFound(err) {
-						pw.Write(j.Digest.String(), progress.Status{
-							Action: "waiting",
-						})
-						continue
-					}
-				} else {
-					j.done = true
-				}
-
-				if done || j.done {
-					started := j.started
-					createdAt := info.CreatedAt
-					pw.Write(j.Digest.String(), progress.Status{
-						Action:    "done",
-						Current:   int(info.Size),
-						Total:     int(info.Size),
-						Completed: &createdAt,
-						Started:   &started,
-					})
-				}
-			}
-		}
-		if done {
-			return
-		}
-	}
-}
-
 // jobs provides a way of identifying the download keys for a particular task
 // encountering during the pull walk.
 //
@@ -485,21 +379,4 @@ type statusInfo struct {
 	Total     int64
 	StartedAt time.Time
 	UpdatedAt time.Time
-}
-
-func oneOffProgress(ctx context.Context, id string) func(err error) error {
-	pw, _, _ := progress.FromContext(ctx)
-	now := time.Now()
-	st := progress.Status{
-		Started: &now,
-	}
-	pw.Write(id, st)
-	return func(err error) error {
-		// TODO: set error on status
-		now := time.Now()
-		st.Completed = &now
-		pw.Write(id, st)
-		pw.Close()
-		return err
-	}
 }

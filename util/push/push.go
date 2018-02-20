@@ -3,9 +3,8 @@ package push
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/http"
 	"sync"
-	"time"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/images"
@@ -14,8 +13,6 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/jessfraz/img/util/auth"
 	"github.com/moby/buildkit/util/imageutil"
-	"github.com/moby/buildkit/util/progress"
-	"github.com/moby/buildkit/util/tracing"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -41,7 +38,7 @@ func Push(ctx context.Context, cs content.Store, dgst digest.Digest, ref string,
 	ref = reference.TagNameOnly(parsed).String()
 
 	resolver := docker.NewResolver(docker.ResolverOptions{
-		Client:      tracing.DefaultClient,
+		Client:      http.DefaultClient,
 		Credentials: getCredentialsFunc(ctx),
 		PlainHTTP:   insecure,
 	})
@@ -90,44 +87,24 @@ func Push(ctx context.Context, cs content.Store, dgst digest.Digest, ref string,
 		return err
 	}
 
-	layersDone := oneOffProgress(ctx, "pushing layers")
+	logrus.Info("pushing layers")
 	err = images.Dispatch(ctx, images.Handlers(handlers...), ocispec.Descriptor{
 		Digest:    dgst,
 		Size:      info.Size,
 		MediaType: mtype,
 	})
-	layersDone(err)
 	if err != nil {
 		return err
 	}
 
-	mfstDone := oneOffProgress(ctx, fmt.Sprintf("pushing manifest for %s", ref))
+	logrus.Infof("pushing manifest for %s", ref)
 	for i := len(manifestStack) - 1; i >= 0; i-- {
 		_, err := pushHandler(ctx, manifestStack[i])
 		if err != nil {
-			mfstDone(err)
 			return err
 		}
 	}
-	mfstDone(nil)
 	return nil
-}
-
-func oneOffProgress(ctx context.Context, id string) func(err error) error {
-	pw, _, _ := progress.FromContext(ctx)
-	now := time.Now()
-	st := progress.Status{
-		Started: &now,
-	}
-	pw.Write(id, st)
-	return func(err error) error {
-		// TODO: set error on status
-		now := time.Now()
-		st.Completed = &now
-		pw.Write(id, st)
-		pw.Close()
-		return err
-	}
 }
 
 func childrenHandler(provider content.Provider) images.HandlerFunc {

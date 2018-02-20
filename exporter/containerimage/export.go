@@ -87,7 +87,7 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 		return errors.New("image store is nil")
 	}
 
-	tagDone := oneOffProgress(ctx, "naming to "+e.targetName)
+	logrus.Infof("naming to %s", e.targetName)
 	img := images.Image{
 		Name:      e.targetName,
 		Target:    *desc,
@@ -96,15 +96,13 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 
 	if _, err := e.opt.Images.Update(ctx, img); err != nil {
 		if !errdefs.IsNotFound(err) {
-			return tagDone(err)
+			return err
 		}
 
 		if _, err := e.opt.Images.Create(ctx, img); err != nil {
-			return tagDone(err)
+			return err
 		}
 	}
-
-	tagDone(nil)
 
 	// We can push here if it's requested.
 	if e.push {
