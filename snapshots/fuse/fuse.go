@@ -102,7 +102,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	if err != nil {
 		return nil, err
 	}
-	if mnt.FSType != "fuse" {
+	if mnt.FSType != "fuse.pathfs.pathInode" {
 		return nil, fmt.Errorf("path %s must be a fuse filesystem to be used with the fuse snapshotter, got %s", root, mnt.FSType)
 	}
 
