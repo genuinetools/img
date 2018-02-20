@@ -8,6 +8,7 @@ import (
 
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
 )
 
@@ -61,6 +62,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	// Create the context.
 	ctx := appcontext.Context()
 	ref := identity.NewID()
+	ctx = session.NewContext(ctx, ref)
 
 	// Create the controller.
 	c, err := createController(cmd)

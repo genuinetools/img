@@ -9,7 +9,6 @@ import (
 	"github.com/jessfraz/img/util/push"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
-	"github.com/moby/buildkit/session"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,9 +21,8 @@ const (
 
 // Opt contains the options for the container image exporter.
 type Opt struct {
-	SessionManager *session.Manager
-	ImageWriter    *ImageWriter
-	Images         images.Store
+	ImageWriter *ImageWriter
+	Images      images.Store
 }
 
 type imageExporter struct {
@@ -104,7 +102,7 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 			tagDone(nil)
 		}
 		if e.push {
-			return push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure)
+			return push.Push(ctx, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure)
 		}
 	}
 

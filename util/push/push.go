@@ -13,7 +13,6 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
 	"github.com/jessfraz/img/util/auth"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/imageutil"
 	"github.com/moby/buildkit/util/progress"
 	"github.com/moby/buildkit/util/tracing"
@@ -22,11 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func getCredentialsFunc(ctx context.Context, sm *session.Manager) func(string) (string, string, error) {
-	id := session.FromContext(ctx)
-	if id == "" {
-		return nil
-	}
+func getCredentialsFunc(ctx context.Context) func(string) (string, string, error) {
 	return func(host string) (string, string, error) {
 		creds, err := auth.DockerAuthCredentials(host)
 		if err != nil {
@@ -38,7 +33,7 @@ func getCredentialsFunc(ctx context.Context, sm *session.Manager) func(string) (
 }
 
 // Push takes a digest and pushes it to a registry.
-func Push(ctx context.Context, sm *session.Manager, cs content.Store, dgst digest.Digest, ref string, insecure bool) error {
+func Push(ctx context.Context, cs content.Store, dgst digest.Digest, ref string, insecure bool) error {
 	parsed, err := reference.ParseNormalizedNamed(ref)
 	if err != nil {
 		return err
@@ -47,7 +42,7 @@ func Push(ctx context.Context, sm *session.Manager, cs content.Store, dgst diges
 
 	resolver := docker.NewResolver(docker.ResolverOptions{
 		Client:      tracing.DefaultClient,
-		Credentials: getCredentialsFunc(ctx, sm),
+		Credentials: getCredentialsFunc(ctx),
 		PlainHTTP:   insecure,
 	})
 

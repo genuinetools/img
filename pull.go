@@ -9,7 +9,6 @@ import (
 	"github.com/jessfraz/img/runc"
 	"github.com/jessfraz/img/source/containerimage"
 	"github.com/moby/buildkit/cache"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/appcontext"
 )
@@ -90,12 +89,6 @@ func createSouceManager() (*source.Manager, error) {
 		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
 
-	// Set the session manager.
-	sessionManager, err := session.NewManager()
-	if err != nil {
-		return nil, fmt.Errorf("creating session manager failed: %v", err)
-	}
-
 	cm, err := cache.NewManager(cache.ManagerOpt{
 		Snapshotter:   opt.Snapshotter,
 		MetadataStore: opt.MetadataStore,
@@ -110,11 +103,10 @@ func createSouceManager() (*source.Manager, error) {
 	}
 
 	is, err := containerimage.NewSource(containerimage.SourceOpt{
-		Snapshotter:    opt.Snapshotter,
-		ContentStore:   opt.ContentStore,
-		SessionManager: sessionManager,
-		Applier:        opt.Applier,
-		CacheAccessor:  cm,
+		Snapshotter:   opt.Snapshotter,
+		ContentStore:  opt.ContentStore,
+		Applier:       opt.Applier,
+		CacheAccessor: cm,
 	})
 	if err != nil {
 		return nil, err

@@ -23,16 +23,14 @@ const keySharedKey = "local.sharedKey"
 
 // Opt contains the options for the local source.
 type Opt struct {
-	SessionManager *session.Manager
-	CacheAccessor  cache.Accessor
-	MetadataStore  *metadata.Store
-	LocalDirs      map[string]string
+	CacheAccessor cache.Accessor
+	MetadataStore *metadata.Store
+	LocalDirs     map[string]string
 }
 
 // NewSource returns a new source object.
 func NewSource(opt Opt) (source.Source, error) {
 	ls := &localSource{
-		sm: opt.SessionManager,
 		cm: opt.CacheAccessor,
 		md: opt.MetadataStore,
 		ld: opt.LocalDirs,
@@ -41,7 +39,6 @@ func NewSource(opt Opt) (source.Source, error) {
 }
 
 type localSource struct {
-	sm *session.Manager
 	cm cache.Accessor
 	md *metadata.Store
 	ld map[string]string

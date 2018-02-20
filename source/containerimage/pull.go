@@ -18,7 +18,6 @@ import (
 	"github.com/containerd/containerd/snapshots"
 	"github.com/jessfraz/img/util/auth"
 	"github.com/moby/buildkit/cache"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/flightcontrol"
@@ -33,11 +32,10 @@ import (
 
 // SourceOpt contains the options for the container image source.
 type SourceOpt struct {
-	SessionManager *session.Manager
-	Snapshotter    snapshot.Snapshotter
-	ContentStore   content.Store
-	Applier        diff.Applier
-	CacheAccessor  cache.Accessor
+	Snapshotter   snapshot.Snapshotter
+	ContentStore  content.Store
+	Applier       diff.Applier
+	CacheAccessor cache.Accessor
 }
 
 type imageSource struct {
@@ -61,15 +59,11 @@ func (is *imageSource) ID() string {
 func (is *imageSource) getResolver(ctx context.Context) remotes.Resolver {
 	return docker.NewResolver(docker.ResolverOptions{
 		Client:      tracing.DefaultClient,
-		Credentials: is.getCredentialsFromSession(ctx),
+		Credentials: is.getCredentials(ctx),
 	})
 }
 
-func (is *imageSource) getCredentialsFromSession(ctx context.Context) func(string) (string, string, error) {
-	id := session.FromContext(ctx)
-	if id == "" {
-		return nil
-	}
+func (is *imageSource) getCredentials(ctx context.Context) func(string) (string, string, error) {
 	return func(host string) (string, string, error) {
 		creds, err := auth.DockerAuthCredentials(host)
 		if err != nil {

@@ -8,7 +8,6 @@ import (
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/dockerfile"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/worker"
 )
 
@@ -18,13 +17,6 @@ func createController(cmd command) (*control.Controller, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
-
-	// Set the session manager.
-	sessionManager, err := session.NewManager()
-	if err != nil {
-		return nil, fmt.Errorf("creating session manager failed: %v", err)
-	}
-	opt.SessionManager = sessionManager
 
 	localDirs := getLocalDirs(cmd)
 
@@ -45,7 +37,6 @@ func createController(cmd command) (*control.Controller, error) {
 
 	// Create the controller.
 	return control.NewController(control.Opt{
-		SessionManager:   sessionManager,
 		WorkerController: wc,
 		Frontends:        frontends,
 		CacheExporter:    w.CacheExporter,

@@ -65,11 +65,10 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 	}
 
 	is, err := containerimage.NewSource(containerimage.SourceOpt{
-		Snapshotter:    opt.Snapshotter,
-		ContentStore:   opt.ContentStore,
-		SessionManager: opt.SessionManager,
-		Applier:        opt.Applier,
-		CacheAccessor:  cm,
+		Snapshotter:   opt.Snapshotter,
+		ContentStore:  opt.ContentStore,
+		Applier:       opt.Applier,
+		CacheAccessor: cm,
 	})
 	if err != nil {
 		return nil, err
@@ -98,10 +97,9 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 	sm.Register(hs)
 
 	ss, err := local.NewSource(local.Opt{
-		SessionManager: opt.SessionManager,
-		CacheAccessor:  cm,
-		MetadataStore:  opt.MetadataStore,
-		LocalDirs:      localDirs,
+		CacheAccessor: cm,
+		MetadataStore: opt.MetadataStore,
+		LocalDirs:     localDirs,
 	})
 	if err != nil {
 		return nil, err
@@ -120,36 +118,31 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 	}
 
 	imageExporter, err := imageexporter.New(imageexporter.Opt{
-		Images:         opt.ImageStore,
-		SessionManager: opt.SessionManager,
-		ImageWriter:    iw,
+		Images:      opt.ImageStore,
+		ImageWriter: iw,
 	})
 	if err != nil {
 		return nil, err
 	}
 	exporters[client.ExporterImage] = imageExporter
 
-	localExporter, err := localexporter.New(localexporter.Opt{
-		SessionManager: opt.SessionManager,
-	})
+	localExporter, err := localexporter.New(localexporter.Opt{})
 	if err != nil {
 		return nil, err
 	}
 	exporters[client.ExporterLocal] = localExporter
 
 	ce := cacheimport.NewCacheExporter(cacheimport.ExporterOpt{
-		Snapshotter:    opt.Snapshotter,
-		ContentStore:   opt.ContentStore,
-		SessionManager: opt.SessionManager,
-		Differ:         opt.Differ,
+		Snapshotter:  opt.Snapshotter,
+		ContentStore: opt.ContentStore,
+		Differ:       opt.Differ,
 	})
 
 	ci := cacheimport.NewCacheImporter(cacheimport.ImportOpt{
-		Snapshotter:    opt.Snapshotter,
-		ContentStore:   opt.ContentStore,
-		Applier:        opt.Applier,
-		CacheAccessor:  cm,
-		SessionManager: opt.SessionManager,
+		Snapshotter:   opt.Snapshotter,
+		ContentStore:  opt.ContentStore,
+		Applier:       opt.Applier,
+		CacheAccessor: cm,
 	})
 
 	return &Worker{
