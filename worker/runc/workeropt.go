@@ -14,6 +14,7 @@ import (
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/overlay"
 	libfuse "github.com/hanwen/go-fuse/fuse"
+	"github.com/jessfraz/img/executor/runc"
 	"github.com/jessfraz/img/snapshots/fuse"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
@@ -37,7 +38,7 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 	}
 
 	// Create the runc executor.
-	exe, err := newExecutor(filepath.Join(root, "executor"))
+	exe, err := runc.New(filepath.Join(root, "executor"))
 	if err != nil {
 		return opt, nil, err
 	}

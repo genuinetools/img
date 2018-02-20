@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/hanwen/go-fuse/fuse"
-	"github.com/jessfraz/img/runc"
+	"github.com/jessfraz/img/worker/runc"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/dockerfile"

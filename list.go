@@ -10,7 +10,7 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
-	"github.com/jessfraz/img/runc"
+	"github.com/jessfraz/img/worker/runc"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"

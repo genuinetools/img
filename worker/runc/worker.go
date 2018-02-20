@@ -40,8 +40,8 @@ type Worker struct {
 	cache         instructioncache.InstructionCache
 	Exporters     map[string]exporter.Exporter
 	ImageSource   source.Source
-	CacheExporter *cacheimport.CacheExporter // TODO: remove
-	CacheImporter *cacheimport.CacheImporter // TODO: remove
+	CacheExporter *cacheimport.CacheExporter
+	CacheImporter *cacheimport.CacheImporter
 }
 
 // NewWorker instantiates a local worker.

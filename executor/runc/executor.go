@@ -29,8 +29,8 @@ type Executor struct {
 	root string
 }
 
-// newExecutor creates a new runc executor.
-func newExecutor(root string) (executor.Executor, error) {
+// New creates a new runc executor.
+func New(root string) (executor.Executor, error) {
 	// Make sure the runc binary exists.
 	if exists := BinaryExists(); !exists {
 		return nil, errors.New("cannot find runc binary locally, please install runc")
@@ -202,4 +202,11 @@ func (s *forwardIO) Stdout() io.ReadCloser {
 
 func (s *forwardIO) Stderr() io.ReadCloser {
 	return nil
+}
+
+// BinaryExists checks if the runc binary exists.
+func BinaryExists() bool {
+	_, err := exec.LookPath("runc")
+	// Return true when there is no error.
+	return err == nil
 }

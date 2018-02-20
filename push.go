@@ -9,7 +9,7 @@ import (
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/exporter/containerimage"
 	"github.com/jessfraz/img/exporter/imagepush"
-	"github.com/jessfraz/img/runc"
+	"github.com/jessfraz/img/worker/runc"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
