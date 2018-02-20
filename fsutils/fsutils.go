@@ -38,8 +38,7 @@ func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdat
 	}
 
 	if _, err = os.Open(dest); !os.IsNotExist(err) && !DirIsEmpty(dest) {
-		logrus.Warnf("destination already exists: %s", dest)
-		//return errors.New("CopyDir: Destination already exists")
+		logrus.Debugf("destination already exists, using cache: %s", dest)
 	}
 
 	// Create the destination directory
