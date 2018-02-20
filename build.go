@@ -112,7 +112,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return fmt.Errorf("solving failed: %v", err)
 	}
 
-	fmt.Printf("Built image %s\n", cmd.tag)
+	fmt.Printf("Successfully built %s\n", cmd.tag)
 
 	return nil
 }

@@ -97,7 +97,7 @@ fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/community/x86_64/APKINDEX.tar.gz
 RUN [copy /src-0/certs /dest/etc/ssl/certs]
 --->
 <--- 6ljir2x800w6deqlradhw0dy2 0 <nil>
-Built and pushed image: jess/img
+Successfully built jess/img
 ```
 
 ### List Image Layers
@@ -165,6 +165,26 @@ $ img pull --backend=fuse r.j3ss.co/stress
 Pulling r.j3ss.co/stress:latest...
 Snapshot ref: sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6
 Size: 365.9KiB
+```
+
+### Push an Image
+
+```console
+$ img push -h
+Usage: img push [OPTIONS] NAME[:TAG]
+
+Push an image or a repository to a registry.
+
+Flags:
+
+  -backend  backend for snapshots (default: overlayfs)
+  -d        enable debug logging (default: false)
+```
+
+```console
+$ img push --backend=fuse jess/thing
+Pushing jess/thing:latest...
+Successfully pushed jess/thing:latest
 ```
 
 ## Acknowledgements
