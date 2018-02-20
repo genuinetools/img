@@ -82,7 +82,6 @@
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
-    "snapshots/overlay",
     "snapshots/storage",
     "sys"
   ]
@@ -281,7 +280,8 @@
     "fuse",
     "fuse/nodefs",
     "fuse/pathfs",
-    "splice"
+    "splice",
+    "unionfs"
   ]
   revision = "master"
 
@@ -547,6 +547,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3218a20c01e1ab41cc1da010e4de2d01201f3f7ccb1906100345d4a4a9883733"
+  inputs-digest = "e01e46010eceb7dafbf2080b6f03a45783a03265c98c4446224c438d63fb800c"
   solver-name = "gps-cdcl"
   solver-version = 1

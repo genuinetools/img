@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/containerd/containerd/log"
@@ -51,12 +55,20 @@ type snapshotFs struct {
 // file system. A metadata file is stored under the root.
 // Root needs to be a mount point of fuse.
 func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
-	// If directory does not exist, create it.
-	if _, err := os.Stat(root); err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-		if err := os.Mkdir(root, 0755); err != nil {
+	// Check if the directory exists.
+	if err := newSnapshotDir(root); err != nil {
+		return nil, err
+	}
+	var (
+		ro = filepath.Join(os.TempDir(), "img", "fuse-ro")
+		rw = filepath.Join(os.TempDir(), "img", "fuse-rw")
+	)
+
+	for _, path := range []string{
+		ro,
+		rw,
+	} {
+		if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
 			return nil, err
 		}
 	}
@@ -67,31 +79,34 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 		BranchCacheTTL:   time.Duration(5 * time.Second),
 		DeletionDirName:  "GOUNIONFS_DELETIONS",
 	}
-	options := unionfs.AutoUnionFsOptions{
-		UnionFsOptions: ufsOptions,
-		Options: nodefs.Options{
-			EntryTimeout:    time.Second,
-			AttrTimeout:     time.Second,
-			NegativeTimeout: time.Second,
-			Owner:           fuse.CurrentOwner(),
-			Debug:           true,
-		},
-		UpdateOnMount: true,
-		PathNodeFsOptions: pathfs.PathNodeFsOptions{
-			ClientInodes: true, // Support hardlinks.
-		},
-		HideReadonly: true, // Hides READONLY link from the top mountpoints.
+	ufs, err := unionfs.NewUnionFsFromRoots([]string{rw, ro}, &ufsOptions, true)
+	if err != nil {
+		return nil, fmt.Errorf("Create FUSE UnionFS failed: %v", err)
 	}
-	fsOpts := nodefs.Options{
-		PortableInodes: false, // Use sequential 32-bit inode numbers.
-		Debug:          true,
+	nodeFs := pathfs.NewPathNodeFs(ufs, &pathfs.PathNodeFsOptions{ClientInodes: true})
+	mOpts := nodefs.Options{
+		EntryTimeout:    time.Duration(1 * time.Second),
+		AttrTimeout:     time.Duration(1 * time.Second),
+		NegativeTimeout: time.Duration(1 * time.Second),
+		PortableInodes:  false, // Use sequential 32-bit inode numbers.
+		Debug:           true,
 	}
-	gofs := unionfs.NewAutoUnionFs("BASEDIR", options)
-	pathfs := pathfs.NewPathNodeFs(gofs, &pathfs.PathNodeFsOptions{Debug: true})
-	state, _, err := nodefs.MountRoot(root, pathfs.Root(), &fsOpts)
+	state, _, err := nodefs.MountRoot(root, nodeFs.Root(), &mOpts)
 	if err != nil {
 		return nil, fmt.Errorf("FUSE mount to root %s failed: %v", root, err)
 	}
+
+	// On ^C, or SIGTERM handle exit.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			state.Unmount()
+			logrus.Infof("Received %s, Unmounting FUSE Server", sig.String())
+			os.Exit(1)
+		}
+	}()
 
 	go func() {
 		logrus.Infof("Starting FUSE server...")
@@ -119,7 +134,7 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 		device: mnt.Source,
 		root:   root,
 		ms:     ms,
-		fs:     pathfs,
+		fs:     nodeFs,
 		server: state,
 	}, nil
 }
@@ -397,4 +412,42 @@ func (o *snapshotter) mounts(s storage.Snapshot) []mount.Mount {
 // Close closes the snapshotter
 func (o *snapshotter) Close() error {
 	return o.ms.Close()
+}
+
+// If directory does not exist, create it.
+func newSnapshotDir(root string) error {
+	if _, err := os.Stat(root); err != nil {
+		if !os.IsNotExist(err) {
+			if strings.Contains(err.Error(), "transport endpoint is not connected") {
+				// Unmount the mount
+				unmount(root)
+				return nil
+			}
+			return err
+		}
+
+		if err := os.Mkdir(root, 0755); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Check if it's already mounted (if we exited poorly) and unmount it.
+	unmount(root)
+
+	return nil
+}
+
+// unmount checks if root is already mounted (if we exited poorly) and unmounts it.
+func unmount(root string) {
+	_, err := mount.Lookup(root)
+	logrus.Printf("mount err %#v", err)
+	if err == nil {
+		cmd := exec.Command("fusermount", "-u", root)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			logrus.Warnf("Calling `fusermount -u %s` failed: %s %v", root, string(out), err)
+		}
+	}
 }

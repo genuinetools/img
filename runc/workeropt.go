@@ -2,6 +2,7 @@ package runc
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
-	"github.com/containerd/containerd/snapshots/overlay"
+	"github.com/jessfraz/img/snapshots/fuse"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/worker/base"
@@ -19,7 +20,7 @@ import (
 
 // NewWorkerOpt creates a WorkerOpt.
 func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
-	name := "runc-overlayfs"
+	name := "runc-fuse"
 
 	// Create the root/
 	root = filepath.Join(root, name)
@@ -40,9 +41,9 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 	}
 
 	// Create the snapshotter.
-	s, err := overlay.NewSnapshotter(filepath.Join(root, "snapshots"))
+	s, err := fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
 	if err != nil {
-		return opt, err
+		return opt, fmt.Errorf("creating snapshotter failed: %v", err)
 	}
 
 	// Create the content store locally.
@@ -59,7 +60,7 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 
 	// Create the new database for metadata.
 	mdb := ctdmetadata.NewDB(db, c, map[string]ctdsnapshot.Snapshotter{
-		"overlayfs": s,
+		"fuse": s,
 	})
 	if err := mdb.Init(context.TODO()); err != nil {
 		return opt, err
@@ -77,14 +78,14 @@ func NewWorkerOpt(root string) (opt base.WorkerOpt, err error) {
 		return opt, err
 	}
 
-	xlabels := base.Labels("oci", "overlayfs")
+	xlabels := base.Labels("oci", "fuse")
 
 	opt = base.WorkerOpt{
 		ID:            id,
 		Labels:        xlabels,
 		MetadataStore: md,
 		Executor:      exe,
-		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter("overlayfs"), c, md, "buildkit", gc),
+		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter("fuse"), c, md, "buildkit", gc),
 		ContentStore:  c,
 		Applier:       apply.NewFileSystemApplier(c),
 		Differ:        walking.NewWalkingDiff(c),
