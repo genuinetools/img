@@ -12,7 +12,7 @@ import (
 	"github.com/moby/buildkit/worker"
 )
 
-func createController(cmd command, ref string) (*control.Controller, error) {
+func createController(cmd command) (*control.Controller, error) {
 	// Create the runc worker.
 	opt, err := runc.NewWorkerOpt(defaultStateDirectory)
 	if err != nil {

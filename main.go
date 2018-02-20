@@ -47,6 +47,7 @@ func main() {
 	commands := []command{
 		&buildCommand{},
 		&listCommand{},
+		&pullCommand{},
 		&versionCommand{},
 	}
 

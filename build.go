@@ -63,7 +63,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ref := identity.NewID()
 
 	// Create the controller.
-	c, err := createController(cmd, ref)
+	c, err := createController(cmd)
 	if err != nil {
 		return err
 	}

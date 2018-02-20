@@ -8,7 +8,6 @@ import (
 
 	units "github.com/docker/go-units"
 	controlapi "github.com/moby/buildkit/api/services/control"
-	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/util/appcontext"
 )
 
@@ -34,10 +33,9 @@ type listCommand struct {
 func (cmd *listCommand) Run(args []string) (err error) {
 	// Create the context.
 	ctx := appcontext.Context()
-	ref := identity.NewID()
 
 	// Create the controller.
-	c, err := createController(cmd, ref)
+	c, err := createController(cmd)
 	if err != nil {
 		return err
 	}
