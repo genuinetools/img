@@ -91,27 +91,16 @@ func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdat
 		}()
 
 		destWalker := getWalkerFn(dest)
-		if err := doubleWalkDiff(ctx, dw.HandleChange, destWalker, w.fill); err != nil {
-			return err
-		}
-
-		return nil
+		return doubleWalkDiff(ctx, dw.HandleChange, destWalker, w.fill)
 	})
 
 	err = fsutil.Walk(ctx, src, &fsutil.WalkOpt{IncludePatterns: li.IncludePatterns, ExcludePatterns: li.ExcludePatterns}, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
-			if err := w.update(nil); err != nil {
-				return err
-			}
-			return nil
+			return w.update(nil)
 		}
 
 		cp := &currentPath{path: path, f: info}
-		if err := w.update(cp); err != nil {
-			return err
-		}
-
-		return nil
+		return w.update(cp)
 	})
 	if err != nil {
 		return err

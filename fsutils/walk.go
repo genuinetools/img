@@ -76,7 +76,3 @@ func getWalkerFn(root string) walkerFn {
 		})
 	}
 }
-
-func emptyWalker(ctx context.Context, pathC chan<- *currentPath) error {
-	return nil
-}

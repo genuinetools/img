@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/jessfraz/img/fsutils"
@@ -14,12 +13,10 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/source"
-	"github.com/moby/buildkit/util/progress"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/tonistiigi/fsutil"
-	"golang.org/x/time/rate"
 )
 
 const keySharedKey = "local.sharedKey"
@@ -196,30 +193,6 @@ func (ls *localSourceHandler) Snapshot(ctx context.Context) (out cache.Immutable
 	mutable = nil // avoid deferred cleanup
 
 	return snap, nil
-}
-
-func newProgressHandler(ctx context.Context, id string) func(int, bool) {
-	limiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 1)
-	pw, _, _ := progress.FromContext(ctx)
-	now := time.Now()
-	st := progress.Status{
-		Started: &now,
-		Action:  "transferring",
-	}
-	pw.Write(id, st)
-	return func(s int, last bool) {
-		if last || limiter.Allow() {
-			st.Current = s
-			if last {
-				now := time.Now()
-				st.Completed = &now
-			}
-			pw.Write(id, st)
-			if last {
-				pw.Close()
-			}
-		}
-	}
 }
 
 type cacheUpdater struct {

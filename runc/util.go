@@ -7,8 +7,6 @@ import (
 // BinaryExists checks if the runc binary exists.
 func BinaryExists() bool {
 	_, err := exec.LookPath("runc")
-	if err != nil {
-		return false
-	}
-	return true
+	// Return true when there is no error.
+	return err == nil
 }
