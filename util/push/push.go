@@ -12,7 +12,7 @@ import (
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
-	"github.com/jessfraz/img/auth"
+	"github.com/jessfraz/img/util/auth"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/imageutil"
 	"github.com/moby/buildkit/util/progress"

@@ -16,7 +16,7 @@ import (
 	"github.com/containerd/containerd/remotes/docker/schema1"
 	"github.com/containerd/containerd/rootfs"
 	"github.com/containerd/containerd/snapshots"
-	"github.com/jessfraz/img/auth"
+	"github.com/jessfraz/img/util/auth"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
