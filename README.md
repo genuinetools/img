@@ -8,6 +8,8 @@ container image builder.
 **The FUSE backend runs completely in userspace. It is a bit buggy and a work
 in progress so hang tight.**
 
+You might also be interested in reading the [original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
+
 * [Installation](#installation)
     - [Binaries](#binaries)
     - [Via Go](#via-go)
@@ -235,6 +237,9 @@ Flags:
 ## Contributing
 
 Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/jessfraz/img/issues).
+
+The local directories are mostly re-implementations of `buildkit` interfaces to
+be unprivileged.
 
 ## Acknowledgements
 
