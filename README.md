@@ -24,6 +24,28 @@ see [#22](https://github.com/jessfraz/img/issues/22).
 The `fuse` backend runs completely in userspace. It is a bit buggy and a work
 in progress so hang tight.
 
+**Unprivileged Mounting**
+
+To mount a filesystem without root access you need to do it from a mount and
+user namespace.
+
+Make sure you have user namespace support enabled. On some distros (Debian and
+Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_ns_clone`.
+
+You also need a version of `runc` with the patches from
+[opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688).
+
+Example:
+
+```console
+# unshare a mountns and userns 
+# and remap the user inside the namespaces to your current user
+$ unshare -m -U --map-root-user
+
+# then you can run img
+$ img build -t user/myimage .
+```
+
 **Table of Contents**
 
 * [Installation](#installation)
