@@ -12,6 +12,7 @@ You might also be interested in reading the [original design doc](https://docs.g
 
 The default backend is currently set to `overlayfs` and requires privileges
 since it is a lot more stable than the `fuse` backend.
+You can also use `naive` backend.
 
 * [Installation](#installation)
     - [Binaries](#binaries)

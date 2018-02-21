@@ -12,6 +12,7 @@ import (
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
+	"github.com/containerd/containerd/snapshots/naive"
 	"github.com/containerd/containerd/snapshots/overlay"
 	libfuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/executor/runc"
@@ -52,6 +53,8 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 		s, fuseserver, err = fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
 	case "overlayfs":
 		s, err = overlay.NewSnapshotter(filepath.Join(root, "snapshots"))
+	case "naive":
+		s, err = naive.NewSnapshotter(filepath.Join(root, "snapshots"))
 	default:
 		return opt, nil, fmt.Errorf("%s is not a valid snapshots backend", backend)
 	}
