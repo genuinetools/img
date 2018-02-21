@@ -15,7 +15,8 @@ You might also be interested in reading the
 
 The default backend is currently set to `naive` and requires privileges, but 
 it can be made unprivileged and that work is being done, see 
-[moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630). 
+[moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
+and [AkihiroSuda/buildkit_poc](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b). 
 It is a lot more stable than the `fuse` backend. You can also use `overlayfs` 
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/jessfraz/img/issues/22).
