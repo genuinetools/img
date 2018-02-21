@@ -24,6 +24,8 @@ see [#22](https://github.com/jessfraz/img/issues/22).
 The `fuse` backend runs completely in userspace. It is a bit buggy and a work
 in progress so hang tight.
 
+**Table of Contents**
+
 * [Installation](#installation)
     - [Binaries](#binaries)
     - [Via Go](#via-go)
