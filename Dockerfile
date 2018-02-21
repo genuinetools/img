@@ -3,7 +3,6 @@ FROM golang:1.9-alpine AS gobuild-base
 RUN apk add --no-cache git make
 
 FROM gobuild-base AS img
-RUN apk add --no-cache fuse
 WORKDIR /go/src/github.com/jessfraz/img
 COPY . .
 RUN make static && mv img /usr/bin/img
@@ -19,7 +18,7 @@ RUN git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com
 
 FROM alpine
 MAINTAINER Jessica Frazelle <jess@linux.com>
-RUN apk add --no-cache git
+RUN apk add --no-cache fuse git
 COPY --from=img /usr/bin/img /usr/bin/img
 COPY --from=runc /usr/bin/runc /usr/bin/runc
 ENTRYPOINT [ "img" ]
