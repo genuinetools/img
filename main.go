@@ -9,11 +9,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/jessfraz/img/types"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	defaultBackend        = "overlayfs"
+	defaultBackend        = types.NaiveBackend
 	defaultDockerRegistry = "https://index.docker.io/v1/"
 )
 
@@ -23,7 +24,7 @@ var (
 
 	defaultStateDirectory = "/tmp/img"
 
-	validBackends = []string{defaultBackend, "fuse", "naive"}
+	validBackends = []string{types.FUSEBackend, types.NaiveBackend, types.OverlayFSBackend}
 )
 
 func init() {

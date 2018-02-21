@@ -88,6 +88,7 @@
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
+    "snapshots/naive",
     "snapshots/overlay",
     "snapshots/storage",
     "sys"
@@ -625,6 +626,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a0ecf1e01d82296b8d545a82d52f4bbb24abf717ed54ea4ec0a956540baa2519"
+  inputs-digest = "68a26466097cc9bf3a62457179b4c342f01e34311695dc09ec1180b698380f10"
   solver-name = "gps-cdcl"
   solver-version = 1

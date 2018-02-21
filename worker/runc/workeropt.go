@@ -17,6 +17,7 @@ import (
 	libfuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/executor/runc"
 	"github.com/jessfraz/img/snapshots/fuse"
+	"github.com/jessfraz/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/worker/base"
@@ -49,12 +50,12 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 		s ctdsnapshot.Snapshotter
 	)
 	switch backend {
-	case "fuse":
+	case types.FUSEBackend:
 		s, fuseserver, err = fuse.NewSnapshotter(filepath.Join(root, "snapshots"))
-	case "overlayfs":
-		s, err = overlay.NewSnapshotter(filepath.Join(root, "snapshots"))
-	case "naive":
+	case types.NaiveBackend:
 		s, err = naive.NewSnapshotter(filepath.Join(root, "snapshots"))
+	case types.OverlayFSBackend:
+		s, err = overlay.NewSnapshotter(filepath.Join(root, "snapshots"))
 	default:
 		return opt, nil, fmt.Errorf("%s is not a valid snapshots backend", backend)
 	}

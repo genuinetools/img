@@ -2,19 +2,26 @@
 
 [![Build Status](https://travis-ci.org/jessfraz/img.svg?branch=master)](https://travis-ci.org/jessfraz/img)
 
-Standalone, daemon-less, unprivileged (with FUSE) Dockerfile and OCI compatible
+Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
 container image builder.
 
-**The FUSE backend runs completely in userspace. It is a bit buggy and a work
-in progress so hang tight.**
+img is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
+as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 
-You might also be interested in reading the [original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
+You might also be interested in reading the 
+[original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
 
-The default backend is currently set to `overlayfs` and requires privileges
-since it is a lot more stable than the `fuse` backend.
-You can also use `naive` backend.
+**Snapshotter Backends**
 
-img is more cache-efficient than Docker and can also execute multiple build stages concurrently, as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
+The default backend is currently set to `naive` and requires privileges, but 
+it can be made unprivileged and that work is being done, see 
+[moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630). 
+It is a lot more stable than the `fuse` backend. You can also use `overlayfs` 
+backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
+see [#22](https://github.com/jessfraz/img/issues/22).
+
+The `fuse` backend runs completely in userspace. It is a bit buggy and a work
+in progress so hang tight.
 
 * [Installation](#installation)
     - [Binaries](#binaries)
