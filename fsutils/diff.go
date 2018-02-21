@@ -79,7 +79,7 @@ func doubleWalkDiff(ctx context.Context, changeFn fsutil.ChangeFunc, a, b walker
 				if rmdir != "" && strings.HasPrefix(f1.path, rmdir) {
 					f1 = nil
 					continue
-				} else if rmdir == "" && f1.f.IsDir() {
+				} else if f1.f.IsDir() {
 					rmdir = f1.path + string(os.PathSeparator)
 				} else if rmdir != "" {
 					rmdir = ""
