@@ -14,6 +14,8 @@ The default backend is currently set to `overlayfs` and requires privileges
 since it is a lot more stable than the `fuse` backend.
 You can also use `naive` backend.
 
+img is more cache-efficient than Docker and can also execute multiple build stages concurrently, as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
+
 * [Installation](#installation)
     - [Binaries](#binaries)
     - [Via Go](#via-go)
