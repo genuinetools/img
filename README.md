@@ -53,7 +53,7 @@ $ img build -t user/myimage .
 
 This project is not trying to reinvent `buildkit`. If anything all changes and
 modifications for `buildkit` without privileges are being done upstream. The
-goal of this project is to in the future just be a glorified client on top of
+goal of this project is to in the future just be a glorified cli tool on top of
 `buildkit`.
 
 **Table of Contents**
