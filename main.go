@@ -23,7 +23,7 @@ var (
 
 	defaultStateDirectory = "/tmp/img"
 
-	validBackends = []string{defaultBackend, "fuse"}
+	validBackends = []string{defaultBackend, "fuse", "naive"}
 )
 
 func init() {
@@ -94,7 +94,7 @@ func main() {
 			// Build flag set with global flags in there.
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
 			fs.BoolVar(&debug, "d", false, "enable debug logging")
-			fs.StringVar(&backend, "backend", defaultBackend, "backend for snapshots")
+			fs.StringVar(&backend, "backend", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
 
 			// Register the subcommand flags in there, too.
 			command.Register(fs)
