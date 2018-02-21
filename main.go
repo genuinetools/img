@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
@@ -19,22 +18,14 @@ const (
 )
 
 var (
-	backend string
-	debug   bool
+	backend  string
+	stateDir string
+	debug    bool
 
 	defaultStateDirectory = "/tmp/img"
 
 	validBackends = []string{types.FUSEBackend, types.NaiveBackend, types.OverlayFSBackend}
 )
-
-func init() {
-	home, err := getHomeDir()
-	if err != nil {
-		logrus.Warnf("Using (%s) as default state directory, getting home directory failed: %v", defaultStateDirectory, err)
-		return
-	}
-	defaultStateDirectory = filepath.Join(home, ".img")
-}
 
 type command interface {
 	Name() string           // "foobar"
@@ -96,6 +87,7 @@ func main() {
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
 			fs.BoolVar(&debug, "d", false, "enable debug logging")
 			fs.StringVar(&backend, "backend", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
+			fs.StringVar(&stateDir, "state", defaultStateDirectory, fmt.Sprintf("directory to hold the global state"))
 
 			// Register the subcommand flags in there, too.
 			command.Register(fs)

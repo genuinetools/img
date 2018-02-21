@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"syscall"
 
@@ -19,7 +18,7 @@ import (
 
 func createController(cmd command) (*control.Controller, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
+	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
 	if err != nil {
 		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}
@@ -67,19 +66,6 @@ func getLocalDirs(c command) map[string]string {
 		"context":    cmd.contextDir,
 		"dockerfile": filepath.Dir(file),
 	}
-}
-
-func getHomeDir() (string, error) {
-	home := os.Getenv(homeKey)
-	if home != "" {
-		return home, nil
-	}
-
-	u, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-	return u.HomeDir, nil
 }
 
 // On ^C, SIGTERM, etc handle exit.

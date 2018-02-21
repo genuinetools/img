@@ -90,7 +90,7 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 func createSouceManager() (*source.Manager, *fuse.Server, error) {
 	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
+	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
 	if err != nil {
 		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
 	}

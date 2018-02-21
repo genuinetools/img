@@ -40,7 +40,7 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
 	// Create the runc worker options.
-	opt, fuseserver, err := runc.NewWorkerOpt(defaultStateDirectory, backend)
+	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
 	defer unmount(fuseserver)
 	if err != nil {
 		return fmt.Errorf("creating runc worker opt failed: %v", err)
