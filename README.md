@@ -49,6 +49,13 @@ $ unshare -m -U --map-root-user
 $ img build -t user/myimage .
 ```
 
+#### Goals
+
+This project is not trying to reinvent `buildkit`. If anything all changes and
+modifications for `buildkit` without privileges are being done upstream. The
+goal of this project is to in the future just be a glorified client on top of
+`buildkit`.
+
 **Table of Contents**
 
 * [Installation](#installation)
