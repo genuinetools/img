@@ -20,3 +20,4 @@ script:
 matrix:
   allow_failures:
     - go: 1.9.4
+

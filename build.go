@@ -196,11 +196,8 @@ func contextFromStdin(dockerfileName string) (string, error) {
 	defer f.Close()
 
 	// Copy the contents of the reader to the file.
-	if _, err = io.Copy(f, buf); err != nil {
-		return tmpDir, err
-	}
-
-	return tmpDir, nil
+	_, err = io.Copy(f, buf)
+	return tmpDir, err
 }
 
 // isArchive checks for the magic bytes of a tar or any supported compression algorithm.

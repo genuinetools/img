@@ -34,21 +34,21 @@ const (
 // computed during a directory changes calculation.
 type ChangeFunc func(ChangeKind, string, os.FileInfo, error) error
 
-type currentPath struct {
-	path string
-	f    os.FileInfo
+type CurrentPath struct {
+	Path     string
+	FileInfo os.FileInfo
 	//	fullPath string
 }
 
-// doubleWalkDiff walks both directories to create a diff
-func doubleWalkDiff(ctx context.Context, changeFn ChangeFunc, a, b walkerFn) (err error) {
+// DoubleWalkDiff walks both directories to create a diff
+func DoubleWalkDiff(ctx context.Context, changeFn ChangeFunc, a, b walkerFn) (err error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	var (
-		c1 = make(chan *currentPath, 128)
-		c2 = make(chan *currentPath, 128)
+		c1 = make(chan *CurrentPath, 128)
+		c2 = make(chan *CurrentPath, 128)
 
-		f1, f2 *currentPath
+		f1, f2 *CurrentPath
 		rmdir  string
 	)
 	g.Go(func() error {
@@ -92,16 +92,16 @@ func doubleWalkDiff(ctx context.Context, changeFn ChangeFunc, a, b walkerFn) (er
 				if rmdir != "" {
 					rmdir = ""
 				}
-				f = f2.f
+				f = f2.FileInfo
 				f2 = nil
 			case ChangeKindDelete:
 				// Check if this file is already removed by being
 				// under of a removed directory
-				if rmdir != "" && strings.HasPrefix(f1.path, rmdir) {
+				if rmdir != "" && strings.HasPrefix(f1.Path, rmdir) {
 					f1 = nil
 					continue
-				} else if rmdir == "" && f1.f.IsDir() {
-					rmdir = f1.path + string(os.PathSeparator)
+				} else if rmdir == "" && f1.FileInfo.IsDir() {
+					rmdir = f1.Path + string(os.PathSeparator)
 				} else if rmdir != "" {
 					rmdir = ""
 				}
@@ -111,12 +111,12 @@ func doubleWalkDiff(ctx context.Context, changeFn ChangeFunc, a, b walkerFn) (er
 				if err != nil {
 					return err
 				}
-				if f1.f.IsDir() && !f2.f.IsDir() {
-					rmdir = f1.path + string(os.PathSeparator)
+				if f1.FileInfo.IsDir() && !f2.FileInfo.IsDir() {
+					rmdir = f1.Path + string(os.PathSeparator)
 				} else if rmdir != "" {
 					rmdir = ""
 				}
-				f = f2.f
+				f = f2.FileInfo
 				f1 = nil
 				f2 = nil
 				if same {
@@ -133,48 +133,48 @@ func doubleWalkDiff(ctx context.Context, changeFn ChangeFunc, a, b walkerFn) (er
 	return g.Wait()
 }
 
-func pathChange(lower, upper *currentPath) (ChangeKind, string) {
+func pathChange(lower, upper *CurrentPath) (ChangeKind, string) {
 	if lower == nil {
 		if upper == nil {
 			panic("cannot compare nil paths")
 		}
-		return ChangeKindAdd, upper.path
+		return ChangeKindAdd, upper.Path
 	}
 	if upper == nil {
-		return ChangeKindDelete, lower.path
+		return ChangeKindDelete, lower.Path
 	}
 
-	switch i := ComparePath(lower.path, upper.path); {
+	switch i := ComparePath(lower.Path, upper.Path); {
 	case i < 0:
 		// File in lower that is not in upper
-		return ChangeKindDelete, lower.path
+		return ChangeKindDelete, lower.Path
 	case i > 0:
 		// File in upper that is not in lower
-		return ChangeKindAdd, upper.path
+		return ChangeKindAdd, upper.Path
 	default:
-		return ChangeKindModify, upper.path
+		return ChangeKindModify, upper.Path
 	}
 }
 
-func sameFile(f1, f2 *currentPath) (same bool, retErr error) {
+func sameFile(f1, f2 *CurrentPath) (same bool, retErr error) {
 	// If not a directory also check size, modtime, and content
-	if !f1.f.IsDir() {
-		if f1.f.Size() != f2.f.Size() {
+	if !f1.FileInfo.IsDir() {
+		if f1.FileInfo.Size() != f2.FileInfo.Size() {
 			return false, nil
 		}
 
-		t1 := f1.f.ModTime()
-		t2 := f2.f.ModTime()
+		t1 := f1.FileInfo.ModTime()
+		t2 := f2.FileInfo.ModTime()
 		if t1.UnixNano() != t2.UnixNano() {
 			return false, nil
 		}
 	}
 
-	ls1, ok := f1.f.Sys().(*Stat)
+	ls1, ok := f1.FileInfo.Sys().(*Stat)
 	if !ok {
 		return false, nil
 	}
-	ls2, ok := f1.f.Sys().(*Stat)
+	ls2, ok := f1.FileInfo.Sys().(*Stat)
 	if !ok {
 		return false, nil
 	}
@@ -189,7 +189,7 @@ func compareStat(ls1, ls2 *Stat) (bool, error) {
 	return ls1.Mode == ls2.Mode && ls1.Uid == ls2.Uid && ls1.Gid == ls2.Gid && ls1.Devmajor == ls2.Devmajor && ls1.Devminor == ls2.Devminor && ls1.Linkname == ls2.Linkname, nil
 }
 
-func nextPath(ctx context.Context, pathC <-chan *currentPath) (*currentPath, error) {
+func nextPath(ctx context.Context, pathC <-chan *CurrentPath) (*CurrentPath, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

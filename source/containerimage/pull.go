@@ -323,15 +323,13 @@ func getLayers(ctx context.Context, provider content.Provider, desc ocispec.Desc
 // This is very minimal and will probably be replaced with something more
 // featured.
 type jobs struct {
-	name     string
-	added    map[digest.Digest]job
-	mu       sync.Mutex
-	resolved bool
+	name  string
+	added map[digest.Digest]job
+	mu    sync.Mutex
 }
 
 type job struct {
 	ocispec.Descriptor
-	done    bool
 	started time.Time
 }
 
@@ -353,30 +351,4 @@ func (j *jobs) add(desc ocispec.Descriptor) {
 		Descriptor: desc,
 		started:    time.Now(),
 	}
-}
-
-func (j *jobs) jobs() []job {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-
-	descs := make([]job, 0, len(j.added))
-	for _, j := range j.added {
-		descs = append(descs, j)
-	}
-	return descs
-}
-
-func (j *jobs) isResolved() bool {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	return j.resolved
-}
-
-type statusInfo struct {
-	Ref       string
-	Status    string
-	Offset    int64
-	Total     int64
-	StartedAt time.Time
-	UpdatedAt time.Time
 }

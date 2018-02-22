@@ -80,7 +80,7 @@ func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdat
 		return err
 	}
 
-	w := newDynamicWalker()
+	w := fsutil.NewDynamicWalker()
 
 	g.Go(func() (retErr error) {
 		defer func() {
@@ -89,24 +89,24 @@ func CopyDir(src, dest string, li source.LocalIdentifier, cu filesync.CacheUpdat
 			}
 		}()
 
-		destWalker := getWalkerFn(dest)
-		return doubleWalkDiff(ctx, dw.HandleChange, destWalker, w.fill)
+		destWalker := fsutil.GetWalkerFn(dest)
+		return fsutil.DoubleWalkDiff(ctx, dw.HandleChange, destWalker, w.Fill)
 	})
 
 	err = fsutil.Walk(ctx, src, &fsutil.WalkOpt{IncludePatterns: li.IncludePatterns, ExcludePatterns: li.ExcludePatterns}, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
-			return w.update(nil)
+			return w.Update(nil)
 		}
 
-		cp := &currentPath{path: path, f: info}
-		return w.update(cp)
+		cp := &fsutil.CurrentPath{Path: path, FileInfo: info}
+		return w.Update(cp)
 	})
 	if err != nil {
 		return err
 	}
 
 	// Close the channel or we will wait here for eternity.
-	close(w.walkChan)
+	close(w.WalkChan)
 
 	return g.Wait()
 }

@@ -86,3 +86,8 @@
 [[constraint]]
   name = "github.com/jessfraz/reg"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/tonistiigi/fsutil"
+  branch = "export-some-functions"
+  source = "github.com/jessfraz/fsutil"
