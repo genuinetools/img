@@ -136,10 +136,11 @@ Build an image from a Dockerfile.
 
 Flags:
 
-  -backend    backend for snapshots (default: overlayfs)
+  -backend    backend for snapshots ([fuse naive overlayfs]) (default: naive)
   -build-arg  Set build-time variables (default: [])
   -d          enable debug logging (default: false)
   -f          Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
+  -state      directory to hold the global state (default: /tmp/img)
   -t          Name and optionally a tag in the 'name:tag' format (default: <none>)
   -target     Set the target build stage to build (default: <none>)
 ```
@@ -188,9 +189,10 @@ List images and digests.
 
 Flags:
 
-  -backend  backend for snapshots (default: overlayfs)
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (default: [])
+  -state    directory to hold the global state (default: /tmp/img)
 ```
 
 ```console
@@ -210,8 +212,9 @@ Pull an image or a repository from a registry.
 
 Flags:
 
-  -backend    backend for snapshots (default: overlayfs)
-  -d  enable debug logging (default: false)
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -d        enable debug logging (default: false)
+  -state    directory to hold the global state (default: /tmp/img)
 ```
 
 ```console
@@ -231,8 +234,9 @@ Push an image or a repository to a registry.
 
 Flags:
 
-  -backend  backend for snapshots (default: overlayfs)
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
   -d        enable debug logging (default: false)
+  -state    directory to hold the global state (default: /tmp/img)
 ```
 
 ```console
@@ -251,9 +255,10 @@ Show image disk usage.
 
 Flags:
 
-  -backend  backend for snapshots (default: overlayfs)
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (snapshot ID supported) (default: <none>)
+  -state    directory to hold the global state (default: /tmp/img)
 ```
 
 ```console
@@ -283,10 +288,11 @@ If no server is specified, the default (https://index.docker.io/v1/) is used.
 
 Flags:
 
-  -backend         backend for snapshots (default: overlayfs)
+  -backend         backend for snapshots ([fuse naive overlayfs]) (default: naive)
   -d               enable debug logging (default: false)
   -p               Password (default: <none>)
   -password-stdin  Take the password from stdin (default: false)
+  -state           directory to hold the global state (default: /tmp/img)
   -u               Username (default: <none>)
 ```
 
