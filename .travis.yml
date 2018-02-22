@@ -24,7 +24,10 @@
     - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
     - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"
     - go test $(go list ./... | grep -v vendor)
+    - make cover
     - make release
+  after_success:
+    - bash <(curl -s https://codecov.io/bash)
   deploy:
     provider: releases
     api_key:
