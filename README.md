@@ -17,9 +17,7 @@ You might also be interested in reading the
 #### Snapshotter Backends
 
 The default backend is currently set to `naive` and requires privileges, but 
-it can be made unprivileged and that work is being done, see 
-[moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
-and [AkihiroSuda/buildkit_poc](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
+it can be made unprivileged and that work is being done, see [`Unprivileged Mounting`](#unprivileged-mounting) section below.
 It is a lot more stable than the `fuse` backend. You can also use `overlayfs` 
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/jessfraz/img/issues/22).
@@ -48,6 +46,16 @@ $ unshare -m -U --map-root-user
 # then you can run img
 $ img build -t user/myimage .
 ```
+
+Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
+
+So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
+
+If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/jessfraz/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
+
+For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
+and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
+
 
 #### Goals
 
