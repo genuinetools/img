@@ -130,6 +130,12 @@ tag: ## Create a new git tag to prepare to build a release
 	git tag -sa $(VERSION) -m "$(VERSION)"
 	@echo "Run git push origin $(VERSION) to push your new tag to GitHub and trigger a travis build."
 
+.PHONY: AUTHORS
+AUTHORS:
+	@$(file >$@,# This file lists all individuals having contributed content to the repository.)
+	@$(file >>$@,# For how it is generated, see `make AUTHORS`.)
+	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" >> $@
+
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages
 	@echo "+ $@"
