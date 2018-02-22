@@ -5,8 +5,11 @@
 Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
 container image builder.
 
-img is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
+`img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
 as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
+
+The commands/UX are the same as `docker {build,push,pull,login}` so all you 
+have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
 Currently you can run it as unprivileged if you follow the instructions in the
 [unprivileged mounting](#unprivileged-mounting) section below.
