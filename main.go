@@ -15,6 +15,7 @@ import (
 const (
 	defaultBackend        = types.NaiveBackend
 	defaultDockerRegistry = "https://index.docker.io/v1/"
+	defaultDockerfileName = "Dockerfile"
 )
 
 var (
