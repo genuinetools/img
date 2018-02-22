@@ -63,7 +63,6 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("image: %#v\n", identifier)
 
 	// Create the source manager.
 	sm, fuseserver, err := createSouceManager()
