@@ -93,18 +93,17 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "3b4fcf771ae669bdf108054d93125f8ff3ebac4b"
+  revision = "9463fcbbe7e15bc9165f9cafc92248f974990390"
 
 [[projects]]
-  branch = "drop-privs"
+  branch = "master"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
     "pathdriver",
     "sysx"
   ]
-  revision = "a03e9da26a1389f8bdb3bc90fbe27a4688cc2a56"
-  source = "github.com/jessfraz/continuity"
+  revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
 
 [[projects]]
   branch = "master"
@@ -179,6 +178,7 @@
     "builder/dockerfile/shell",
     "builder/dockerignore",
     "errdefs",
+    "pkg/archive",
     "pkg/fileutils",
     "pkg/homedir",
     "pkg/idtools",
@@ -186,6 +186,7 @@
     "pkg/jsonmessage",
     "pkg/longpath",
     "pkg/mount",
+    "pkg/pools",
     "pkg/signal",
     "pkg/stringid",
     "pkg/system",
@@ -195,7 +196,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "ffbb130873ad1aba579de7817b348b0ceacc31c2"
+  revision = "8b8a0e2c523eb886094fad7e5342d93407a19c8e"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -525,7 +526,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
+  revision = "49796115aa4b964c318aad4f3084fdb41e9aa067"
 
 [[projects]]
   branch = "master"
@@ -556,7 +557,7 @@
     "unix",
     "windows"
   ]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "c1138c84af3a9927aee1a1b8b7ce06c9b7ea52bc"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -626,6 +627,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "68a26466097cc9bf3a62457179b4c342f01e34311695dc09ec1180b698380f10"
+  inputs-digest = "4bc76b26fd0a36643eeb454b533aef2859ebe472cb92187ac4c44dc8ea312f39"
   solver-name = "gps-cdcl"
   solver-version = 1

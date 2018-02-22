@@ -297,7 +297,7 @@ func checkSourceAddress(addr net.Addr, sourceAddrs string) error {
 // provided by the user failed to authenticate.
 type ServerAuthError struct {
 	// Errors contains authentication errors returned by the authentication
-	// callback methods.
+	// callback methods. The first entry typically is NoAuthError.
 	Errors []error
 }
 
@@ -309,13 +309,11 @@ func (l ServerAuthError) Error() string {
 	return "[" + strings.Join(errs, ", ") + "]"
 }
 
-// NoAuthError is the unique error that is returned if no authentication method
-// has been passed yet
-type NoAuthError struct{}
-
-func (e *NoAuthError) Error() string {
-	return "no auth passed yet"
-}
+// NoAuthError is the unique error that is returned if no
+// authentication method has been passed yet. This happens as a normal
+// part of the authentication loop, since the client first tries
+// 'none' authentication to discover available methods.
+var NoAuthError = errors.New("ssh: no auth passed yet")
 
 func (s *connection) serverAuthenticate(config *ServerConfig) (*Permissions, error) {
 	sessionID := s.transport.getSessionID()
@@ -371,7 +369,7 @@ userAuthLoop:
 		}
 
 		perms = nil
-		authErr := error(&NoAuthError{})
+		authErr := NoAuthError
 
 		switch userAuthReq.Method {
 		case "none":
