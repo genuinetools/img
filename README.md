@@ -20,7 +20,8 @@ You might also be interested in reading the
 #### Snapshotter Backends
 
 The default backend is currently set to `naive` and requires privileges, but 
-it can be made unprivileged and that work is being done, see [`Unprivileged Mounting`](#unprivileged-mounting) section below.
+it can be made unprivileged and that work is being done, see the 
+[unprivileged mounting](#unprivileged-mounting) section below.
 It is a lot more stable than the `fuse` backend. You can also use `overlayfs` 
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/jessfraz/img/issues/22).
