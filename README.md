@@ -47,7 +47,7 @@ $ unshare -m -U --map-root-user
 $ img build -t user/myimage .
 ```
 
-Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
+Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5)`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
 
 So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
 
