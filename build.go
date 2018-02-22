@@ -56,7 +56,12 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// Parse what is set to come from stdin.
 	if cmd.dockerfilePath == "-" {
-		return errors.New("stdin not supported for Dockerfile yet")
+		cmd.dockerfilePath, err = dockerfileFromStdin()
+		if err != nil {
+			return fmt.Errorf("reading dockerfile from stdin failed: %v", err)
+		}
+		// On exit cleanup the temporary file we used hold the dockerfile from stdin.
+		defer os.RemoveAll(cmd.dockerfilePath)
 	}
 
 	if cmd.contextDir == "" {
@@ -127,6 +132,26 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	fmt.Printf("Successfully built %s\n", cmd.tag)
 
 	return nil
+}
+
+func dockerfileFromStdin() (string, error) {
+	stdin, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		return "", fmt.Errorf("reading from stdin failed: %v", err)
+	}
+
+	// Create a temporary file for the Dockerfile
+	f, err := ioutil.TempFile("", "img-build-dockerfile-")
+	if err != nil {
+		return f.Name(), fmt.Errorf("unable to create temporary file for dockerfile: %v", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(stdin); err != nil {
+		return f.Name(), fmt.Errorf("writing to temporary file for dockerfile failed: %v", err)
+	}
+
+	return f.Name(), nil
 }
 
 // contextFromStdin will read the contents of stdin as either a
