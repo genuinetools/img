@@ -55,6 +55,21 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 		if creds, ok := authConfigs[registry]; ok {
 			return creds, nil
 		}
+
+		// remove https:// from user input and try again
+		if strings.HasPrefix(registry, "https://") {
+			if creds, ok := authConfigs[strings.TrimPrefix(registry, "https://")]; ok {
+				return creds, nil
+			}
+		}
+
+		// remove http:// from user input and try again
+		if strings.HasPrefix(registry, "http://") {
+			if creds, ok := authConfigs[strings.TrimPrefix(registry, "http://")]; ok {
+				return creds, nil
+			}
+		}
+
 		// add https:// to user input and try again
 		// see https://github.com/jessfraz/reg/issues/32
 		if !strings.HasPrefix(registry, "https://") && !strings.HasPrefix(registry, "http://") {
@@ -62,6 +77,7 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 				return creds, nil
 			}
 		}
+		fmt.Printf("Using registry '%s' with no authentication\n", registry)
 
 		// Otherwise just use the registry with no auth.
 		return setDefaultRegistry(types.AuthConfig{
@@ -76,6 +92,7 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 	}
 
 	// Don't use any authentication.
+	fmt.Println("Not using any authentication")
 	return types.AuthConfig{}, nil
 }
 

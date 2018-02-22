@@ -19,7 +19,7 @@ func IsEmptyLayer(blobSum digest.Digest) bool {
 
 var (
 	// Priorities are the vulnerability priority labels.
-	Priorities = []string{"Unknown", "Negligible", "Low", "Medium", "High", "Critical", "Defcon1"}
+	Priorities = []string{"Unknown", "Negligible", "Low", "Medium", "High", "Critical", "Defcon1", "Fixable"}
 )
 
 // Error describes the structure of a clair error.

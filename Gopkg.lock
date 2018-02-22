@@ -50,7 +50,7 @@
   branch = "master"
   name = "github.com/containerd/console"
   packages = ["."]
-  revision = "84eeaae905fa414d03e07bcd6c8d3f19e7cf180e"
+  revision = "2748ece16665b45a47f884001d5831ec79703880"
 
 [[projects]]
   branch = "master"
@@ -93,7 +93,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "129167132c5e0dbd1b031badae201a432d1bd681"
+  revision = "3b4fcf771ae669bdf108054d93125f8ff3ebac4b"
 
 [[projects]]
   branch = "drop-privs"
@@ -133,7 +133,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "02e8dc6bfcf283322a767f711b3058c4032fb507"
+  revision = "ef7d8be86c96f48cd05ae692b4ad1c18aaac6940"
 
 [[projects]]
   branch = "master"
@@ -195,7 +195,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "ee9abc212032353e19e5b0f5e6410ad67a0cc9b1"
+  revision = "ffbb130873ad1aba579de7817b348b0ceacc31c2"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -326,7 +326,7 @@
   branch = "master"
   name = "github.com/jessfraz/reg"
   packages = ["registry"]
-  revision = "9f7b2358497106ab05b0ad1e28d0eee00c8da497"
+  revision = "5208643fa87b8de25a7466d4ce03271166f041c9"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -425,7 +425,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "595bea022f077a9e17d7473b34fbaf1adaed9e43"
+  revision = "b50fa98d9e5ec3ff58028c46767129607067f961"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -559,7 +559,6 @@
   revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -577,7 +576,8 @@
     "unicode/norm",
     "unicode/rangetable"
   ]
-  revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"

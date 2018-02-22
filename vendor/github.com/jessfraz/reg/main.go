@@ -276,10 +276,18 @@ func main() {
 					Name:  "clair",
 					Usage: "url to clair instance",
 				},
+				cli.IntFlag{
+					Name:  "fixable-threshold",
+					Usage: "number of fixable issues permitted",
+					Value: 0,
+				},
 			},
 			Action: func(c *cli.Context) error {
 				if c.String("clair") == "" {
 					return errors.New("clair url cannot be empty, pass --clair")
+				}
+				if c.Int("fixable-threshold") < 0 {
+					return errors.New("fixable threshold must be a positive integer")
 				}
 				if len(c.Args()) < 1 {
 					return fmt.Errorf("pass the name of the repository")
@@ -362,6 +370,10 @@ func main() {
 				for _, v := range vulns {
 					sevRow := vulnsBy(v.Severity, store)
 					store[v.Severity] = append(sevRow, v)
+					if len(v.FixedBy) > 0 {
+						fixRow := vulnsBy("Fixable", store)
+						store["Fixable"] = append(fixRow, v)
+					}
 				}
 
 				// iterate over the priorities list
@@ -374,7 +386,12 @@ func main() {
 				}
 				iteratePriorities(func(sev string) {
 					for _, v := range store[sev] {
-						fmt.Printf("%s: [%s] \n%s\n%s\n", v.Name, v.Severity, v.Description, v.Link)
+						if sev == "Fixable" {
+							fmt.Printf("%s: [%s] \n%s\n%s\n", v.Name, v.Severity+" - Fixable", v.Description, v.Link)
+							fmt.Printf("Fixed by: %s\n", v.FixedBy)
+						} else {
+							fmt.Printf("%s: [%s] \n%s\n%s\n", v.Name, v.Severity, v.Description, v.Link)
+						}
 						fmt.Println("-----------------------------------------")
 					}
 				})
@@ -382,10 +399,16 @@ func main() {
 					fmt.Printf("%s: %d\n", sev, len(store[sev]))
 				})
 
+				// return an error if there are more than 1 fixable vulns
+				lenFixableVulns := len(store["Fixable"])
+				if lenFixableVulns > c.Int("fixable-threshold") {
+					logrus.Fatalf("%d fixable vulnerabilities found", lenFixableVulns)
+				}
+
 				// return an error if there are more than 10 bad vulns
 				lenBadVulns := len(store["High"]) + len(store["Critical"]) + len(store["Defcon1"])
 				if lenBadVulns > 10 {
-					logrus.Fatalf("%d bad vunerabilities found", lenBadVulns)
+					logrus.Fatalf("%d bad vulnerabilities found", lenBadVulns)
 				}
 
 				return nil

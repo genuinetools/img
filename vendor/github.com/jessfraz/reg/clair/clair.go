@@ -43,7 +43,7 @@ func New(url string, debug bool) (*Clair, error) {
 	registry := &Clair{
 		URL: url,
 		Client: &http.Client{
-			Timeout:   time.Minute,
+			Timeout:   5 * time.Minute,
 			Transport: errorTransport,
 		},
 		Logf: logf,
