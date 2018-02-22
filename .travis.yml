@@ -1,6 +1,6 @@
 ---
   language: go
-  sudo: false
+  sudo: true
   notifications:
     email: true
   go:
@@ -16,6 +16,7 @@
   install:
     - go get github.com/golang/lint/golint
     - go get honnef.co/go/tools/cmd/staticcheck
+    - curl -sSL -o runc https://github.com/opencontainers/runc/releases/download/v1.0.0-rc4/runc.amd64 && chmod +x runc && sudo mv runc /usr/bin/runc
   script:
     - go build -v
     - go vet $(go list ./... | grep -v vendor)

@@ -1,12 +1,21 @@
 package main
 
 import (
+	"archive/tar"
+	"bufio"
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/containerd/containerd/namespaces"
+	"github.com/docker/docker/pkg/archive"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
@@ -55,7 +64,12 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	}
 
 	if cmd.contextDir == "-" {
-		return errors.New("stdin not supported for build context yet")
+		cmd.contextDir, err = contextFromStdin(cmd.dockerfilePath)
+		if err != nil {
+			return fmt.Errorf("reading context from stdin failed: %v", err)
+		}
+		// On exit cleanup the temporary directory we used hold the files from stdin.
+		defer os.RemoveAll(cmd.contextDir)
 	}
 
 	// Add the latest lag if they did not provide one.
@@ -113,4 +127,115 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	fmt.Printf("Successfully built %s\n", cmd.tag)
 
 	return nil
+}
+
+// contextFromStdin will read the contents of stdin as either a
+// Dockerfile or tar archive. Returns the path to a temporary directory
+// for the build context..
+func contextFromStdin(dockerfileName string) (string, error) {
+	// Set the dockerfile name if it is empty.
+	if dockerfileName == "" {
+		dockerfileName = defaultDockerfileName
+	}
+
+	// Create a temporary directory for the build context.
+	tmpDir, err := ioutil.TempDir("", "img-build-context-")
+	if err != nil {
+		return "", fmt.Errorf("unable to create temporary context directory: %v", err)
+	}
+
+	// Create a new reader from stdin.
+	buf := bufio.NewReader(os.Stdin)
+
+	// Grab the magic number range from the reader.
+	archiveHeaderSize := 512 // number of bytes in an archive header
+	magic, err := buf.Peek(archiveHeaderSize)
+	if err != nil && err != io.EOF {
+		return tmpDir, fmt.Errorf("failed to peek context header from STDIN: %v", err)
+	}
+
+	// Validate if it is a tar archive.
+	if isArchive(magic) {
+		return tmpDir, untar(tmpDir, buf)
+	}
+
+	if dockerfileName == "-" {
+		return tmpDir, errors.New("build context is not an archive")
+	}
+
+	// Create the dockerfile in the temporary directory.
+	f, err := os.Create(filepath.Join(tmpDir, dockerfileName))
+	if err != nil {
+		return tmpDir, err
+	}
+	defer f.Close()
+
+	// Copy the contents of the reader to the file.
+	if _, err = io.Copy(f, buf); err != nil {
+		return tmpDir, err
+	}
+
+	return tmpDir, nil
+}
+
+// isArchive checks for the magic bytes of a tar or any supported compression algorithm.
+func isArchive(header []byte) bool {
+	compression := archive.DetectCompression(header)
+	if compression != archive.Uncompressed {
+		return true
+	}
+	r := tar.NewReader(bytes.NewBuffer(header))
+	_, err := r.Next()
+	return err == nil
+}
+
+// untar unpacks a tarball to a given directory.
+func untar(dest string, r io.Reader) error {
+	gzr, err := gzip.NewReader(r)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+	for {
+		header, err := tr.Next()
+		switch {
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+		// return any other error
+		case err != nil:
+			return err
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
+		}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(dest, header.Name)
+
+		// check the file type
+		switch header.Typeflag {
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+		// if it's a file create it
+		case tar.TypeReg:
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			// copy over contents
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+		}
+	}
 }

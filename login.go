@@ -79,7 +79,11 @@ func (cmd *loginCommand) Run(args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	token, err := registryLogin(authConfig)
+	r, err := registryapi.New(authConfig, debug)
+	if err != nil {
+		return fmt.Errorf("creating registry client failed: %v", err)
+	}
+	token, err := r.Token(authConfig.ServerAddress)
 	if err != nil {
 		return fmt.Errorf("getting registry token failed: %v", err)
 	}
@@ -98,15 +102,6 @@ func (cmd *loginCommand) Run(args []string) error {
 	fmt.Println("Login succeeded.")
 
 	return nil
-}
-
-func registryLogin(auth types.AuthConfig) (string, error) {
-	r, err := registryapi.New(auth, debug)
-	if err != nil {
-		return "", err
-	}
-
-	return r.Token(auth.ServerAddress)
 }
 
 // configureAuth returns an types.AuthConfig from the specified user, password and server.
