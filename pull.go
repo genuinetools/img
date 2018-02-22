@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/namespaces"
+	"github.com/docker/distribution/reference"
 	units "github.com/docker/go-units"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/jessfraz/img/source/containerimage"
@@ -49,11 +50,20 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
+	// Parse the repository name.
+	image, err := reference.ParseNormalizedNamed(cmd.image)
+	if err != nil {
+		return fmt.Errorf("not a valid image %q: %v", cmd.image, err)
+	}
+	// Add latest to the image name if it is empty.
+	image = reference.TagNameOnly(image)
+
 	// Get the identifier for the image.
-	identifier, err := source.NewImageIdentifier(cmd.image)
+	identifier, err := source.NewImageIdentifier(image.String())
 	if err != nil {
 		return err
 	}
+	fmt.Printf("image: %#v\n", identifier)
 
 	// Create the source manager.
 	sm, fuseserver, err := createSouceManager()
