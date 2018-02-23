@@ -40,8 +40,8 @@ func (cmd *tagCommand) Run(args []string) (err error) {
 	cmd.image = args[0]
 	cmd.target = args[1]
 	// Add the latest lag if they did not provide one.
-	addLatestTagSuffix(cmd.image)
-	addLatestTagSuffix(cmd.target)
+	cmd.image = addLatestTagSuffix(cmd.image)
+	cmd.target = addLatestTagSuffix(cmd.target)
 
 	// Create the context.
 	ctx := appcontext.Context()
