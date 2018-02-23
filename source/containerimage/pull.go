@@ -10,6 +10,7 @@ import (
 	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
@@ -163,6 +164,7 @@ func (p *puller) resolve(ctx context.Context) error {
 			Target:    p.desc,
 			CreatedAt: time.Now(),
 		}
+		ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 		if _, err := p.images.Update(ctx, img); err != nil {
 			if !errdefs.IsNotFound(err) {
 				p.resolveErr = fmt.Errorf("updating image store for image %s failed: %v", p.ref, err)
