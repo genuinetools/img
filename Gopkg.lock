@@ -196,7 +196,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "8b8a0e2c523eb886094fad7e5342d93407a19c8e"
+  revision = "219582bba6a316673fddeca50585f5c655041acb"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -469,7 +469,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "e69720d204a4aa3b0c65dc91208645ba0a52b9cd"
+  revision = "c3324c1198cf3374996e9d3098edd46a6b55afc9"
 
 [[projects]]
   branch = "master"
@@ -514,7 +514,7 @@
   branch = "master"
   name = "github.com/syndtr/gocapability"
   packages = ["capability"]
-  revision = "db04d3cc01c8b54962a58ec7e491717d06cfcc16"
+  revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
   branch = "export-some-functions"
@@ -558,7 +558,7 @@
     "unix",
     "windows"
   ]
-  revision = "c1138c84af3a9927aee1a1b8b7ce06c9b7ea52bc"
+  revision = "88d2dcc510266da9f7f8c7f34e1940716cab5f5c"
 
 [[projects]]
   name = "golang.org/x/text"
