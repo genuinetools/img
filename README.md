@@ -101,6 +101,8 @@ For the FUSE backend, you will also need `fusermount` installed.
 $ go get github.com/jessfraz/img
 ```
 
+NOTE: Only works on Linux. Compile and run in a container (explained below) if you're on Windows or MacOS ;)
+
 #### Running with Docker
 
 ```console
