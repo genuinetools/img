@@ -79,6 +79,7 @@ goal of this project is to in the future just be a glorified cli tool on top of
     + [List Image Layers](#list-image-layers)
     + [Pull an Image](#pull-an-image)
     + [Push an Image](#push-an-image)
+    + [Tag an Image](#tag-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
 * [Contributing](#contributing)
@@ -111,7 +112,7 @@ $ docker run --rm -it \
     --volume "${HOME}/.docker:/root/.docker:ro" \ # for credentials to push to docker hub or a registry
     --cap-add SYS_ADMIN \  # so we can mount if we aren't running as unprivileged
     --security-opt apparmor=unconfined \ # turn off apparmor so we can mount
-    --security-opt seccomp=unconfined \ turn off seccomp so the runc children can use the kernel keyring
+    --security-opt seccomp=unconfined \ # turn off seccomp so the runc children can use the kernel keyring
     --volume /sys/fs/cgroup:/sys/fs/cgroup \ # so we can have nested cgroups for the runc build containers
     r.j3ss.co/img build -t user/myimage .
 ```
@@ -130,6 +131,7 @@ Commands:
   login    Log in to a Docker registry.
   pull     Pull an image or a repository from a registry.
   push     Push an image or a repository to a registry.
+  tag      Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
   version  Show the version information.
 ```
 
@@ -250,6 +252,26 @@ Flags:
 $ img push --backend=fuse jess/thing
 Pushing jess/thing:latest...
 Successfully pushed jess/thing:latest
+```
+
+### Tag an Image
+
+```console
+$ img tag -h
+Usage: img tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+
+Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
+
+Flags:
+
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -d        enable debug logging (default: false)
+  -state    directory to hold the global state (default: /tmp/img)
+```
+
+```console
+$ img tag jess/thing jess/otherthing
+Successfully tagged jess/thing as jess/otherthing
 ```
 
 ### Disk Usage

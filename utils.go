@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/hanwen/go-fuse/fuse"
@@ -101,4 +102,12 @@ func unmount(fuseserver *fuse.Server) {
 	if err := fuseserver.Unmount(); err != nil {
 		logrus.Errorf("Unmounting FUSE server failed: %v", err)
 	}
+}
+
+// addLatestTagSuffix adds :latest to the image if it does not have a tag
+func addLatestTagSuffix(image string) string {
+	if !strings.Contains(image, ":") {
+		return image + latestTagSuffix
+	}
+	return image
 }

@@ -16,6 +16,8 @@ const (
 	defaultBackend        = types.NaiveBackend
 	defaultDockerRegistry = "https://index.docker.io/v1/"
 	defaultDockerfileName = "Dockerfile"
+
+	latestTagSuffix = ":latest"
 )
 
 var (
@@ -59,6 +61,7 @@ func main() {
 		&loginCommand{},
 		&pullCommand{},
 		&pushCommand{},
+		&tagCommand{},
 		&versionCommand{},
 	}
 

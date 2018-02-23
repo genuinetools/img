@@ -78,9 +78,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	}
 
 	// Add the latest lag if they did not provide one.
-	if !strings.Contains(cmd.tag, ":") {
-		cmd.tag += ":latest"
-	}
+	addLatestTagSuffix(cmd.tag)
 
 	// Create the context.
 	ctx := appcontext.Context()

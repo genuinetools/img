@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/hanwen/go-fuse/fuse"
@@ -35,12 +34,10 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 		return fmt.Errorf("must pass an image or repository to push")
 	}
 
-	// Get the specified context.
+	// Get the specified image.
 	cmd.image = args[0]
 	// Add the latest lag if they did not provide one.
-	if !strings.Contains(cmd.image, ":") {
-		cmd.image += ":latest"
-	}
+	addLatestTagSuffix(cmd.image)
 
 	// Create the context.
 	ctx := appcontext.Context()

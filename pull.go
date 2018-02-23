@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/distribution/reference"
@@ -37,12 +36,8 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 		return fmt.Errorf("must pass an image or repository to pull")
 	}
 
-	// Get the specified context.
+	// Get the specified image.
 	cmd.image = args[0]
-	// Add the latest lag if they did not provide one.
-	if !strings.Contains(cmd.image, ":") {
-		cmd.image += ":latest"
-	}
 
 	// Create the context.
 	ctx := appcontext.Context()

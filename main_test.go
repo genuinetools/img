@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 
 // doRun runs the test command, recording stdout and stderr and
 // returning exit status.
-func doRun(args []string, stdin io.Reader) error {
+func doRun(args []string, stdin io.Reader) (string, error) {
 	prog := "./testimg" + exeSuffix
 
 	newargs := []string{prog, args[0], "--state", testStateDir}
@@ -66,23 +66,28 @@ func doRun(args []string, stdin io.Reader) error {
 	if stdin != nil {
 		cmd.Stdin = stdin
 	}
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("Error running %s: %s\n%v", strings.Join(newargs, " "), string(out), err)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(out), fmt.Errorf("Error running %s: %s\n%v", strings.Join(newargs, " "), string(out), err)
 	}
 
-	return nil
+	return string(out), nil
 }
 
 // run runs the test command, and expects it to succeed.
-func run(t *testing.T, args ...string) {
+func run(t *testing.T, args ...string) string {
 	if runtime.GOOS == "windows" {
 		mu.Lock()
 		defer mu.Unlock()
 	}
-	if err := doRun(args, nil); err != nil {
+
+	out, err := doRun(args, nil)
+	if err != nil {
 		t.Logf("img %v failed unexpectedly: %v", args, err)
 		t.FailNow()
 	}
+
+	return out
 }
 
 func runBuild(t *testing.T, name string, stdin io.Reader) {
@@ -96,7 +101,7 @@ func runBuild(t *testing.T, name string, stdin io.Reader) {
 		buildCtx = "-"
 	}
 	args := []string{"build", "-t", name, buildCtx}
-	if err := doRun(args, stdin); err != nil {
+	if _, err := doRun(args, stdin); err != nil {
 		t.Logf("img %v failed unexpectedly: %v", args, err)
 		t.FailNow()
 	}
