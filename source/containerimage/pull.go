@@ -8,6 +8,7 @@ import (
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
+	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
@@ -35,6 +36,7 @@ type SourceOpt struct {
 	ContentStore  content.Store
 	Applier       diff.Applier
 	CacheAccessor cache.Accessor
+	Images        images.Store
 }
 
 type imageSource struct {
@@ -102,6 +104,7 @@ func (is *imageSource) Resolve(ctx context.Context, id source.Identifier) (sourc
 		src:      imageIdentifier,
 		is:       is,
 		resolver: is.getResolver(ctx),
+		images:   is.Images,
 	}
 	return p, nil
 }
@@ -114,6 +117,7 @@ type puller struct {
 	ref         string
 	resolveErr  error
 	resolver    remotes.Resolver
+	images      images.Store
 }
 
 func (p *puller) resolve(ctx context.Context) error {
@@ -147,7 +151,30 @@ func (p *puller) resolve(ctx context.Context) error {
 		}
 		p.desc = desc
 		p.ref = ref
+
+		// Add to the image store.
+		if p.images == nil {
+			p.resolveErr = errors.New("image store is nil")
+		}
+
+		// Update the target image. Create it if it does not exist.
+		img := images.Image{
+			Name:      p.ref,
+			Target:    p.desc,
+			CreatedAt: time.Now(),
+		}
+		if _, err := p.images.Update(ctx, img); err != nil {
+			if !errdefs.IsNotFound(err) {
+				p.resolveErr = fmt.Errorf("updating image store for image %s failed: %v", p.ref, err)
+			}
+
+			logrus.Debugf("Creating new tag: %s", p.ref)
+			if _, err := p.images.Create(ctx, img); err != nil {
+				p.resolveErr = fmt.Errorf("creating image %s in image store failed: %v", p.ref, err)
+			}
+		}
 	})
+
 	return p.resolveErr
 }
 

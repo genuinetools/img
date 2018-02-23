@@ -69,6 +69,7 @@ func NewWorker(opt base.WorkerOpt, localDirs map[string]string) (*Worker, error)
 		ContentStore:  opt.ContentStore,
 		Applier:       opt.Applier,
 		CacheAccessor: cm,
+		Images:        opt.ImageStore,
 	})
 	if err != nil {
 		return nil, err

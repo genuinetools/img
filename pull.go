@@ -117,6 +117,7 @@ func createSouceManager() (*source.Manager, *fuse.Server, error) {
 		ContentStore:  opt.ContentStore,
 		Applier:       opt.Applier,
 		CacheAccessor: cm,
+		Images:        opt.ImageStore,
 	})
 	if err != nil {
 		return nil, fuseserver, err
