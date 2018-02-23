@@ -105,11 +105,14 @@ $ go get github.com/jessfraz/img
 ```console
 $ docker run --rm -it \
     --name img \
-    --volume /tmp/state:/root/.img \
-    --volume $(pwd):/src \
-    --workdir /src \
-    --privileged \
-    --volume "${HOME}/.docker:/root/.docker:ro" \
+    --volume /place/for/my/state:/tmp/img \ # for the builder state
+    --volume $(pwd):/src:ro \ # for the build context and dockerfile, can be read-only since we won't modify it
+    --workdir /src \ # set the builder working directory
+    --volume "${HOME}/.docker:/root/.docker:ro" \ # for credentials to push to docker hub or a registry
+    --cap-add SYS_ADMIN \  # so we can mount if we aren't running as unprivileged
+    --security-opt apparmor=unconfined \ # turn off apparmor so we can mount
+    --security-opt seccomp=unconfined \ turn off seccomp so the runc children can use the kernel keyring
+    --volume /sys/fs/cgroup:/sys/fs/cgroup \ # so we can have nested cgroups for the runc build containers
     r.j3ss.co/img build -t user/myimage .
 ```
 
