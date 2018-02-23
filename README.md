@@ -35,7 +35,7 @@ To mount a filesystem without root access you need to do it from a mount and
 user namespace.
 
 Make sure you have user namespace support enabled. On some distros (Debian and
-Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_ns_clone`.
+Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
 
 You also need a version of `runc` with the patches from
 [opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688).
