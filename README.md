@@ -91,6 +91,8 @@ You need to have `runc` installed.
 
 For the FUSE backend, you will also need `fusermount` installed.
 
+NOTE: These steps work only for Linux. Compile and run in a container (explained below) if you're on Windows or MacOS.
+
 #### Binaries
 
 - **linux** [amd64](https://github.com/jessfraz/img/releases/download/v0.2.4/img-linux-amd64)
@@ -101,7 +103,15 @@ For the FUSE backend, you will also need `fusermount` installed.
 $ go get github.com/jessfraz/img
 ```
 
-NOTE: Only works on Linux. Compile and run in a container (explained below) if you're on Windows or MacOS ;)
+#### From Source
+
+```bash
+$ mkdir -p $GOPATH/src/github.com/jessfraz
+$ git clone https://github.com/jessfraz/img $GOPATH/src/github.com/jessfraz/img
+$ cd !$
+$ make
+$ sudo make install
+```
 
 #### Running with Docker
 

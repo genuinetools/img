@@ -1,5 +1,6 @@
 # Set an output prefix, which is the local directory if not specified
 PREFIX?=$(shell pwd)
+BINDIR := /usr/local/sbin
 
 # Setup name variables for the package/tool
 NAME := img
@@ -26,7 +27,7 @@ GO_LDFLAGS_STATIC=-ldflags "-w $(CTIMEVAR) -extldflags -static"
 # List the GOOS and GOARCH to build
 GOOSARCHES = linux/amd64
 
-all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install
+all: clean build fmt lint test staticcheck vet
 
 .PHONY: build
 build: $(NAME) ## Builds a dynamic executable or package
@@ -81,7 +82,7 @@ cover: ## Runs go test with coverage
 .PHONY: install
 install: ## Installs the executable or package
 	@echo "+ $@"
-	go install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
+	install -D -m0755 $(NAME) $(BINDIR)/$(NAME)
 
 define buildpretty
 mkdir -p $(BUILDDIR)/$(1)/$(2);
