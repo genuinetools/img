@@ -76,12 +76,14 @@ type ConsoleSocket interface {
 type CreateOpts struct {
 	IO
 	// PidFile is a path to where a pid file should be created
-	PidFile       string
-	ConsoleSocket ConsoleSocket
-	Detach        bool
-	NoPivot       bool
-	NoNewKeyring  bool
-	ExtraFiles    []*os.File
+	PidFile          string
+	ConsoleSocket    ConsoleSocket
+	Detach           bool
+	NoPivot          bool
+	NoNewKeyring     bool
+	ForceMappingTool bool
+
+	ExtraFiles []*os.File
 }
 
 func (o *CreateOpts) args() (out []string, err error) {
@@ -106,6 +108,9 @@ func (o *CreateOpts) args() (out []string, err error) {
 	}
 	if o.ExtraFiles != nil {
 		out = append(out, "--preserve-fds", strconv.Itoa(len(o.ExtraFiles)))
+	}
+	if o.ForceMappingTool {
+		out = append(out, "--force-mapping-tool")
 	}
 	return out, nil
 }

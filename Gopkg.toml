@@ -56,6 +56,11 @@
   branch = "demo-rootless"
   source = "github.com/AkihiroSuda/runc"
 
+[[constraint]]
+  name = "github.com/containerd/go-runc"
+  branch = "force-mapping-tool"
+  source = "github.com/jessfraz/go-runc"
+
 [[override]]
   name = "github.com/opencontainers/runtime-spec"
   version = "v1.0.1"

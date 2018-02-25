@@ -141,13 +141,13 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	}
 
 	// if we are not running as root setup unprivileged.
-	if uid != 0 {
-		// Make sure the spec is rootless.
-		// Only if we are not running as root.
-		specconv.ToRootless(spec, &specconv.RootlessOpts{MapSubUIDGID: true})
-		// Remove the cgroups path.
-		spec.Linux.CgroupsPath = ""
-	}
+	//if uid != 0 {
+	// Make sure the spec is rootless.
+	// Only if we are not running as root.
+	specconv.ToRootless(spec, &specconv.RootlessOpts{MapSubUIDGID: true})
+	// Remove the cgroups path.
+	spec.Linux.CgroupsPath = ""
+	//}
 
 	// fmt.Printf("spec: %#v\n", spec)
 
@@ -159,7 +159,9 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	fmt.Println("--->")
 
 	status, err := w.runc.Run(ctx, id, bundle, &runc.CreateOpts{
-		IO: &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
+		IO:           &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
+		NoNewKeyring: true,
+		//	ForceMappingTool: true,
 	})
 
 	fmt.Printf("<--- %s %v %v\n", id, status, err)

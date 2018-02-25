@@ -106,10 +106,11 @@
   revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
 
 [[projects]]
-  branch = "master"
+  branch = "force-mapping-tool"
   name = "github.com/containerd/go-runc"
   packages = ["."]
-  revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
+  revision = "bd3f4d1748c91f908e3969fcf442eafa120e2e59"
+  source = "github.com/jessfraz/go-runc"
 
 [[projects]]
   branch = "master"
@@ -629,6 +630,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8eb42f1b1b18abc35ac57264524a8d5dad6975b28452ede10493194e18489f34"
+  inputs-digest = "917e74a7749176c524aebf6283ce4fa2597750343dbf82e00fb6c1a3f0f27d78"
   solver-name = "gps-cdcl"
   solver-version = 1
