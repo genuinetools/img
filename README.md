@@ -27,7 +27,7 @@ I don't want to be maintaining docker tools for the rest of my life. Use
 something else. I have no fight in this game.
 
 You could even use [buildah](https://github.com/projectatomic/buildah) as
-unprivileged if you use the same instructions from the [Unprivileged
+unprivileged if you use the same instructions from the [unprivileged
 mounting](#unprivileged-mounting) section below.
 
 #### Snapshotter Backends
