@@ -524,7 +524,7 @@
   branch = "export-some-functions"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "7762e040620db665440a8a122eda929f59421ff4"
+  revision = "cb8177f1822111041f040efec0fb3cc7f021f830"
   source = "github.com/jessfraz/fsutil"
 
 [[projects]]
@@ -632,6 +632,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "793323703ff5da18c087b2b134ba76b92ab1bbc1505598465f118c7fe0132307"
+  inputs-digest = "ff72564789b8f21395408d0a1e2ce04a810cc6251358ea95fc1b07cbe6faac33"
   solver-name = "gps-cdcl"
   solver-version = 1

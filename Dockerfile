@@ -32,5 +32,9 @@ RUN apk add --no-cache \
 	shadow-uidmap
 COPY --from=img /usr/bin/img /usr/bin/img
 COPY --from=runc /usr/bin/runc /usr/bin/runc
+ENV HOME /home/user
+RUN adduser -u 1001 -D user \
+	&& chown -R user:user $HOME /run /tmp
+USER user
 ENTRYPOINT [ "img" ]
 CMD [ "--help" ]
