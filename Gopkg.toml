@@ -31,7 +31,8 @@
 
 [[override]]
   name = "github.com/moby/buildkit"
-  revision = "master"
+  revision = "mountless"
+  source = "github.com/jessfraz/buildkit"
 
 [[override]]
   name = "github.com/hanwen/go-fuse"

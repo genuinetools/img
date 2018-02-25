@@ -24,6 +24,7 @@ import (
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/worker/base"
+	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 // NewWorkerOpt creates a WorkerOpt.
@@ -43,7 +44,11 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 	}
 
 	// Create the runc executor.
-	exe, err := runc.New(filepath.Join(root, "executor"))
+	cuser, err := user.CurrentUser()
+	if err != nil {
+		return opt, nil, fmt.Errorf("getting current user failed: %v", err)
+	}
+	exe, err := runc.New(filepath.Join(root, "executor"), cuser.Uid != 0)
 	if err != nil {
 		return opt, nil, err
 	}

@@ -399,7 +399,8 @@
     "worker",
     "worker/base"
   ]
-  revision = "master"
+  revision = "mountless"
+  source = "github.com/jessfraz/buildkit"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -631,6 +632,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f39fc551b9222cbb45cae361aa0801dc283223b1bf88cfbafff55e5932c54d63"
+  inputs-digest = "793323703ff5da18c087b2b134ba76b92ab1bbc1505598465f118c7fe0132307"
   solver-name = "gps-cdcl"
   solver-version = 1
