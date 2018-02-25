@@ -107,10 +107,11 @@
   revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
 
 [[projects]]
-  branch = "master"
+  branch = "force-mapping-tool"
   name = "github.com/containerd/go-runc"
   packages = ["."]
-  revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
+  revision = "bd3f4d1748c91f908e3969fcf442eafa120e2e59"
+  source = "github.com/jessfraz/go-runc"
 
 [[projects]]
   branch = "master"
@@ -417,7 +418,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
+  branch = "demo-rootless"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
@@ -427,7 +428,8 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "b50fa98d9e5ec3ff58028c46767129607067f961"
+  revision = "688ce5349f709d7d9032fc9d1844ad54a2eff51d"
+  source = "github.com/AkihiroSuda/runc"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -629,6 +631,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f7b768ce6a972aeed17cd93b091ee1346d7c229590ad5a61b6d8ac8a31152c47"
+  inputs-digest = "f39fc551b9222cbb45cae361aa0801dc283223b1bf88cfbafff55e5932c54d63"
   solver-name = "gps-cdcl"
   solver-version = 1

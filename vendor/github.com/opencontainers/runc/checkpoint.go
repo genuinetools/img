@@ -44,7 +44,7 @@ checkpointed.`,
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
-		if isRootless() {
+		if isRootless(context) {
 			return fmt.Errorf("runc checkpoint requires root")
 		}
 

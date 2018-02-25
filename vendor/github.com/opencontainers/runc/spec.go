@@ -72,6 +72,10 @@ generate a proper rootless spec file.`,
 			Name:  "rootless",
 			Usage: "generate a configuration for a rootless container",
 		},
+		cli.BoolFlag{
+			Name:  "rootless-subuid",
+			Usage: "add subuid and subgid entries to the mapping configuration. requires rootless to be true and newuidmap/newgidmap binaries with suid bit. ignored when running in userns.",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 0, exactArgs); err != nil {
@@ -81,7 +85,12 @@ generate a proper rootless spec file.`,
 
 		rootless := context.Bool("rootless")
 		if rootless {
-			specconv.ToRootless(spec)
+			opts := &specconv.RootlessOpts{
+				MapSubUIDGID: context.Bool("rootless-subuid"),
+			}
+			if err := specconv.ToRootless(spec, opts); err != nil {
+				return err
+			}
 		}
 
 		checkNoFile := func(name string) error {

@@ -100,10 +100,8 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 
 	if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
-		err = pivotRoot(config.Rootfs)
 	} else {
-		err = chroot(config.Rootfs)
+		err = pivotRoot(config.Rootfs)
 	}
 	if err != nil {
 		return newSystemErrorWithCause(err, "jailing process inside rootfs")
@@ -704,10 +702,6 @@ func msMoveRoot(rootfs string) error {
 	if err := unix.Mount(rootfs, "/", "", unix.MS_MOVE, ""); err != nil {
 		return err
 	}
-	return chroot(rootfs)
-}
-
-func chroot(rootfs string) error {
 	if err := unix.Chroot("."); err != nil {
 		return err
 	}
