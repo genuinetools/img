@@ -196,7 +196,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "4d9beb4607404e4d756052aca7041517788f7e75"
+  revision = "5a7bbd6dba252d0935bb2505b725041b6d4eeeea"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -416,7 +416,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
+  branch = "demo-rootless"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
@@ -426,7 +426,8 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "b50fa98d9e5ec3ff58028c46767129607067f961"
+  revision = "688ce5349f709d7d9032fc9d1844ad54a2eff51d"
+  source = "github.com/AkihiroSuda/runc"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -558,7 +559,7 @@
     "unix",
     "windows"
   ]
-  revision = "88d2dcc510266da9f7f8c7f34e1940716cab5f5c"
+  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -628,6 +629,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cc021825ef8567a68625ff6a09363211f55032e7c0709ce1fc2ed718d248606a"
+  inputs-digest = "8eb42f1b1b18abc35ac57264524a8d5dad6975b28452ede10493194e18489f34"
   solver-name = "gps-cdcl"
   solver-version = 1

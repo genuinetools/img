@@ -144,7 +144,7 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	if uid != 0 {
 		// Make sure the spec is rootless.
 		// Only if we are not running as root.
-		specconv.ToRootless(spec)
+		specconv.ToRootless(spec, &specconv.RootlessOpts{MapSubUIDGID: true})
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""
 	}

@@ -5,7 +5,6 @@ package libcontainer
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,6 +47,7 @@ type linuxContainer struct {
 	criuPath             string
 	newuidmapPath        string
 	newgidmapPath        string
+	forceMappingTool     bool
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -268,71 +268,20 @@ func (c *linuxContainer) Exec() error {
 
 func (c *linuxContainer) exec() error {
 	path := filepath.Join(c.root, execFifoFilename)
-
-	fifoOpen := make(chan struct{})
-	select {
-	case <-awaitProcessExit(c.initProcess.pid(), fifoOpen):
-		return errors.New("container process is already dead")
-	case result := <-awaitFifoOpen(path):
-		close(fifoOpen)
-		if result.err != nil {
-			return result.err
-		}
-		f := result.file
-		defer f.Close()
-		if err := readFromExecFifo(f); err != nil {
-			return err
-		}
-		return os.Remove(path)
+	f, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return newSystemErrorWithCause(err, "open exec fifo for reading")
 	}
-}
-
-func readFromExecFifo(execFifo io.Reader) error {
-	data, err := ioutil.ReadAll(execFifo)
+	defer f.Close()
+	data, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}
-	if len(data) <= 0 {
-		return fmt.Errorf("cannot start an already running container")
+	if len(data) > 0 {
+		os.Remove(path)
+		return nil
 	}
-	return nil
-}
-
-func awaitProcessExit(pid int, exit <-chan struct{}) <-chan struct{} {
-	isDead := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-exit:
-				return
-			case <-time.After(time.Millisecond * 100):
-				stat, err := system.Stat(pid)
-				if err != nil || stat.State == system.Zombie {
-					close(isDead)
-					return
-				}
-			}
-		}
-	}()
-	return isDead
-}
-
-func awaitFifoOpen(path string) <-chan openResult {
-	fifoOpened := make(chan openResult)
-	go func() {
-		f, err := os.OpenFile(path, os.O_RDONLY, 0)
-		if err != nil {
-			fifoOpened <- openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
-			return
-		}
-		fifoOpened <- openResult{file: f}
-	}()
-	return fifoOpened
-}
-
-type openResult struct {
-	file *os.File
-	err  error
+	return fmt.Errorf("cannot start an already running container")
 }
 
 func (c *linuxContainer) start(process *Process, isInit bool) error {
@@ -1801,10 +1750,11 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 					Value: []byte(c.newgidmapPath),
 				})
 			}
-			// The following only applies if we are root.
-			if !c.config.Rootless {
+			// The following only applies if we are root, unless we are
+			// advised to use the mapping tool.
+			if !(c.config.Rootless && !c.forceMappingTool) {
 				// check if we have CAP_SETGID to setgroup properly
-				pid, err := capability.NewPid(0)
+				pid, err := capability.NewPid(os.Getpid())
 				if err != nil {
 					return nil, err
 				}
@@ -1815,6 +1765,12 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 					})
 				}
 			}
+		}
+		if c.forceMappingTool {
+			r.AddData(&Boolmsg{
+				Type:  ForceMappingToolAttr,
+				Value: true,
+			})
 		}
 	}
 

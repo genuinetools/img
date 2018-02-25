@@ -112,7 +112,6 @@ clean:
 
 validate:
 	script/validate-gofmt
-	script/validate-c
 	$(GO) vet $(allpackages)
 
 ci: validate test release

@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -62,11 +63,16 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		newgidmap = ""
 	}
+	forceMappingTool := context.Bool("force-mapping-tool")
+	if forceMappingTool && (newuidmap == "" || newgidmap == "") {
+		return nil, errors.New("force mapping tool flag passed, but newuidmap/newgidmap tool is not available")
+	}
 
 	return libcontainer.New(abs, cgroupManager, intelRdtManager,
 		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
+		libcontainer.NewgidmapPath(newgidmap),
+		libcontainer.ForceMappingTool(forceMappingTool))
 }
 
 // getContainer returns the specified container instance by loading it from state
@@ -217,9 +223,16 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-// XXX: Currently we autodetect rootless mode.
-func isRootless() bool {
-	return os.Geteuid() != 0
+func isRootless(context *cli.Context) bool {
+	if context != nil && context.GlobalBool("force-rootless") {
+		return true
+	}
+	// Even if os.Geteuid() == 0, it might still require rootless mode,
+	// especially when running within userns.
+	// So we use system.GetParentNSeuid() here.
+	//
+	// TODO(AkihiroSuda): how to support nested userns?
+	return system.GetParentNSeuid() != 0
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
@@ -229,7 +242,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
-		Rootless:         isRootless(),
+		Rootless:         isRootless(context),
 	})
 	if err != nil {
 		return nil, err

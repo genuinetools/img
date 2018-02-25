@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+
 #include <linux/limits.h>
 #include <linux/netlink.h>
 #include <linux/types.h>
@@ -31,15 +32,15 @@
 
 /* Synchronisation values. */
 enum sync_t {
-	SYNC_USERMAP_PLS = 0x40,	/* Request parent to map our users. */
-	SYNC_USERMAP_ACK = 0x41,	/* Mapping finished by the parent. */
-	SYNC_RECVPID_PLS = 0x42,	/* Tell parent we're sending the PID. */
-	SYNC_RECVPID_ACK = 0x43,	/* PID was correctly received by parent. */
-	SYNC_GRANDCHILD = 0x44,	/* The grandchild is ready to run. */
-	SYNC_CHILD_READY = 0x45,	/* The child or grandchild is ready to return. */
+	SYNC_USERMAP_PLS = 0x40, /* Request parent to map our users. */
+	SYNC_USERMAP_ACK = 0x41, /* Mapping finished by the parent. */
+	SYNC_RECVPID_PLS = 0x42, /* Tell parent we're sending the PID. */
+	SYNC_RECVPID_ACK = 0x43, /* PID was correctly received by parent. */
+	SYNC_GRANDCHILD  = 0x44, /* The grandchild is ready to run. */
+	SYNC_CHILD_READY = 0x45, /* The child or grandchild is ready to return. */
 
 	/* XXX: This doesn't help with segfaults and other such issues. */
-	SYNC_ERR = 0xFF,	/* Fatal error, no turning back. The error code follows. */
+	SYNC_ERR = 0xFF, /* Fatal error, no turning back. The error code follows. */
 };
 
 /* longjmp() arguments. */
@@ -72,7 +73,7 @@ struct nlconfig_t {
 	char *oom_score_adj;
 	size_t oom_score_adj_len;
 
-	/* User namespace settings. */
+	/* User namespace settings.*/
 	char *uidmap;
 	size_t uidmap_len;
 	char *gidmap;
@@ -81,12 +82,13 @@ struct nlconfig_t {
 	size_t namespaces_len;
 	uint8_t is_setgroup;
 
-	/* Rootless container settings. */
+	/* Rootless container settings.*/
 	uint8_t is_rootless;
 	char *uidmappath;
 	size_t uidmappath_len;
 	char *gidmappath;
 	size_t gidmappath_len;
+	uint8_t force_mapping_tool;
 };
 
 /*
@@ -103,6 +105,7 @@ struct nlconfig_t {
 #define ROOTLESS_ATTR	    27287
 #define UIDMAPPATH_ATTR	    27288
 #define GIDMAPPATH_ATTR	    27289
+#define FORCE_MAPPING_TOOL_ATTR	    27290
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -166,7 +169,7 @@ static int write_file(char *data, size_t data_len, char *pathfmt, ...)
 		goto out;
 	}
 
- out:
+out:
 	close(fd);
 	return ret;
 }
@@ -177,22 +180,23 @@ enum policy_t {
 	SETGROUPS_DENY,
 };
 
-/* This *must* be called before we touch gid_map. */
+/* This *must* be called before we touch gid_map,
+   unless force_mapping_tool is set */
 static void update_setgroups(int pid, enum policy_t setgroup)
 {
 	char *policy;
 
 	switch (setgroup) {
-	case SETGROUPS_ALLOW:
-		policy = "allow";
-		break;
-	case SETGROUPS_DENY:
-		policy = "deny";
-		break;
-	case SETGROUPS_DEFAULT:
-	default:
-		/* Nothing to do. */
-		return;
+		case SETGROUPS_ALLOW:
+			policy = "allow";
+			break;
+		case SETGROUPS_DENY:
+			policy = "deny";
+			break;
+		case SETGROUPS_DEFAULT:
+		default:
+			/* Nothing to do. */
+			return;
 	}
 
 	if (write_file(policy, strlen(policy), "/proc/%d/setgroups", pid) < 0) {
@@ -225,14 +229,14 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	if (!child) {
 #define MAX_ARGV 20
 		char *argv[MAX_ARGV];
-		char *envp[] = { NULL };
+		char *envp[] = {NULL};
 		char pid_fmt[16];
 		int argc = 0;
 		char *next;
 
 		snprintf(pid_fmt, 16, "%d", pid);
 
-		argv[argc++] = (char *)app;
+		argv[argc++] = (char *) app;
 		argv[argc++] = pid_fmt;
 		/*
 		 * Convert the map string into a list of argument that
@@ -271,10 +275,16 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	return -1;
 }
 
-static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
+static void update_uidmap(const char *path, int pid, char *map, size_t map_len, bool force_mapping_tool)
 {
 	if (map == NULL || map_len <= 0)
 		return;
+
+	if (force_mapping_tool) {
+		if (try_mapping_tool(path, pid, map, map_len))
+			bail("failed to use newuid map on %d", pid);
+		return;
+	}
 
 	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0) {
 		if (errno != EPERM)
@@ -284,10 +294,16 @@ static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 	}
 }
 
-static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
+static void update_gidmap(const char *path, int pid, char *map, size_t map_len, bool force_mapping_tool)
 {
 	if (map == NULL || map_len <= 0)
 		return;
+
+	if (force_mapping_tool) {
+		if (try_mapping_tool(path, pid, map, map_len))
+			bail("failed to use newgid map on %d", pid);
+		return;
+	}
 
 	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0) {
 		if (errno != EPERM)
@@ -318,7 +334,7 @@ static int clone_parent(jmp_buf *env, int jmpval) __attribute__ ((noinline));
 static int clone_parent(jmp_buf *env, int jmpval)
 {
 	struct clone_t ca = {
-		.env = env,
+		.env    = env,
 		.jmpval = jmpval,
 	};
 
@@ -449,6 +465,9 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
 			break;
+		case FORCE_MAPPING_TOOL_ATTR:
+			config->force_mapping_tool = readint8(current);
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -532,7 +551,7 @@ void nsexec(void)
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
-	struct nlconfig_t config = { 0 };
+	struct nlconfig_t config = {0};
 
 	/*
 	 * If we don't have an init pipe, just return to the go routine.
@@ -629,21 +648,21 @@ void nsexec(void)
 	 */
 
 	switch (setjmp(env)) {
-		/*
-		 * Stage 0: We're in the parent. Our job is just to create a new child
-		 *          (stage 1: JUMP_CHILD) process and write its uid_map and
-		 *          gid_map. That process will go on to create a new process, then
-		 *          it will send us its PID which we will send to the bootstrap
-		 *          process.
-		 */
-	case JUMP_PARENT:{
+	/*
+	 * Stage 0: We're in the parent. Our job is just to create a new child
+	 *          (stage 1: JUMP_CHILD) process and write its uid_map and
+	 *          gid_map. That process will go on to create a new process, then
+	 *          it will send us its PID which we will send to the bootstrap
+	 *          process.
+	 */
+	case JUMP_PARENT: {
 			int len;
 			pid_t child, first_child = -1;
 			char buf[JSON_MAX];
 			bool ready = false;
 
 			/* For debugging. */
-			prctl(PR_SET_NAME, (unsigned long)"runc:[0:PARENT]", 0, 0, 0);
+			prctl(PR_SET_NAME, (unsigned long) "runc:[0:PARENT]", 0, 0, 0);
 
 			/* Start the process of getting a container. */
 			child = clone_parent(&env, JUMP_CHILD);
@@ -680,20 +699,22 @@ void nsexec(void)
 					 * have to explicitly disable setgroups(2) if we're
 					 * creating a rootless container (this is required since
 					 * Linux 3.19).
+					 *
+					 * However, we can use mapping tool (with suid bit) to allow setgroups.
 					 */
-					if (config.is_rootless && config.is_setgroup) {
+					if (config.is_rootless && config.is_setgroup && !config.force_mapping_tool) {
 						kill(child, SIGKILL);
-						bail("cannot allow setgroup in an unprivileged user namespace setup");
+						bail("cannot allow setgroup in an unprivileged user namespace setup without the mapping tool");
 					}
 
 					if (config.is_setgroup)
 						update_setgroups(child, SETGROUPS_ALLOW);
-					if (config.is_rootless)
+					if (config.is_rootless && !config.force_mapping_tool)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_uidmap(config.uidmappath, child, config.uidmap, config.uidmap_len);
-					update_gidmap(config.gidmappath, child, config.gidmap, config.gidmap_len);
+					update_uidmap(config.uidmappath, child, config.uidmap, config.uidmap_len, config.force_mapping_tool);
+					update_gidmap(config.gidmappath, child, config.gidmap, config.gidmap_len, config.force_mapping_tool);
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
@@ -701,7 +722,7 @@ void nsexec(void)
 						bail("failed to sync with child: write(SYNC_USERMAP_ACK)");
 					}
 					break;
-				case SYNC_RECVPID_PLS:{
+				case SYNC_RECVPID_PLS: {
 						first_child = child;
 
 						/* Get the init_func pid. */
@@ -780,16 +801,16 @@ void nsexec(void)
 			exit(0);
 		}
 
-		/*
-		 * Stage 1: We're in the first child process. Our job is to join any
-		 *          provided namespaces in the netlink payload and unshare all
-		 *          of the requested namespaces. If we've been asked to
-		 *          CLONE_NEWUSER, we will ask our parent (stage 0) to set up
-		 *          our user mappings for us. Then, we create a new child
-		 *          (stage 2: JUMP_INIT) for PID namespace. We then send the
-		 *          child's PID to our parent (stage 0).
-		 */
-	case JUMP_CHILD:{
+	/*
+	 * Stage 1: We're in the first child process. Our job is to join any
+	 *          provided namespaces in the netlink payload and unshare all
+	 *          of the requested namespaces. If we've been asked to
+	 *          CLONE_NEWUSER, we will ask our parent (stage 0) to set up
+	 *          our user mappings for us. Then, we create a new child
+	 *          (stage 2: JUMP_INIT) for PID namespace. We then send the
+	 *          child's PID to our parent (stage 0).
+	 */
+	case JUMP_CHILD: {
 			pid_t child;
 			enum sync_t s;
 
@@ -798,7 +819,7 @@ void nsexec(void)
 			close(sync_child_pipe[1]);
 
 			/* For debugging. */
-			prctl(PR_SET_NAME, (unsigned long)"runc:[1:CHILD]", 0, 0, 0);
+			prctl(PR_SET_NAME, (unsigned long) "runc:[1:CHILD]", 0, 0, 0);
 
 			/*
 			 * We need to setns first. We cannot do this earlier (in stage 0)
@@ -900,13 +921,13 @@ void nsexec(void)
 			exit(0);
 		}
 
-		/*
-		 * Stage 2: We're the final child process, and the only process that will
-		 *          actually return to the Go runtime. Our job is to just do the
-		 *          final cleanup steps and then return to the Go runtime to allow
-		 *          init_linux.go to run.
-		 */
-	case JUMP_INIT:{
+	/*
+	 * Stage 2: We're the final child process, and the only process that will
+	 *          actually return to the Go runtime. Our job is to just do the
+	 *          final cleanup steps and then return to the Go runtime to allow
+	 *          init_linux.go to run.
+	 */
+	case JUMP_INIT: {
 			/*
 			 * We're inside the child now, having jumped from the
 			 * start_child() code after forking in the parent.
@@ -920,7 +941,7 @@ void nsexec(void)
 			close(sync_child_pipe[1]);
 
 			/* For debugging. */
-			prctl(PR_SET_NAME, (unsigned long)"runc:[2:INIT]", 0, 0, 0);
+			prctl(PR_SET_NAME, (unsigned long) "runc:[2:INIT]", 0, 0, 0);
 
 			if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 				bail("failed to sync with parent: read(SYNC_GRANDCHILD)");

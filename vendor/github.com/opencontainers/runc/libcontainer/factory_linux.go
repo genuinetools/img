@@ -158,6 +158,9 @@ type LinuxFactory struct {
 	NewuidmapPath string
 	NewgidmapPath string
 
+	// ForceMappingTool forcibly enables newuidmap/newgidmap tool.
+	ForceMappingTool bool
+
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
 
@@ -191,15 +194,16 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		return nil, newGenericError(err, SystemError)
 	}
 	c := &linuxContainer{
-		id:            id,
-		root:          containerRoot,
-		config:        config,
-		initPath:      l.InitPath,
-		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
-		newuidmapPath: l.NewuidmapPath,
-		newgidmapPath: l.NewgidmapPath,
-		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+		id:               id,
+		root:             containerRoot,
+		config:           config,
+		initPath:         l.InitPath,
+		initArgs:         l.InitArgs,
+		criuPath:         l.CriuPath,
+		newuidmapPath:    l.NewuidmapPath,
+		newgidmapPath:    l.NewgidmapPath,
+		forceMappingTool: l.ForceMappingTool,
+		cgroupManager:    l.NewCgroupsManager(config.Cgroups, nil),
 	}
 	if intelrdt.IsEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
@@ -359,6 +363,15 @@ func NewuidmapPath(newuidmapPath string) func(*LinuxFactory) error {
 func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
 		l.NewgidmapPath = newgidmapPath
+		return nil
+	}
+}
+
+// ForceMappingTool returns an option func to configure a LinuxFactory with the
+// provided ..
+func ForceMappingTool(flag bool) func(*LinuxFactory) error {
+	return func(l *LinuxFactory) error {
+		l.ForceMappingTool = flag
 		return nil
 	}
 }
