@@ -61,7 +61,8 @@
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  branch = "master"
+  branch = "no-lchown"
+  source = "github.com/jessfraz/containerd"
 
 [[override]]
   name = "github.com/containerd/continuity"
