@@ -167,11 +167,14 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	fmt.Printf("RUN %v\n", meta.Args)
 	fmt.Println("--->")
 
-	status, err := w.runc.Run(ctx, id, bundle, &runc.CreateOpts{
+	opts := &runc.CreateOpts{
 		IO:           &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
 		NoNewKeyring: true,
-		//	ForceMappingTool: true,
-	})
+	}
+	if w.unprivileged {
+		opts.ForceMappingTool = true
+	}
+	status, err := w.runc.Run(ctx, id, bundle, opts)
 
 	fmt.Printf("<--- %s %v %v\n", id, status, err)
 
