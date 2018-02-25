@@ -8,6 +8,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/containerd/containerd/content/local"
+	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/diff/apply"
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
@@ -15,6 +16,8 @@ import (
 	"github.com/containerd/containerd/snapshots/naive"
 	"github.com/containerd/containerd/snapshots/overlay"
 	libfuse "github.com/hanwen/go-fuse/fuse"
+	mountlessapply "github.com/jessfraz/img/diff/apply"
+	mountlesswalking "github.com/jessfraz/img/diff/walking"
 	"github.com/jessfraz/img/executor/runc"
 	"github.com/jessfraz/img/snapshots/fuse"
 	"github.com/jessfraz/img/types"
@@ -101,6 +104,24 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 
 	xlabels := base.Labels("oci", backend)
 
+	var (
+		applier  diff.Applier
+		comparer diff.Comparer
+	)
+	switch backend {
+	case types.FUSEBackend:
+		applier = mountlessapply.NewFileSystemApplier(c)
+		comparer = mountlesswalking.NewWalkingDiff(c)
+	case types.NaiveBackend:
+		applier = mountlessapply.NewFileSystemApplier(c)
+		comparer = mountlesswalking.NewWalkingDiff(c)
+	case types.OverlayFSBackend:
+		applier = apply.NewFileSystemApplier(c)
+		comparer = walking.NewWalkingDiff(c)
+	default:
+		return opt, nil, fmt.Errorf("%s is not a valid snapshots backend", backend)
+	}
+
 	opt = base.WorkerOpt{
 		ID:            id,
 		Labels:        xlabels,
@@ -108,8 +129,8 @@ func NewWorkerOpt(root, backend string) (opt base.WorkerOpt, fuseserver *libfuse
 		Executor:      exe,
 		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter(backend), c, md, "buildkit", gc),
 		ContentStore:  c,
-		Applier:       apply.NewFileSystemApplier(c),
-		Differ:        walking.NewWalkingDiff(c),
+		Applier:       applier,
+		Differ:        comparer,
 		ImageStore:    imageStore,
 	}
 	return opt, fuseserver, nil
