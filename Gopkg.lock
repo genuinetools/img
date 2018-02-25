@@ -93,7 +93,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "9463fcbbe7e15bc9165f9cafc92248f974990390"
+  revision = "5bd99af7dbfc887d2c62af3949c8d01424c43f78"
 
 [[projects]]
   branch = "master"
@@ -196,7 +196,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "219582bba6a316673fddeca50585f5c655041acb"
+  revision = "4d9beb4607404e4d756052aca7041517788f7e75"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -628,6 +628,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e25f371ae771926b5e307874b10af19d57a2fc145e2dfd8141df1a3c65690e9"
+  inputs-digest = "cc021825ef8567a68625ff6a09363211f55032e7c0709ce1fc2ed718d248606a"
   solver-name = "gps-cdcl"
   solver-version = 1

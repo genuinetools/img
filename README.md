@@ -17,6 +17,19 @@ Currently you can run it as unprivileged if you follow the instructions in the
 You might also be interested in reading the 
 [original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
 
+## NOTE
+
+You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
+
+THIS IS NOT NOVEL.
+
+I don't want to be maintaining docker tools for the rest of my life. Use
+something else. I have no fight in this game.
+
+You could even use [buildah](https://github.com/projectatomic/buildah) as
+unprivileged if you use the same instructions from the [Unprivileged
+mounting](#unprivileged-mounting) section below.
+
 #### Snapshotter Backends
 
 The default backend is currently set to `naive` and requires privileges, but 
