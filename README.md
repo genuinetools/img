@@ -27,7 +27,7 @@ for more info.
 But it will work as an unprivileged user on your host with a `runc` that is
 compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
 
-**TLDR;** will work on your host not in a container til we work out some kinks.
+**TLDR;** will work unprivileged on your host not in a container til we work out some kinks.
 
 [![asciicast](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC.png)](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC?speed=2)
 
