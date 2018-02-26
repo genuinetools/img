@@ -1,6 +1,6 @@
 # Set an output prefix, which is the local directory if not specified
 PREFIX?=$(shell pwd)
-BINDIR := /usr/local/sbin
+BINDIR := /usr/local/bin
 
 # Setup name variables for the package/tool
 NAME := img
