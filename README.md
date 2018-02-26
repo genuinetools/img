@@ -17,7 +17,13 @@ You might also be interested in reading the
 Currently you can run it as unprivileged and there are a few ways to go about
 this, the default backend `naive` will not mount if you are running as an
 unprivileged user and so it should work. You can learn more about the
-snaphotter backends [here](#snapshotter-backends) 
+snaphotter backends [here](#snapshotter-backends).
+
+However, it does not currently work as an unprivileged user _in_ a container
+due to the fact that it cant mount `proc` inside the container.
+
+But it will work as an unprivileged user on your host with a runc that is
+compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
 
 **Table of Contents**
 
