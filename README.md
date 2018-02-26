@@ -31,7 +31,7 @@ I made a small demo you can see [here](https://asciinema.org/a/4Nr7gihYjcOxtq0CA
 
 ## Prior Art
 
-The best replacement is [cyphar/orca-build](https://github.com/cyphar/orca-build).
+The best one you _should_ be using is [cyphar/orca-build](https://github.com/cyphar/orca-build).
 
 You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
 
