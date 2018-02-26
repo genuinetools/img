@@ -27,7 +27,7 @@ for more info.
 But it will work as an unprivileged user on your host with a `runc` that is
 compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
 
-[![asciicast](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu.png)](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu)
+[![asciicast](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu.png)](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu?speed=2)
 
 **Table of Contents**
 
