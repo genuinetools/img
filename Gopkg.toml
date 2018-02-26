@@ -31,7 +31,8 @@
 
 [[override]]
   name = "github.com/moby/buildkit"
-  revision = "master"
+  revision = "mountless"
+  source = "github.com/jessfraz/buildkit"
 
 [[override]]
   name = "github.com/hanwen/go-fuse"
@@ -53,7 +54,13 @@
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  branch = "master"
+  branch = "demo-rootless"
+  source = "github.com/AkihiroSuda/runc"
+
+[[constraint]]
+  name = "github.com/containerd/go-runc"
+  branch = "force-mapping-tool"
+  source = "github.com/jessfraz/go-runc"
 
 [[override]]
   name = "github.com/opencontainers/runtime-spec"
@@ -61,7 +68,8 @@
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  branch = "master"
+  branch = "no-lchown"
+  source = "github.com/jessfraz/containerd"
 
 [[override]]
   name = "github.com/containerd/continuity"

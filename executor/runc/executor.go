@@ -24,12 +24,13 @@ import (
 
 // Executor is the definition of an executor.
 type Executor struct {
-	runc *runc.Runc
-	root string
+	runc         *runc.Runc
+	root         string
+	unprivileged bool
 }
 
 // New creates a new runc executor.
-func New(root string) (executor.Executor, error) {
+func New(root string, unprivileged bool) (executor.Executor, error) {
 	// Make sure the runc binary exists.
 	if exists := BinaryExists(); !exists {
 		return nil, errors.New("cannot find runc binary locally, please install runc")
@@ -56,8 +57,9 @@ func New(root string) (executor.Executor, error) {
 	}
 
 	e := &Executor{
-		runc: runtime,
-		root: root,
+		runc:         runtime,
+		root:         root,
+		unprivileged: unprivileged,
 	}
 
 	return e, nil
@@ -68,19 +70,19 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	// Get the resolv.conf.
 	resolvConf, err := oci.GetResolvConf(ctx, w.root)
 	if err != nil {
-		return err
+		return fmt.Errorf("oci.GetResolvConf failed: %v", err)
 	}
 
 	// Get the hosts file.
 	hostsFile, err := oci.GetHostsFile(ctx, w.root)
 	if err != nil {
-		return err
+		return fmt.Errorf("oci.GetHostsFile failed: %v", err)
 	}
 
 	// Mount the cache.
 	rootMount, err := root.Mount(ctx, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("root.Mount failed: %v", err)
 	}
 
 	// Create a new UUID.
@@ -89,23 +91,32 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 
 	// Create the bundle directory.
 	if err := os.Mkdir(bundle, 0700); err != nil {
-		return err
+		return fmt.Errorf("os.Mkdir failed: %v", err)
 	}
 	defer os.RemoveAll(bundle)
 
 	// Create the rootfs path.
-	rootFSPath := filepath.Join(bundle, "rootfs")
-	if err := os.Mkdir(rootFSPath, 0700); err != nil {
-		return err
+	var (
+		rootFSPath string
+	)
+	if w.unprivileged {
+		// If we are running as unprivileged do not do the mounts.
+		rootFSPath = rootMount[0].Source
+
+	} else {
+		rootFSPath = filepath.Join(bundle, "rootfs")
+		if err := os.Mkdir(rootFSPath, 0700); err != nil {
+			return fmt.Errorf("failed to create directory at %s: %v", rootFSPath, err)
+		}
+
+		// Mount the root and rootfs path.
+		if err := mount.All(rootMount, rootFSPath); err != nil {
+			return fmt.Errorf("mount.All failed: %v", err)
+		}
+		defer mount.Unmount(rootFSPath, 0)
 	}
 
-	// Mount the root and rootfs path.
-	if err := mount.All(rootMount, rootFSPath); err != nil {
-		return err
-	}
-	defer mount.Unmount(rootFSPath, 0)
-
-	// Get the user.
+	// Get the user in the bundle.
 	uid, gid, err := oci.GetUser(ctx, rootFSPath, meta.User)
 	if err != nil {
 		return err
@@ -141,15 +152,13 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	}
 
 	// if we are not running as root setup unprivileged.
-	if uid != 0 {
+	if w.unprivileged {
 		// Make sure the spec is rootless.
 		// Only if we are not running as root.
-		specconv.ToRootless(spec)
+		specconv.ToRootless(spec, &specconv.RootlessOpts{MapSubUIDGID: true})
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""
 	}
-
-	// fmt.Printf("spec: %#v\n", spec)
 
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err
@@ -158,9 +167,14 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	fmt.Printf("RUN %v\n", meta.Args)
 	fmt.Println("--->")
 
-	status, err := w.runc.Run(ctx, id, bundle, &runc.CreateOpts{
-		IO: &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
-	})
+	opts := &runc.CreateOpts{
+		IO:           &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
+		NoNewKeyring: true,
+	}
+	if w.unprivileged {
+		opts.ForceMappingTool = true
+	}
+	status, err := w.runc.Run(ctx, id, bundle, opts)
 
 	fmt.Printf("<--- %s %v %v\n", id, status, err)
 

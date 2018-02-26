@@ -8,6 +8,7 @@ import (
 
 	"github.com/containerd/continuity/sysx"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func rewriteMetadata(p string, stat *Stat) error {
@@ -16,7 +17,7 @@ func rewriteMetadata(p string, stat *Stat) error {
 	}
 
 	if err := os.Lchown(p, int(stat.Uid), int(stat.Gid)); err != nil {
-		return errors.Wrapf(err, "failed to lchown %s", p)
+		logrus.Debugf("failed to lchown: %v", err)
 	}
 
 	if os.FileMode(stat.Mode)&os.ModeSymlink == 0 {

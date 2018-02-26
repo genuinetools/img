@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 
 	"github.com/containerd/continuity/fs"
-	"github.com/moby/buildkit/snapshot"
 )
 
 func ReadFile(ctx context.Context, ref ImmutableRef, p string) ([]byte, error) {
@@ -14,7 +13,7 @@ func ReadFile(ctx context.Context, ref ImmutableRef, p string) ([]byte, error) {
 		return nil, err
 	}
 
-	lm := snapshot.LocalMounter(mount)
+	/*lm := snapshot.LocalMounter(mount)
 
 	root, err := lm.Mount()
 	if err != nil {
@@ -25,8 +24,9 @@ func ReadFile(ctx context.Context, ref ImmutableRef, p string) ([]byte, error) {
 		if lm != nil {
 			lm.Unmount()
 		}
-	}()
+	}()*/
 
+	root := mount[0].Source
 	fp, err := fs.RootPath(root, p)
 	if err != nil {
 		return nil, err
@@ -36,9 +36,9 @@ func ReadFile(ctx context.Context, ref ImmutableRef, p string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := lm.Unmount(); err != nil {
+	/*if err := lm.Unmount(); err != nil {
 		return nil, err
 	}
-	lm = nil
+	lm = nil*/
 	return dt, err
 }

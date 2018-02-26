@@ -11,77 +11,19 @@ as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 The commands/UX are the same as `docker {build,push,pull,login}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
-Currently you can run it as unprivileged if you follow the instructions in the
-[unprivileged mounting](#unprivileged-mounting) section below.
-
 You might also be interested in reading the 
 [original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
 
-## NOTE
+Currently you can run it as unprivileged and there are a few ways to go about
+this, the default backend `naive` will not mount if you are running as an
+unprivileged user and so it should work. You can learn more about the
+snaphotter backends [here](#snapshotter-backends).
 
-You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
+However, it does not currently work as an unprivileged user _in_ a container
+due to the fact that it cant mount `proc` inside the container.
 
-THIS IS NOT NOVEL.
-
-I don't want to be maintaining docker tools for the rest of my life. Use
-something else. I have no fight in this game.
-
-You could even use [buildah](https://github.com/projectatomic/buildah) as
-unprivileged if you use the same instructions from the [unprivileged
-mounting](#unprivileged-mounting) section below.
-
-OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
-
-#### Snapshotter Backends
-
-The default backend is currently set to `naive` and requires privileges, but 
-it can be made unprivileged and that work is being done, see the 
-[unprivileged mounting](#unprivileged-mounting) section below.
-It is a lot more stable than the `fuse` backend. You can also use `overlayfs` 
-backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
-see [#22](https://github.com/jessfraz/img/issues/22).
-
-The `fuse` backend runs completely in userspace. It is a bit buggy and a work
-in progress so hang tight.
-
-#### Unprivileged Mounting
-
-To mount a filesystem without root access you need to do it from a mount and
-user namespace.
-
-Make sure you have user namespace support enabled. On some distros (Debian and
-Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
-
-You also need a version of `runc` with the patches from
-[opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688).
-
-Example:
-
-```console
-# unshare a mountns and userns 
-# and remap the user inside the namespaces to your current user
-$ unshare -m -U --map-root-user
-
-# then you can run img
-$ img build -t user/myimage .
-```
-
-Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5)`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
-
-So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
-
-If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/jessfraz/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
-
-For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
-and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
-
-
-#### Goals
-
-This project is not trying to reinvent `buildkit`. If anything all changes and
-modifications for `buildkit` without privileges are being done upstream. The
-goal of this project is to in the future just be a glorified cli tool on top of
-`buildkit`.
+But it will work as an unprivileged user on your host with a `runc` that is
+compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
 
 **Table of Contents**
 
@@ -97,8 +39,13 @@ goal of this project is to in the future just be a glorified cli tool on top of
     + [Tag an Image](#tag-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
+* [About](#about)
+    + [Goals](#goals)
+    + [Snapshotter Backends](#snapshotter-backends)
+    + [Unprivileged Mounting](#unprivileged-mounting)
 * [Contributing](#contributing)
 * [Acknowledgements](#acknowledgements)
+* [Prior Art](#prior-art)
 
 ## Installation
 
@@ -352,6 +299,67 @@ Flags:
   -u               Username (default: <none>)
 ```
 
+## About
+
+### Goals
+
+This project is not trying to reinvent `buildkit`. If anything all changes and
+modifications for `buildkit` without privileges are being done upstream. The
+goal of this project is to in the future just be a glorified cli tool on top of
+`buildkit`.
+
+### Snapshotter Backends
+
+#### naive
+
+The default backend is currently set to `naive` and if you run it as an
+unprivileged user is will not attempt to ever mount.
+ 
+It can be made unprivileged with mounts and that work is being done, see the 
+[unprivileged mounting](#unprivileged-mounting) section below.
+
+#### overlayfs
+
+You can also use `overlayfs` 
+backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
+see [#22](https://github.com/jessfraz/img/issues/22).
+
+#### fuse
+
+The `fuse` backend runs completely in userspace. It is a bit buggy and a work
+in progress so hang tight.
+
+### Unprivileged Mounting
+
+To mount a filesystem without root access you need to do it from a mount and
+user namespace.
+
+Make sure you have user namespace support enabled. On some distros (Debian and
+Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
+
+You also need a version of `runc` with the patches from
+[opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688).
+
+Example:
+
+```console
+# unshare a mountns and userns 
+# and remap the user inside the namespaces to your current user
+$ unshare -m -U --map-root-user
+
+# then you can run img
+$ img build -t user/myimage .
+```
+
+Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5)`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
+
+So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
+
+If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/jessfraz/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
+
+For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
+and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
+
 ## Contributing
 
 Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/jessfraz/img/issues).
@@ -364,3 +372,16 @@ be unprivileged.
 A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
 Thanks [@tonistiigi](https://github.com/tonistiigi) and
 [@AkihiroSuda](https://github.com/AkihiroSuda)!
+
+## Prior Art
+
+You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
+
+THIS IS NOT NOVEL.
+
+You could even probably use [buildah](https://github.com/projectatomic/buildah) as
+unprivileged if you use the same instructions from the [unprivileged
+mounting](#unprivileged-mounting) section below.
+
+OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
+

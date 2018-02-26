@@ -53,7 +53,7 @@
   revision = "2748ece16665b45a47f884001d5831ec79703880"
 
 [[projects]]
-  branch = "master"
+  branch = "no-lchown"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -93,7 +93,8 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "5bd99af7dbfc887d2c62af3949c8d01424c43f78"
+  revision = "5b91bd470c4b43f38ae89d675e1241549fb6adf7"
+  source = "github.com/jessfraz/containerd"
 
 [[projects]]
   branch = "master"
@@ -106,10 +107,11 @@
   revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
 
 [[projects]]
-  branch = "master"
+  branch = "force-mapping-tool"
   name = "github.com/containerd/go-runc"
   packages = ["."]
-  revision = "4f6e87ae043f859a38255247b49c9abc262d002f"
+  revision = "bd3f4d1748c91f908e3969fcf442eafa120e2e59"
+  source = "github.com/jessfraz/go-runc"
 
 [[projects]]
   branch = "master"
@@ -196,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "4d9beb4607404e4d756052aca7041517788f7e75"
+  revision = "5a7bbd6dba252d0935bb2505b725041b6d4eeeea"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -397,7 +399,8 @@
     "worker",
     "worker/base"
   ]
-  revision = "master"
+  revision = "mountless"
+  source = "github.com/jessfraz/buildkit"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -416,7 +419,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
+  branch = "demo-rootless"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
@@ -426,7 +429,8 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "b50fa98d9e5ec3ff58028c46767129607067f961"
+  revision = "688ce5349f709d7d9032fc9d1844ad54a2eff51d"
+  source = "github.com/AkihiroSuda/runc"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -520,7 +524,7 @@
   branch = "export-some-functions"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "7762e040620db665440a8a122eda929f59421ff4"
+  revision = "cb8177f1822111041f040efec0fb3cc7f021f830"
   source = "github.com/jessfraz/fsutil"
 
 [[projects]]
@@ -558,7 +562,7 @@
     "unix",
     "windows"
   ]
-  revision = "88d2dcc510266da9f7f8c7f34e1940716cab5f5c"
+  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -628,6 +632,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6ba319cba4572d3a137f66ff48f62254d7dc214d0084a23e3371d8543fcd3d52"
+  inputs-digest = "ff72564789b8f21395408d0a1e2ce04a810cc6251358ea95fc1b07cbe6faac33"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -29,7 +29,7 @@ var psCommand = cli.Command{
 			return err
 		}
 		// XXX: Currently not supported with rootless containers.
-		if isRootless() {
+		if isRootless(context) {
 			return fmt.Errorf("runc ps requires root")
 		}
 
