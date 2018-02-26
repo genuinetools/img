@@ -20,7 +20,9 @@ unprivileged user and so it should work. You can learn more about the
 snaphotter backends [here](#snapshotter-backends).
 
 However, it does not currently work as an unprivileged user _in_ a container
-due to the fact that it cant mount `proc` inside the container.
+due to the fact that it cant mount `proc` inside the container. See
+[opencontainers/runc#1734](https://github.com/opencontainers/runc/issues/1734)
+for more info.
 
 But it will work as an unprivileged user on your host with a `runc` that is
 compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
