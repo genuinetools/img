@@ -31,6 +31,12 @@ compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https:
 
 [![asciicast](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC.png)](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC?speed=2)
 
+## Acknowledgements
+
+A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
+Thanks [@tonistiigi](https://github.com/tonistiigi) and
+[@AkihiroSuda](https://github.com/AkihiroSuda)!
+
 ## Prior Art
 
 The best one you _should_ be using is [cyphar/orca-build](https://github.com/cyphar/orca-build).
@@ -412,8 +418,3 @@ Please do! This is a new project and can use some love <3. Check out the [issues
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.
 
-## Acknowledgements
-
-A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
-Thanks [@tonistiigi](https://github.com/tonistiigi) and
-[@AkihiroSuda](https://github.com/AkihiroSuda)!
