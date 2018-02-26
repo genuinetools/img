@@ -57,6 +57,7 @@ OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-u
     + [Pull an Image](#pull-an-image)
     + [Push an Image](#push-an-image)
     + [Tag an Image](#tag-an-image)
+    + [Export an Image to Docker](#export-an-image-to-docker)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
 * [About](#about)
@@ -265,6 +266,31 @@ Flags:
 ```console
 $ img tag jess/thing jess/otherthing
 Successfully tagged jess/thing as jess/otherthing
+```
+
+### Export an Image to Docker
+
+```console
+$ img save -h
+Usage: ./img save [OPTIONS] NAME
+
+Save an image to a tar archive (streamed to STDOUT by default)
+
+Flags:
+
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -d        enable debug logging (default: false)
+  -o        Write to a file, instead of STDOUT (default: <none>)
+  -state    directory to hold the global state (default: /tmp/img)
+```
+
+```console
+$ img save jess/thing | docker load
+6c3d70c8619c: Loading layer [==================================================>]  9.927MB/9.927MB                                      
+7e336c441b5e: Loading layer [==================================================>]  5.287MB/5.287MB                                      
+533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
+3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
+Loaded image: jess/thing
 ```
 
 ### Disk Usage

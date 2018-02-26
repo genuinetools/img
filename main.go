@@ -62,6 +62,7 @@ func main() {
 		&pullCommand{},
 		&pushCommand{},
 		&tagCommand{},
+		&saveCommand{},
 		&versionCommand{},
 	}
 
