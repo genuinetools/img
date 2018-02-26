@@ -21,7 +21,7 @@ snaphotter backends [here](#snapshotter-backends).
 
 However, it does not currently work as an unprivileged user _in_ a container
 due to the fact that it cant mount `proc` inside the container. See
-[opencontainers/runc#1685](https://github.com/opencontainers/runc/issues/1685)
+[opencontainers/runc#1658](https://github.com/opencontainers/runc/issues/1658)
 for more info.
 
 But it will work as an unprivileged user on your host with a `runc` that is
