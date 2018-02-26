@@ -30,6 +30,8 @@ You could even use [buildah](https://github.com/projectatomic/buildah) as
 unprivileged if you use the same instructions from the [unprivileged
 mounting](#unprivileged-mounting) section below.
 
+OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
+
 #### Snapshotter Backends
 
 The default backend is currently set to `naive` and requires privileges, but 
