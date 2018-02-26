@@ -27,7 +27,21 @@ for more info.
 But it will work as an unprivileged user on your host with a `runc` that is
 compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
 
-[![asciicast](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu.png)](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu?speed=2)
+I made a small demo you can see [here](https://asciinema.org/a/4Nr7gihYjcOxtq0CAU0Te0fDu?speed=2).
+
+## Prior Art
+
+The best replacement is [cyphar/orca-build](https://github.com/cyphar/orca-build).
+
+You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
+
+THIS IS NOT NOVEL.
+
+You could even probably use [buildah](https://github.com/projectatomic/buildah) as
+unprivileged if you use the same instructions from the [unprivileged
+mounting](#unprivileged-mounting) section below.
+
+OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
 
 **Table of Contents**
 
@@ -135,7 +149,7 @@ Flags:
 **Use just like you would `docker build`.**
 
 ```console
-$ sudo img build -t jess/img .
+$ img build -t jess/img .
 Building jess/img
 Setting up the rootfs... this may take a bit.
 RUN [/bin/sh -c apk add --no-cache      ca-certificates]
@@ -183,7 +197,7 @@ Flags:
 ```
 
 ```console
-$ img ls --backend=fuse
+$ img ls
 NAME                    SIZE            CREATED AT      UPDATED AT      DIGEST
 jess/img:latest         1.534KiB        9 seconds ago   9 seconds ago   sha256:27d862ac32022946d61afbb91ddfc6a1fa2341a78a0da11ff9595a85f651d51e
 jess/thing:latest       591B            30 minutes ago  30 minutes ago  sha256:d664b4e9b9cd8b3067e122ef68180e95dd4494fd4cb01d05632b6e77ce19118e
@@ -205,7 +219,7 @@ Flags:
 ```
 
 ```console
-$ img pull --backend=fuse r.j3ss.co/stress
+$ img pull r.j3ss.co/stress
 Pulling r.j3ss.co/stress:latest...
 Snapshot ref: sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6
 Size: 365.9KiB
@@ -227,7 +241,7 @@ Flags:
 ```
 
 ```console
-$ img push --backend=fuse jess/thing
+$ img push jess/thing
 Pushing jess/thing:latest...
 Successfully pushed jess/thing:latest
 ```
@@ -269,7 +283,7 @@ Flags:
 ```
 
 ```console
-$ img du --backend=fuse
+$ img du 
 ID                                                                      RECLAIMABLE     SIZE            DESCRIPTION
 sha256:d9a48086f223d28a838263a6c04705c8009fab1dd67cc82c0ee821545de3bf7c true            911.8KiB        pulled from docker.io/tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e
 7ia86xm2e4hzn2u947iqh9ph2                                               true            203.2MiB        mount /dest from exec copy /src-0 /dest/go/src/github.com/jessfraz/img
@@ -376,16 +390,3 @@ be unprivileged.
 A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
 Thanks [@tonistiigi](https://github.com/tonistiigi) and
 [@AkihiroSuda](https://github.com/AkihiroSuda)!
-
-## Prior Art
-
-You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
-
-THIS IS NOT NOVEL.
-
-You could even probably use [buildah](https://github.com/projectatomic/buildah) as
-unprivileged if you use the same instructions from the [unprivileged
-mounting](#unprivileged-mounting) section below.
-
-OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
-

@@ -51,6 +51,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return fmt.Errorf("must pass a path to build")
 	}
 
+	if cmd.tag == "" {
+		return errors.New("please specify an image tag with `-t`")
+	}
+
 	// Get the specified context.
 	cmd.contextDir = args[0]
 
@@ -77,7 +81,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		defer os.RemoveAll(cmd.contextDir)
 	}
 
-	// Add the latest lag if they did not provide one.
+	// Add the latest tag if they did not provide one.
 	cmd.tag = addLatestTagSuffix(cmd.tag)
 
 	// Create the context.
