@@ -173,6 +173,9 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	}
 	if w.unprivileged {
 		opts.ForceMappingTool = true
+		// TODO(jessfraz): figure out why we can't use a pivot root
+		// See: https://github.com/opencontainers/runc/issues/1658
+		// 	opts.NoPivot = true
 	}
 	status, err := w.runc.Run(ctx, id, bundle, opts)
 
