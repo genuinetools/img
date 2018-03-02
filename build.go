@@ -84,6 +84,11 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	// Add the latest tag if they did not provide one.
 	cmd.tag = addLatestTagSuffix(cmd.tag)
 
+	// Set the dockerfile path as the default if one was not given.
+	if cmd.dockerfilePath == "" {
+		cmd.dockerfilePath = filepath.Join(cmd.contextDir, defaultDockerfileName)
+	}
+
 	// Create the context.
 	ctx := appcontext.Context()
 	id := identity.NewID()
@@ -100,7 +105,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// Create the frontend attrs.
 	frontendAttrs := map[string]string{
-		"filename": cmd.dockerfilePath,
+		// We use the base for filename here becasue we already set up the local dirs which sets the path in createController.
+		"filename": filepath.Base(cmd.dockerfilePath),
 		"target":   cmd.target,
 	}
 
@@ -136,6 +142,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	return nil
 }
 
+// dockerfileFromStdin copies a dockerfile from stdin to a temporary file.
 func dockerfileFromStdin() (string, error) {
 	stdin, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
