@@ -155,7 +155,10 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	if w.unprivileged {
 		// Make sure the spec is rootless.
 		// Only if we are not running as root.
-		specconv.ToRootless(spec, &specconv.RootlessOpts{MapSubUIDGID: false})
+		specconv.ToRootless(spec, &specconv.RootlessOpts{
+			// This comes from https://github.com/opencontainers/runc/pull/1692
+			MapSubUIDGID: true,
+		})
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""
 	}
@@ -172,10 +175,8 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		NoNewKeyring: true,
 	}
 	if w.unprivileged {
+		// This comes from https://github.com/opencontainers/runc/pull/1693
 		opts.ForceMappingTool = true
-		// TODO(jessfraz): figure out why we can't use a pivot root
-		// See: https://github.com/opencontainers/runc/issues/1658
-		// 	opts.NoPivot = true
 	}
 	status, err := w.runc.Run(ctx, id, bundle, opts)
 
