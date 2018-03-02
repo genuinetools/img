@@ -58,14 +58,9 @@ func getLocalDirs(c command) map[string]string {
 		return nil
 	}
 
-	file := cmd.dockerfilePath
-	if file == "" {
-		file = filepath.Join(cmd.contextDir, "Dockerfile")
-	}
-
 	return map[string]string{
 		"context":    cmd.contextDir,
-		"dockerfile": filepath.Dir(file),
+		"dockerfile": filepath.Dir(cmd.dockerfilePath),
 	}
 }
 

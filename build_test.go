@@ -62,3 +62,15 @@ func TestBuildEnvironmentReplacementWorkdir(t *testing.T) {
   WORKDIR ${MYWORKDIR}
   `))
 }
+
+func TestBuildDockerfileNotInContext(t *testing.T) {
+	name := "testbuilddockerfilenotincontext"
+
+	run(t, "build", "-t", name, "-f", "testdata/Dockerfile.test-build-dockerfile-not-in-context", "types")
+}
+
+func TestBuildDockerfileNotInContextRoot(t *testing.T) {
+	name := "testbuilddockerfilenotincontextroot"
+
+	run(t, "build", "-t", name, "-f", "testdata/Dockerfile.test-build-dockerfile-not-in-context", ".")
+}
