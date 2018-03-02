@@ -128,7 +128,10 @@ func (StreamingRecognitionResult_MessageType) EnumDescriptor() ([]byte, []int) {
 // The request to detect user's intent.
 type DetectIntentRequest struct {
 	// Required. The name of the session this query is sent to. Format:
-	// `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// `projects/<Project ID>/agent/sessions/<Session ID>`, or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	// It's up to the API caller to choose an appropriate session ID. It can be
 	// a random number or some type of user identifier (preferably hashed).
 	// The length of the session ID must not exceed 36 bytes.
@@ -624,8 +627,7 @@ func (m *QueryResult) GetDiagnosticInfo() *google_protobuf4.Struct {
 // Multiple request messages should be sent in order:
 //
 // 1.  The first message must contain `session`, `query_input` plus optionally
-//     `query_params` and/or `single_utterance`. The message must not contain
-//     `input_audio`.
+//     `query_params` and/or `single_utterance`. The message must not contain `input_audio`.
 //
 // 2.  If `query_input` was set to a streaming input audio config,
 //     all subsequent messages must contain only `input_audio`.
@@ -633,7 +635,10 @@ func (m *QueryResult) GetDiagnosticInfo() *google_protobuf4.Struct {
 type StreamingDetectIntentRequest struct {
 	// Required. The name of the session the query is sent to.
 	// Format of the session name:
-	// `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// `projects/<Project ID>/agent/sessions/<Session ID>`, or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	// It’s up to the API caller to choose an appropriate <Session ID>. It can be
 	// a random number or some type of user identifier (preferably hashed).
 	// The length of the session ID must not exceed 36 characters.

@@ -8,11 +8,11 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/pkg/term"
-	"github.com/jessfraz/img/util/dockerexporter"
 	"github.com/jessfraz/img/worker/runc"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"github.com/moby/buildkit/util/dockerexporter"
 )
 
 // TODO(AkihiroSuda): support saving multiple images

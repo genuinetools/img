@@ -5,16 +5,13 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 var (
-	authChallengeRegex = regexp.MustCompile(
-		`^\s*Bearer\s+realm="([^"]+)",service="([^"]+)"\s*$`)
-	basicRegex     = regexp.MustCompile(`^\s*Basic\s+.*$`)
-	challengeRegex = regexp.MustCompile(
-		`^\s*Bearer\s+realm="([^"]+)",service="([^"]+)",scope="([^"]+)"\s*$`)
-
-	scopeSeparatorRegex = regexp.MustCompile(`\s+`)
+	bearerRegex = regexp.MustCompile(
+		`^\s*Bearer\s+(.*)$`)
+	basicRegex = regexp.MustCompile(`^\s*Basic\s+.*$`)
 )
 
 func parseAuthHeader(header http.Header) (*authService, error) {
@@ -31,27 +28,41 @@ func parseChallenge(challengeHeader string) (*authService, error) {
 		return nil, nil
 	}
 
-	match := challengeRegex.FindAllStringSubmatch(challengeHeader, -1)
+	match := bearerRegex.FindAllStringSubmatch(challengeHeader, -1)
+	if d := len(match); d != 1 {
+		return nil, fmt.Errorf("malformed auth challenge header: '%s', %d", challengeHeader, d)
+	}
+	parts := strings.Split(strings.TrimSpace(match[0][1]), ",")
 
-	if len(match) != 1 {
-		match = authChallengeRegex.FindAllStringSubmatch(challengeHeader, -1)
-		if len(match) != 1 {
+	var realm, service string
+	var scope []string
+	for _, s := range parts {
+		p := strings.SplitN(s, "=", 2)
+		if len(p) != 2 {
 			return nil, fmt.Errorf("malformed auth challenge header: '%s'", challengeHeader)
 		}
+		key := p[0]
+		value := strings.TrimSuffix(strings.TrimPrefix(p[1], `"`), `"`)
+		switch key {
+		case "realm":
+			realm = value
+		case "service":
+			service = value
+		case "scope":
+			scope = strings.Fields(value)
+		default:
+			return nil, fmt.Errorf("unknown field in challege header %s: %v", key, challengeHeader)
+		}
 	}
-
-	parsedRealm, err := url.Parse(match[0][1])
+	parsedRealm, err := url.Parse(realm)
 	if err != nil {
 		return nil, err
 	}
 
 	a := &authService{
 		Realm:   parsedRealm,
-		Service: match[0][2],
-	}
-
-	if len(match[0]) >= 4 {
-		a.Scope = scopeSeparatorRegex.Split(match[0][3], -1)
+		Service: service,
+		Scope:   scope,
 	}
 
 	return a, nil

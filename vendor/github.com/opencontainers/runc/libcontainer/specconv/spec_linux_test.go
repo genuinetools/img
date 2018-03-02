@@ -504,6 +504,10 @@ func TestRootlessSpecconvValidate(t *testing.T) {
 				if !reflect.DeepEqual(expectedUIDMappings, s.Linux.UIDMappings) {
 					t.Errorf("expected %#v, got %#v", expectedUIDMappings, s.Linux.UIDMappings)
 				}
+				expectedGIDMappings := expectedUIDMappings
+				if !reflect.DeepEqual(expectedGIDMappings, s.Linux.GIDMappings) {
+					t.Errorf("expected %#v, got %#v", expectedGIDMappings, s.Linux.GIDMappings)
+				}
 			},
 		},
 		{
@@ -551,6 +555,10 @@ func TestRootlessSpecconvValidate(t *testing.T) {
 				}
 				if !reflect.DeepEqual(expectedUIDMappings, s.Linux.UIDMappings) {
 					t.Errorf("expected %#v, got %#v", expectedUIDMappings, s.Linux.UIDMappings)
+				}
+				expectedGIDMappings := expectedUIDMappings
+				if !reflect.DeepEqual(expectedGIDMappings, s.Linux.GIDMappings) {
+					t.Errorf("expected %#v, got %#v", expectedGIDMappings, s.Linux.GIDMappings)
 				}
 			},
 		},

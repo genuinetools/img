@@ -177,9 +177,9 @@ type RootlessContext struct {
 	InUserNS bool
 }
 
-// ExampleRootless returns an example spec file that works with rootless
-// containers. It's essentially a modified version of the specfile from
-// Example().
+// ToRootless converts the given spec file into one that should work with
+// rootless containers, by removing incompatible options and adding others that
+// are needed.
 func ToRootless(spec *specs.Spec, opts *RootlessOpts) error {
 	var err error
 	ctx := RootlessContext{}
@@ -283,7 +283,7 @@ func ToRootlessWithContext(ctx RootlessContext, spec *specs.Spec, opts *Rootless
 				spec.Linux.GIDMappings = append(spec.Linux.GIDMappings,
 					specs.LinuxIDMapping{
 						HostID:      uint32(subgid.SubID),
-						ContainerID: uint32(uNextContainerID),
+						ContainerID: uint32(gNextContainerID),
 						Size:        uint32(subgid.Count),
 					})
 				gNextContainerID += subgid.Count
