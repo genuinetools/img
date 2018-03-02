@@ -5,15 +5,10 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/namespaces"
-	"github.com/docker/distribution/reference"
 	units "github.com/docker/go-units"
-	"github.com/hanwen/go-fuse/fuse"
-	"github.com/jessfraz/img/source/containerimage"
-	"github.com/jessfraz/img/worker/runc"
-	"github.com/moby/buildkit/cache"
+	"github.com/jessfraz/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/appcontext"
 )
 
@@ -45,41 +40,20 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Parse the repository name.
-	image, err := reference.ParseNormalizedNamed(cmd.image)
-	if err != nil {
-		return fmt.Errorf("not a valid image %q: %v", cmd.image, err)
-	}
-	// Add latest to the image name if it is empty.
-	image = reference.TagNameOnly(image)
-
-	// Get the identifier for the image.
-	identifier, err := source.NewImageIdentifier(image.String())
+	// Create the client.
+	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
 		return err
 	}
-
-	// Create the source manager.
-	sm, fuseserver, err := createSouceManager()
-	defer unmount(fuseserver)
-	if err != nil {
-		return err
-	}
-	handleSignals(fuseserver)
-
-	// Resolve (ie. pull) the image.
-	si, err := sm.Resolve(ctx, identifier)
-	if err != nil {
-		return err
-	}
+	defer c.Close()
 
 	fmt.Printf("Pulling %s...\n", cmd.image)
 
-	// Snapshot the image.
-	ref, err := si.Snapshot(ctx)
+	ref, err := c.Pull(ctx, cmd.image)
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("Snapshot ref: %s\n", ref.ID())
 
 	// Get the size.
@@ -90,40 +64,4 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	fmt.Printf("Size: %s\n", units.BytesSize(float64(size)))
 
 	return nil
-}
-
-func createSouceManager() (*source.Manager, *fuse.Server, error) {
-	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
-	if err != nil {
-		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
-	}
-
-	cm, err := cache.NewManager(cache.ManagerOpt{
-		Snapshotter:   opt.Snapshotter,
-		MetadataStore: opt.MetadataStore,
-	})
-	if err != nil {
-		return nil, fuseserver, err
-	}
-
-	sm, err := source.NewManager()
-	if err != nil {
-		return nil, fuseserver, err
-	}
-
-	is, err := containerimage.NewSource(containerimage.SourceOpt{
-		Snapshotter:   opt.Snapshotter,
-		ContentStore:  opt.ContentStore,
-		Applier:       opt.Applier,
-		CacheAccessor: cm,
-		Images:        opt.ImageStore,
-	})
-	if err != nil {
-		return nil, fuseserver, err
-	}
-
-	sm.Register(is)
-
-	return sm, fuseserver, nil
 }

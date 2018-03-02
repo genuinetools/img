@@ -8,6 +8,7 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
+	"github.com/jessfraz/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
@@ -40,13 +41,12 @@ func (cmd *diskUsageCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the controller.
-	c, fuseserver, err := createController(cmd)
-	defer unmount(fuseserver)
+	// Create the client.
+	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
 		return err
 	}
-	handleSignals(fuseserver)
+	defer c.Close()
 
 	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filter})
 	if err != nil {

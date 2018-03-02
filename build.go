@@ -16,6 +16,7 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/jessfraz/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
@@ -95,13 +96,12 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the controller.
-	c, fuseserver, err := createController(cmd)
-	defer unmount(fuseserver)
+	// Create the client.
+	c, err := client.New(stateDir, backend, cmd.getLocalDirs())
 	if err != nil {
 		return err
 	}
-	handleSignals(fuseserver)
+	defer c.Close()
 
 	// Create the frontend attrs.
 	frontendAttrs := map[string]string{
@@ -123,7 +123,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
 	// Solve the dockerfile.
-	_, err = c.Solve(ctx, &controlapi.SolveRequest{
+	if err := c.Solve(ctx, &controlapi.SolveRequest{
 		Ref:      id,
 		Session:  id,
 		Exporter: "image",
@@ -132,9 +132,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		},
 		Frontend:      "dockerfile.v0",
 		FrontendAttrs: frontendAttrs,
-	})
-	if err != nil {
-		return fmt.Errorf("solving failed: %v", err)
+	}); err != nil {
+		return err
 	}
 
 	fmt.Printf("Successfully built %s\n", cmd.tag)
@@ -268,5 +267,12 @@ func untar(dest string, r io.Reader) error {
 				return err
 			}
 		}
+	}
+}
+
+func (cmd *buildCommand) getLocalDirs() map[string]string {
+	return map[string]string{
+		"context":    cmd.contextDir,
+		"dockerfile": filepath.Dir(cmd.dockerfilePath),
 	}
 }

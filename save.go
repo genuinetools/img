@@ -8,11 +8,10 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/pkg/term"
-	"github.com/jessfraz/img/worker/runc"
+	"github.com/jessfraz/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
-	"github.com/moby/buildkit/util/dockerexporter"
 )
 
 // TODO(AkihiroSuda): support saving multiple images
@@ -34,16 +33,6 @@ type saveCommand struct {
 	output string
 }
 
-func (cmd *saveCommand) writer() (io.WriteCloser, error) {
-	if cmd.output != "" {
-		return os.Create(cmd.output)
-	}
-	if term.IsTerminal(os.Stdout.Fd()) {
-		return nil, fmt.Errorf("cowardly refusing to save to a terminal. Use the -o flag or redirect")
-	}
-	return os.Stdout, nil
-}
-
 func (cmd *saveCommand) Run(args []string) (err error) {
 	if len(args) != 1 {
 		return fmt.Errorf("must pass an image")
@@ -51,10 +40,8 @@ func (cmd *saveCommand) Run(args []string) (err error) {
 
 	// Get the specified image.
 	cmd.image = args[0]
-	writer, err := cmd.writer()
-	if err != nil {
-		return err
-	}
+	// Add the latest lag if they did not provide one.
+	cmd.image = addLatestTagSuffix(cmd.image)
 
 	// Create the context.
 	ctx := appcontext.Context()
@@ -62,24 +49,30 @@ func (cmd *saveCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the runc worker options.
-	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
-	defer unmount(fuseserver)
+	// Create the client.
+	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
-		return fmt.Errorf("creating runc worker opt failed: %v", err)
+		return err
 	}
-	handleSignals(fuseserver)
+	defer c.Close()
 
-	img, err := opt.ImageStore.Get(ctx, cmd.image)
+	// Create the writer.
+	writer, err := cmd.writer()
 	if err != nil {
-		return fmt.Errorf("getting image %q failed: %v", cmd.image, err)
+		return err
 	}
 
-	exporter := &dockerexporter.DockerExporter{
-		Name: img.Name,
+	return c.SaveImage(ctx, cmd.image, writer)
+}
+
+func (cmd *saveCommand) writer() (io.WriteCloser, error) {
+	if cmd.output != "" {
+		return os.Create(cmd.output)
 	}
-	if err := exporter.Export(ctx, opt.ContentStore, img.Target, writer); err != nil {
-		return fmt.Errorf("exporting image %q failed: %v", cmd.image, err)
+
+	if term.IsTerminal(os.Stdout.Fd()) {
+		return nil, fmt.Errorf("cowardly refusing to save to a terminal. Use the -o flag or redirect")
 	}
-	return writer.Close()
+
+	return os.Stdout, nil
 }

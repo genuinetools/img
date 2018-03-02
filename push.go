@@ -5,11 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/namespaces"
-	"github.com/hanwen/go-fuse/fuse"
-	"github.com/jessfraz/img/exporter/containerimage"
-	"github.com/jessfraz/img/exporter/imagepush"
-	"github.com/jessfraz/img/worker/runc"
-	"github.com/moby/buildkit/exporter"
+	"github.com/jessfraz/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
@@ -45,57 +41,21 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the source manager.
-	imgpush, fuseserver, err := createImagePusher()
-	defer unmount(fuseserver)
+	// Create the client.
+	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
 		return err
 	}
-	handleSignals(fuseserver)
-
-	// Resolve (ie. push) the image.
-	ip, err := imgpush.Resolve(ctx, map[string]string{
-		"name": cmd.image,
-	})
-	if err != nil {
-		return err
-	}
+	defer c.Close()
 
 	fmt.Printf("Pushing %s...\n", cmd.image)
 
 	// Snapshot the image.
-	if err := ip.Export(ctx, nil, nil); err != nil {
+	if err := c.Push(ctx, cmd.image); err != nil {
 		return err
 	}
 
 	fmt.Printf("Successfully pushed %s", cmd.image)
 
 	return nil
-}
-
-func createImagePusher() (exporter.Exporter, *fuse.Server, error) {
-	// Create the runc worker.
-	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
-	if err != nil {
-		return nil, fuseserver, fmt.Errorf("creating runc worker opt failed: %v", err)
-	}
-
-	iw, err := containerimage.NewImageWriter(containerimage.WriterOpt{
-		Snapshotter:  opt.Snapshotter,
-		ContentStore: opt.ContentStore,
-		Differ:       opt.Differ,
-	})
-	if err != nil {
-		return nil, fuseserver, err
-	}
-
-	imagePusher, err := imagepush.New(imagepush.Opt{
-		Images:      opt.ImageStore,
-		ImageWriter: iw,
-	})
-	if err != nil {
-		return nil, fuseserver, err
-	}
-
-	return imagePusher, fuseserver, nil
 }
