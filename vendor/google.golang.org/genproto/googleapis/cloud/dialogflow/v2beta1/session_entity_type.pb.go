@@ -66,7 +66,11 @@ func (SessionEntityType_EntityOverrideMode) EnumDescriptor() ([]byte, []int) {
 type SessionEntityType struct {
 	// Required. The unique identifier of this session entity type. Format:
 	// `projects/<Project ID>/agent/sessions/<Session ID>/entityTypes/<Entity Type
-	// Display Name>`.
+	// Display Name>`, or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>sessions/<Session
+	// ID>/entityTypes/<Entity Type Display Name>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	// Required. Indicates whether the additional data should override or
 	// supplement the developer entity type definition.
@@ -102,11 +106,13 @@ func (m *SessionEntityType) GetEntities() []*EntityType_Entity {
 	return nil
 }
 
-// The request message for
-// [SessionEntityTypes.ListSessionEntityTypes][google.cloud.dialogflow.v2beta1.SessionEntityTypes.ListSessionEntityTypes].
+// The request message for [SessionEntityTypes.ListSessionEntityTypes][google.cloud.dialogflow.v2beta1.SessionEntityTypes.ListSessionEntityTypes].
 type ListSessionEntityTypesRequest struct {
 	// Required. The session to list all session entity types from.
-	// Format: `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// Format: `projects/<Project ID>/agent/sessions/<Session ID>` or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Parent string `protobuf:"bytes,1,opt,name=parent" json:"parent,omitempty"`
 	// Optional. The maximum number of items to return in a single page. By
 	// default 100 and at most 1000.
@@ -141,8 +147,7 @@ func (m *ListSessionEntityTypesRequest) GetPageToken() string {
 	return ""
 }
 
-// The response message for
-// [SessionEntityTypes.ListSessionEntityTypes][google.cloud.dialogflow.v2beta1.SessionEntityTypes.ListSessionEntityTypes].
+// The response message for [SessionEntityTypes.ListSessionEntityTypes][google.cloud.dialogflow.v2beta1.SessionEntityTypes.ListSessionEntityTypes].
 type ListSessionEntityTypesResponse struct {
 	// The list of session entity types. There will be a maximum number of items
 	// returned based on the page_size field in the request.
@@ -171,12 +176,14 @@ func (m *ListSessionEntityTypesResponse) GetNextPageToken() string {
 	return ""
 }
 
-// The request message for
-// [SessionEntityTypes.GetSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.GetSessionEntityType].
+// The request message for [SessionEntityTypes.GetSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.GetSessionEntityType].
 type GetSessionEntityTypeRequest struct {
 	// Required. The name of the session entity type. Format:
 	// `projects/<Project ID>/agent/sessions/<Session ID>/entityTypes/<Entity Type
-	// Display Name>`.
+	// Display Name>` or `projects/<Project ID>/agent/runtimes/<Runtime
+	// ID>/sessions/<Session ID>/entityTypes/<Entity Type Display Name>`. Note:
+	// Runtimes are under construction and will be available soon. If <Runtime ID>
+	// is not specified, we assume default 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
@@ -192,11 +199,13 @@ func (m *GetSessionEntityTypeRequest) GetName() string {
 	return ""
 }
 
-// The request message for
-// [SessionEntityTypes.CreateSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.CreateSessionEntityType].
+// The request message for [SessionEntityTypes.CreateSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.CreateSessionEntityType].
 type CreateSessionEntityTypeRequest struct {
 	// Required. The session to create a session entity type for.
-	// Format: `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// Format: `projects/<Project ID>/agent/sessions/<Session ID>` or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Parent string `protobuf:"bytes,1,opt,name=parent" json:"parent,omitempty"`
 	// Required. The session entity type to create.
 	SessionEntityType *SessionEntityType `protobuf:"bytes,2,opt,name=session_entity_type,json=sessionEntityType" json:"session_entity_type,omitempty"`
@@ -221,12 +230,14 @@ func (m *CreateSessionEntityTypeRequest) GetSessionEntityType() *SessionEntityTy
 	return nil
 }
 
-// The request message for
-// [SessionEntityTypes.UpdateSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.UpdateSessionEntityType].
+// The request message for [SessionEntityTypes.UpdateSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.UpdateSessionEntityType].
 type UpdateSessionEntityTypeRequest struct {
 	// Required. The entity type to update. Format:
 	// `projects/<Project ID>/agent/sessions/<Session ID>/entityTypes/<Entity Type
-	// Display Name>`.
+	// Display Name>` or `projects/<Project ID>/agent/runtimes/<Runtime
+	// ID>/sessions/<Session ID>/entityTypes/<Entity Type Display Name>`. Note:
+	// Runtimes are under construction and will be available soon. If <Runtime ID>
+	// is not specified, we assume default 'sandbox' runtime.
 	SessionEntityType *SessionEntityType `protobuf:"bytes,1,opt,name=session_entity_type,json=sessionEntityType" json:"session_entity_type,omitempty"`
 	// Optional. The mask to control which fields get updated.
 	UpdateMask *google_protobuf3.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask" json:"update_mask,omitempty"`
@@ -251,12 +262,14 @@ func (m *UpdateSessionEntityTypeRequest) GetUpdateMask() *google_protobuf3.Field
 	return nil
 }
 
-// The request message for
-// [SessionEntityTypes.DeleteSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.DeleteSessionEntityType].
+// The request message for [SessionEntityTypes.DeleteSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.DeleteSessionEntityType].
 type DeleteSessionEntityTypeRequest struct {
 	// Required. The name of the entity type to delete. Format:
 	// `projects/<Project ID>/agent/sessions/<Session ID>/entityTypes/<Entity Type
-	// Display Name>`.
+	// Display Name>` or `projects/<Project ID>/agent/runtimes/<Runtime
+	// ID>/sessions/<Session ID>/entityTypes/<Entity Type Display Name>`. Note:
+	// Runtimes are under construction and will be available soon. If <Runtime ID>
+	// is not specified, we assume default 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 

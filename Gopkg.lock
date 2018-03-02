@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "ef7d8be86c96f48cd05ae692b4ad1c18aaac6940"
+  revision = "c26f37c0cce47c2e2c2d8e5f0df261c95c930479"
 
 [[projects]]
   branch = "master"
@@ -157,7 +157,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "6664ec703991875e14419ff4960921cce7678bab"
+  revision = "6fca8d6e6713acbdf3f9ca40cf6370fc5ee5ee53"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "5a7bbd6dba252d0935bb2505b725041b6d4eeeea"
+  revision = "135f815fb4b1c362c0b212e9f3dd3b0cea81616b"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -329,7 +329,7 @@
   branch = "master"
   name = "github.com/jessfraz/reg"
   packages = ["registry"]
-  revision = "5208643fa87b8de25a7466d4ce03271166f041c9"
+  revision = "5088b3b142b4984e1dcbe1a7108d39b7e8735172"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -389,6 +389,7 @@
     "util/appcontext",
     "util/appdefaults",
     "util/bgfunc",
+    "util/dockerexporter",
     "util/flightcontrol",
     "util/imageutil",
     "util/progress",
@@ -399,7 +400,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "mountless"
+  revision = "mountless2"
   source = "github.com/jessfraz/buildkit"
 
 [[projects]]
@@ -429,7 +430,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "688ce5349f709d7d9032fc9d1844ad54a2eff51d"
+  revision = "a8356f2fc7b2d60704f3198b562663c03a032eb9"
   source = "github.com/AkihiroSuda/runc"
 
 [[projects]]
@@ -489,7 +490,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "89604d197083d4781071d3c65855d24ecfb0a563"
+  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
 
 [[projects]]
   branch = "master"
@@ -500,7 +501,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "282c8707aa210456a825798969cc27edda34992a"
+  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -531,7 +532,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "49796115aa4b964c318aad4f3084fdb41e9aa067"
+  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
 
 [[projects]]
   branch = "master"
@@ -547,7 +548,7 @@
     "proxy",
     "trace"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "22ae77b79946ea320088417e4d50825671d82d57"
 
 [[projects]]
   branch = "master"
@@ -562,7 +563,7 @@
     "unix",
     "windows"
   ]
-  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
+  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -595,7 +596,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
+  revision = "2c5e7ac708aaa719366570dd82bda44541ca2a63"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -632,6 +633,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff72564789b8f21395408d0a1e2ce04a810cc6251358ea95fc1b07cbe6faac33"
+  inputs-digest = "4739d00064633816980ee43d89e11349eef55fe31444bcc5580b49ababf51f43"
   solver-name = "gps-cdcl"
   solver-version = 1

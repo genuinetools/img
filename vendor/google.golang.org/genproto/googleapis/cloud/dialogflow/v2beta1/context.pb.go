@@ -24,8 +24,13 @@ var _ = math.Inf
 // Represents a context.
 type Context struct {
 	// Required. The unique identifier of the context. Format:
-	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`.
-	// Note: The Context ID is always converted to lowercase.
+	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`,
+	// or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session
+	// ID>/contexts/<Context ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// The Context ID is always converted to lowercase.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	// Optional. The number of conversational query requests after which the
 	// context expires. If set to `0` (the default) the context expires
@@ -64,11 +69,13 @@ func (m *Context) GetParameters() *google_protobuf4.Struct {
 	return nil
 }
 
-// The request message for
-// [Contexts.ListContexts][google.cloud.dialogflow.v2beta1.Contexts.ListContexts].
+// The request message for [Contexts.ListContexts][google.cloud.dialogflow.v2beta1.Contexts.ListContexts].
 type ListContextsRequest struct {
 	// Required. The session to list all contexts from.
-	// Format: `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// Format: `projects/<Project ID>/agent/sessions/<Session ID>` or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Parent string `protobuf:"bytes,1,opt,name=parent" json:"parent,omitempty"`
 	// Optional. The maximum number of items to return in a single page. By
 	// default 100 and at most 1000.
@@ -103,8 +110,7 @@ func (m *ListContextsRequest) GetPageToken() string {
 	return ""
 }
 
-// The response message for
-// [Contexts.ListContexts][google.cloud.dialogflow.v2beta1.Contexts.ListContexts].
+// The response message for [Contexts.ListContexts][google.cloud.dialogflow.v2beta1.Contexts.ListContexts].
 type ListContextsResponse struct {
 	// The list of contexts. There will be a maximum number of items
 	// returned based on the page_size field in the request.
@@ -133,11 +139,14 @@ func (m *ListContextsResponse) GetNextPageToken() string {
 	return ""
 }
 
-// The request message for
-// [Contexts.GetContext][google.cloud.dialogflow.v2beta1.Contexts.GetContext].
+// The request message for [Contexts.GetContext][google.cloud.dialogflow.v2beta1.Contexts.GetContext].
 type GetContextRequest struct {
 	// Required. The name of the context. Format:
-	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`.
+	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`
+	// or `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session
+	// ID>/contexts/<Context ID>`. Note: Runtimes are under construction and will
+	// be available soon. If <Runtime ID> is not specified, we assume default
+	// 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
@@ -153,11 +162,13 @@ func (m *GetContextRequest) GetName() string {
 	return ""
 }
 
-// The request message for
-// [Contexts.CreateContext][google.cloud.dialogflow.v2beta1.Contexts.CreateContext].
+// The request message for [Contexts.CreateContext][google.cloud.dialogflow.v2beta1.Contexts.CreateContext].
 type CreateContextRequest struct {
 	// Required. The session to create a context for.
-	// Format: `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// Format: `projects/<Project ID>/agent/sessions/<Session ID>` or
+	// `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`.
+	// Note: Runtimes are under construction and will be available soon.
+	// If <Runtime ID> is not specified, we assume default 'sandbox' runtime.
 	Parent string `protobuf:"bytes,1,opt,name=parent" json:"parent,omitempty"`
 	// Required. The context to create.
 	Context *Context `protobuf:"bytes,2,opt,name=context" json:"context,omitempty"`
@@ -182,8 +193,7 @@ func (m *CreateContextRequest) GetContext() *Context {
 	return nil
 }
 
-// The request message for
-// [Contexts.UpdateContext][google.cloud.dialogflow.v2beta1.Contexts.UpdateContext].
+// The request message for [Contexts.UpdateContext][google.cloud.dialogflow.v2beta1.Contexts.UpdateContext].
 type UpdateContextRequest struct {
 	// Required. The context to update.
 	Context *Context `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
@@ -210,11 +220,14 @@ func (m *UpdateContextRequest) GetUpdateMask() *google_protobuf3.FieldMask {
 	return nil
 }
 
-// The request message for
-// [Contexts.DeleteContext][google.cloud.dialogflow.v2beta1.Contexts.DeleteContext].
+// The request message for [Contexts.DeleteContext][google.cloud.dialogflow.v2beta1.Contexts.DeleteContext].
 type DeleteContextRequest struct {
 	// Required. The name of the context to delete. Format:
-	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`.
+	// `projects/<Project ID>/agent/sessions/<Session ID>/contexts/<Context ID>`
+	// or `projects/<Project ID>/agent/runtimes/<Runtime ID>/sessions/<Session
+	// ID>/contexts/<Context ID>`. Note: Runtimes are under construction and will
+	// be available soon. If <Runtime ID> is not specified, we assume default
+	// 'sandbox' runtime.
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
@@ -230,11 +243,13 @@ func (m *DeleteContextRequest) GetName() string {
 	return ""
 }
 
-// The request message for
-// [Contexts.DeleteAllContexts][google.cloud.dialogflow.v2beta1.Contexts.DeleteAllContexts].
+// The request message for [Contexts.DeleteAllContexts][google.cloud.dialogflow.v2beta1.Contexts.DeleteAllContexts].
 type DeleteAllContextsRequest struct {
 	// Required. The name of the session to delete all contexts from. Format:
-	// `projects/<Project ID>/agent/sessions/<Session ID>`.
+	// `projects/<Project ID>/agent/sessions/<Session ID>` or `projects/<Project
+	// ID>/agent/runtimes/<Runtime ID>/sessions/<Session ID>`. Note: Runtimes are
+	// under construction and will be available soon. If <Runtime ID> is not
+	// specified we assume default 'sandbox' runtime.
 	Parent string `protobuf:"bytes,1,opt,name=parent" json:"parent,omitempty"`
 }
 

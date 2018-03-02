@@ -31,7 +31,7 @@
 
 [[override]]
   name = "github.com/moby/buildkit"
-  revision = "mountless"
+  revision = "mountless2"
   source = "github.com/jessfraz/buildkit"
 
 [[override]]

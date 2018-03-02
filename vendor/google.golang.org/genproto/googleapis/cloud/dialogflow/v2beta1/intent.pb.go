@@ -1564,8 +1564,7 @@ func (m *Intent_FollowupIntentInfo) GetParentFollowupIntentName() string {
 	return ""
 }
 
-// The request message for
-// [Intents.ListIntents][google.cloud.dialogflow.v2beta1.Intents.ListIntents].
+// The request message for [Intents.ListIntents][google.cloud.dialogflow.v2beta1.Intents.ListIntents].
 type ListIntentsRequest struct {
 	// Required. The agent to list all intents from.
 	// Format: `projects/<Project ID>/agent`.
@@ -1625,8 +1624,7 @@ func (m *ListIntentsRequest) GetPageToken() string {
 	return ""
 }
 
-// The response message for
-// [Intents.ListIntents][google.cloud.dialogflow.v2beta1.Intents.ListIntents].
+// The response message for [Intents.ListIntents][google.cloud.dialogflow.v2beta1.Intents.ListIntents].
 type ListIntentsResponse struct {
 	// The list of agent intents. There will be a maximum number of items
 	// returned based on the page_size field in the request.
@@ -1655,8 +1653,7 @@ func (m *ListIntentsResponse) GetNextPageToken() string {
 	return ""
 }
 
-// The request message for
-// [Intents.GetIntent][google.cloud.dialogflow.v2beta1.Intents.GetIntent].
+// The request message for [Intents.GetIntent][google.cloud.dialogflow.v2beta1.Intents.GetIntent].
 type GetIntentRequest struct {
 	// Required. The name of the intent.
 	// Format: `projects/<Project ID>/agent/intents/<Intent ID>`.
@@ -1697,8 +1694,7 @@ func (m *GetIntentRequest) GetIntentView() IntentView {
 	return IntentView_INTENT_VIEW_UNSPECIFIED
 }
 
-// The request message for
-// [Intents.CreateIntent][google.cloud.dialogflow.v2beta1.Intents.CreateIntent].
+// The request message for [Intents.CreateIntent][google.cloud.dialogflow.v2beta1.Intents.CreateIntent].
 type CreateIntentRequest struct {
 	// Required. The agent to create a intent for.
 	// Format: `projects/<Project ID>/agent`.
@@ -1748,8 +1744,7 @@ func (m *CreateIntentRequest) GetIntentView() IntentView {
 	return IntentView_INTENT_VIEW_UNSPECIFIED
 }
 
-// The request message for
-// [Intents.UpdateIntent][google.cloud.dialogflow.v2beta1.Intents.UpdateIntent].
+// The request message for [Intents.UpdateIntent][google.cloud.dialogflow.v2beta1.Intents.UpdateIntent].
 type UpdateIntentRequest struct {
 	// Required. The intent to update.
 	// Format: `projects/<Project ID>/agent/intents/<Intent ID>`.
@@ -1799,8 +1794,7 @@ func (m *UpdateIntentRequest) GetIntentView() IntentView {
 	return IntentView_INTENT_VIEW_UNSPECIFIED
 }
 
-// The request message for
-// [Intents.DeleteIntent][google.cloud.dialogflow.v2beta1.Intents.DeleteIntent].
+// The request message for [Intents.DeleteIntent][google.cloud.dialogflow.v2beta1.Intents.DeleteIntent].
 type DeleteIntentRequest struct {
 	// Required. The name of the intent to delete.
 	// Format: `projects/<Project ID>/agent/intents/<Intent ID>`.
@@ -1819,8 +1813,7 @@ func (m *DeleteIntentRequest) GetName() string {
 	return ""
 }
 
-// The request message for
-// [Intents.BatchUpdateIntents][google.cloud.dialogflow.v2beta1.Intents.BatchUpdateIntents].
+// The request message for [Intents.BatchUpdateIntents][google.cloud.dialogflow.v2beta1.Intents.BatchUpdateIntents].
 type BatchUpdateIntentsRequest struct {
 	// Required. The name of the agent to update or create intents in.
 	// Format: `projects/<Project ID>/agent`.
@@ -1981,8 +1974,7 @@ func _BatchUpdateIntentsRequest_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-// The response message for
-// [Intents.BatchUpdateIntents][google.cloud.dialogflow.v2beta1.Intents.BatchUpdateIntents].
+// The response message for [Intents.BatchUpdateIntents][google.cloud.dialogflow.v2beta1.Intents.BatchUpdateIntents].
 type BatchUpdateIntentsResponse struct {
 	// The collection of updated or created intents.
 	Intents []*Intent `protobuf:"bytes,1,rep,name=intents" json:"intents,omitempty"`
@@ -2000,8 +1992,7 @@ func (m *BatchUpdateIntentsResponse) GetIntents() []*Intent {
 	return nil
 }
 
-// The request message for
-// [Intents.BatchDeleteIntents][google.cloud.dialogflow.v2beta1.Intents.BatchDeleteIntents].
+// The request message for [Intents.BatchDeleteIntents][google.cloud.dialogflow.v2beta1.Intents.BatchDeleteIntents].
 type BatchDeleteIntentsRequest struct {
 	// Required. The name of the agent to delete all entities types for. Format:
 	// `projects/<Project ID>/agent`.
@@ -2112,8 +2103,7 @@ type IntentsClient interface {
 	DeleteIntent(ctx context.Context, in *DeleteIntentRequest, opts ...grpc.CallOption) (*google_protobuf2.Empty, error)
 	// Updates/Creates multiple intents in the specified agent.
 	//
-	// Operation <response:
-	// [BatchUpdateIntentsResponse][google.cloud.dialogflow.v2beta1.BatchUpdateIntentsResponse]>
+	// Operation <response: [BatchUpdateIntentsResponse][google.cloud.dialogflow.v2beta1.BatchUpdateIntentsResponse]>
 	BatchUpdateIntents(ctx context.Context, in *BatchUpdateIntentsRequest, opts ...grpc.CallOption) (*google_longrunning.Operation, error)
 	// Deletes intents in the specified agent.
 	//
@@ -2207,8 +2197,7 @@ type IntentsServer interface {
 	DeleteIntent(context.Context, *DeleteIntentRequest) (*google_protobuf2.Empty, error)
 	// Updates/Creates multiple intents in the specified agent.
 	//
-	// Operation <response:
-	// [BatchUpdateIntentsResponse][google.cloud.dialogflow.v2beta1.BatchUpdateIntentsResponse]>
+	// Operation <response: [BatchUpdateIntentsResponse][google.cloud.dialogflow.v2beta1.BatchUpdateIntentsResponse]>
 	BatchUpdateIntents(context.Context, *BatchUpdateIntentsRequest) (*google_longrunning.Operation, error)
 	// Deletes intents in the specified agent.
 	//

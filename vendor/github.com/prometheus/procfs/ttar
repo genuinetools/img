@@ -143,7 +143,11 @@ function extract {
     while IFS= read -r line; do
         line_no=$(( line_no + 1 ))
         if [ "$size" -gt 0 ]; then
-            echo "$line" >> "$path"
+            if [[ "$line" == *EOF ]]; then
+                printf "$line" | sed 's/NULLBYTE/\x00/g' | sed 's/EOF$//' >> "$path"
+            else
+                echo "$line"  | sed 's/NULLBYTE/\x00/g' >> "$path"
+            fi
             size=$(( size - 1 ))
             continue
         fi
@@ -200,6 +204,7 @@ function get_mode {
 function _create {
     shopt -s nullglob
     local mode
+    local eof_without_newline
     while (( "$#" )); do
         file=$1
         if [ -L "$file" ]; then
@@ -221,10 +226,22 @@ function _create {
                 _create "$x"
             done
         elif [ -f "$file" ]; then
+            if grep -q -e NULLBYTE -e EOF "$file"; then
+                echo >&2 "ERROR: $file contains special keywords NULLBYTE or EOF which is currently not supported."
+                exit 2
+            fi
             echo "Path: $file"
-            lines=$(wc -l "$file"|awk '{print $1}')
+            lines=$(wc -l "$file" | cut -d\  -f1)
+            eof_without_newline=0
+            if [[ "$(wc -c "$file" | cut -d\  -f1)" -gt 0 ]] && [[ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]]; then
+                eof_without_newline=1
+                lines=$((lines+1))
+            fi
             echo "Lines: $lines"
-            cat "$file"
+            cat "$file" | sed 's/\x0/NULLBYTE/g'
+            if [[ "$eof_without_newline" -eq 1 ]]; then
+                echo "EOF"
+            fi
             mode=$(get_mode "$file")
             echo "Mode: $mode"
             vecho "$mode $file"
