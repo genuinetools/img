@@ -58,11 +58,11 @@ func TestMain(m *testing.M) {
 func doRun(args []string, stdin io.Reader) (string, error) {
 	prog := "./testimg" + exeSuffix
 
-	newargs := []string{prog, args[0], "--state", testStateDir}
+	newargs := []string{args[0], "--state", testStateDir}
 	newargs = append(newargs, args[1:]...)
 
 	// TODO(jessfraz): the sudo here is horrible, I know.
-	cmd := exec.Command("sudo", newargs...)
+	cmd := exec.Command(prog, newargs...)
 	if stdin != nil {
 		cmd.Stdin = stdin
 	}
