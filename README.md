@@ -25,7 +25,7 @@ due to the fact that it cant mount `proc` inside the container. See
 for more info.
 
 But it will work as an unprivileged user on your host with a `runc` that is
-compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless).
+compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless). I also uploaded one here: [https://misc.j3ss.co/tmp/runc](https://misc.j3ss.co/tmp/runc), if you trust me.
 
 **TLDR;** will work unprivileged on your host not in a container til we work out some kinks.
 
