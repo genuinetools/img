@@ -17,6 +17,7 @@
     - go get github.com/golang/lint/golint
     - go get honnef.co/go/tools/cmd/staticcheck
     - curl -sSL -o runc https://misc.j3ss.co/tmp/runc && chmod +x runc && sudo mv runc /usr/bin/runc
+    - sudo apt install -y --no-install-recommends uidmap
   script:
     - go build -v
     - go vet $(go list ./... | grep -v vendor)
