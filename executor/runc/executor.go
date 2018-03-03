@@ -161,7 +161,7 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		// Only if we are not running as root.
 		specconv.ToRootless(spec, &specconv.RootlessOpts{
 			// This comes from https://github.com/opencontainers/runc/pull/1692
-			// MapSubUIDGID: true,
+			MapSubUIDGID: true,
 		})
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""

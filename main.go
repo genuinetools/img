@@ -9,6 +9,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/genuinetools/img/types"
+	_ "github.com/genuinetools/img/unshare"
 	"github.com/sirupsen/logrus"
 )
 

@@ -22,7 +22,7 @@
     - sudo apt install -y --no-install-recommends -t trusty-backports libseccomp-dev uidmap
   script:
     - go build -v
-    - go vet $(go list ./... | grep -v vendor)
+    - go vet $(go list ./... | grep -v unshare | grep -v vendor)
     - staticcheck $(go list ./... | grep -v vendor)
     - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
     - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"

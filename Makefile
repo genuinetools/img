@@ -55,7 +55,7 @@ lint: ## Verifies `golint` passes
 .PHONY: test
 test: ## Runs the go tests
 	@echo "+ $@"
-	@go test -v -tags "$(BUILDTAGS) cgo" $(shell go list ./... | grep -v vendor)
+	@IMG_RUNNING_TESTS=1 go test -v -tags "$(BUILDTAGS) cgo" $(shell go list ./... | grep -v vendor)
 
 .PHONY: vet
 vet: ## Verifies `go vet` passes
@@ -71,7 +71,7 @@ staticcheck: ## Verifies `staticcheck` passes
 cover: ## Runs go test with coverage
 	@echo "" > coverage.txt
 	@for d in $(shell go list ./... | grep -v vendor); do \
-		go test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
+		IMG_RUNNING_TESTS=1 go test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
 		if [ -f profile.out ]; then \
 			cat profile.out >> coverage.txt; \
 			rm profile.out; \

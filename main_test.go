@@ -31,6 +31,7 @@ func init() {
 // The TestMain function creates a img command for testing purposes and
 // deletes it after the tests have been run.
 func TestMain(m *testing.M) {
+	os.Unsetenv("IMG_RUNNING_TESTS")
 	args := []string{"build", "-o", "testimg" + exeSuffix}
 	out, err := exec.Command("go", args...).CombinedOutput()
 	if err != nil {
