@@ -22,10 +22,13 @@ func WithTempMount(ctx context.Context, mounts []mount.Mount, f func(root string
 		}
 	}()*/
 
+	var root string
 	if len(mounts) > 1 {
 		return fmt.Errorf("mounts holds more than 1 mount, got %d: %#v", len(mounts), mounts)
 	}
-	root := mounts[0].Source
+	if len(mounts) == 1 {
+		root = mounts[0].Source
+	}
 
 	err := f(root)
 	if err != nil {

@@ -63,6 +63,15 @@ func TestBuildEnvironmentReplacementWorkdir(t *testing.T) {
   `))
 }
 
+func TestBuildFromScratch(t *testing.T) {
+	name := "testbuildfromscratch"
+
+	runBuild(t, name, withDockerfile(`
+  FROM scratch
+  COPY . .
+  `))
+}
+
 func TestBuildDockerfileNotInContext(t *testing.T) {
 	name := "testbuilddockerfilenotincontext"
 
