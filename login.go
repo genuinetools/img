@@ -131,9 +131,9 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 	authConfig.Username = strings.TrimSpace(authConfig.Username)
 
 	if flUser = strings.TrimSpace(flUser); flUser == "" {
-		if serverAddress != defaultDockerRegistry {
+		if serverAddress == defaultDockerRegistry {
 			// if this is a default registry (docker hub), then display the following message.
-			fmt.Printf("Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.")
+			fmt.Printf("Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.\n")
 		}
 		promptWithDefault(os.Stdout, "Username", authConfig.Username)
 		flUser = readInput(os.Stdin)
