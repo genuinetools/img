@@ -1420,7 +1420,7 @@ func TestUnionFsPromoteDirTimeStamp(t *testing.T) {
 	// TODO - need to update timestamps after promoteDirsTo calls,
 	// not during.
 	if false && fRo.ModTime().Equal(fRw.ModTime()) {
-		t.Errorf("Changed timestamps on promoted subdir: ro %d rw %d", fRo.ModTime(), fRw.ModTime())
+		t.Errorf("Changed timestamps on promoted subdir: ro %v rw %v", fRo.ModTime(), fRw.ModTime())
 	}
 
 	if fRo.Mode().Perm()|0200 != fRw.Mode().Perm() {

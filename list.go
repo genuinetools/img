@@ -4,13 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
-	"github.com/jessfraz/img/worker/runc"
+	"github.com/jessfraz/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
@@ -39,17 +38,16 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
 
-	// Create the runc worker options.
-	opt, fuseserver, err := runc.NewWorkerOpt(stateDir, backend)
-	defer unmount(fuseserver)
+	// Create the client.
+	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
-		return fmt.Errorf("creating runc worker opt failed: %v", err)
+		return err
 	}
-	handleSignals(fuseserver)
+	defer c.Close()
 
-	images, err := opt.ImageStore.List(ctx, cmd.filters...)
+	images, err := c.ListImages(ctx, cmd.filters...)
 	if err != nil {
-		return fmt.Errorf("listing images with filters (%s) failed: %v", strings.Join(cmd.filters, ", "), err)
+		return err
 	}
 
 	tw := tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)

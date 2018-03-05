@@ -6,17 +6,16 @@ import (
 )
 
 func TestTagImage(t *testing.T) {
-	runBuild(t, "thing", withDockerfile(`
+	runBuild(t, "tagthing", withDockerfile(`
     FROM busybox
-    ENTRYPOINT ["echo"]
-    CMD echo test
+    RUN echo tagtest
     `))
 
-	run(t, "tag", "thing", "jess/tagtest")
+	run(t, "tag", "tagthing", "jess/tagtest")
 
 	out := run(t, "ls")
 
-	if !strings.Contains(out, "thing:latest") || !strings.Contains(out, "jess/tagtest:latest") {
-		t.Fatalf("expected ls output to havething:latest and jess/tagtest:latest but got: %s", out)
+	if !strings.Contains(out, "tagthing:latest") || !strings.Contains(out, "jess/tagtest:latest") {
+		t.Fatalf("expected ls output to have tagthing:latest and jess/tagtest:latest but got: %s", out)
 	}
 }

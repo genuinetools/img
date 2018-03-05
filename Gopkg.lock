@@ -400,7 +400,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "mountless2"
+  revision = "all-changes"
   source = "github.com/jessfraz/buildkit"
 
 [[projects]]
@@ -633,6 +633,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4739d00064633816980ee43d89e11349eef55fe31444bcc5580b49ababf51f43"
+  inputs-digest = "a834e49db7864ff9df7c2f989b70f0786952008a64e5dd3e2c256281f6fd73a7"
   solver-name = "gps-cdcl"
   solver-version = 1
