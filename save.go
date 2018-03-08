@@ -16,10 +16,10 @@ import (
 
 // TODO(AkihiroSuda): support saving multiple images
 // TODO(AkihiroSuda): support OCI archive
-const saveHelp = `Save an image to a tar archive (streamed to STDOUT by default)`
+const saveHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
 
 func (cmd *saveCommand) Name() string      { return "save" }
-func (cmd *saveCommand) Args() string      { return "[OPTIONS] NAME" }
+func (cmd *saveCommand) Args() string      { return "[OPTIONS] IMAGE [IMAGE...]" }
 func (cmd *saveCommand) ShortHelp() string { return saveHelp }
 func (cmd *saveCommand) LongHelp() string  { return saveHelp }
 func (cmd *saveCommand) Hidden() bool      { return false }
@@ -29,19 +29,13 @@ func (cmd *saveCommand) Register(fs *flag.FlagSet) {
 }
 
 type saveCommand struct {
-	image  string
 	output string
 }
 
 func (cmd *saveCommand) Run(args []string) (err error) {
-	if len(args) != 1 {
-		return fmt.Errorf("must pass an image")
+	if len(args) < 1 {
+		return fmt.Errorf("must pass an image to save")
 	}
-
-	// Get the specified image.
-	cmd.image = args[0]
-	// Add the latest lag if they did not provide one.
-	cmd.image = addLatestTagSuffix(cmd.image)
 
 	// Create the context.
 	ctx := appcontext.Context()
@@ -62,7 +56,17 @@ func (cmd *saveCommand) Run(args []string) (err error) {
 		return err
 	}
 
-	return c.SaveImage(ctx, cmd.image, writer)
+	// Loop over the arguments as images and run save.
+	for _, image := range args {
+		// Add the latest lag if they did not provide one.
+		image = addLatestTagSuffix(image)
+
+		if err := c.SaveImage(ctx, image, writer); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cmd *saveCommand) writer() (io.WriteCloser, error) {

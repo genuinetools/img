@@ -64,6 +64,7 @@ OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-u
     + [Push an Image](#push-an-image)
     + [Tag an Image](#tag-an-image)
     + [Export an Image to Docker](#export-an-image-to-docker)
+    + [Remove an Image](#remove-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
 * [About](#about)
@@ -131,6 +132,8 @@ Commands:
   login    Log in to a Docker registry.
   pull     Pull an image or a repository from a registry.
   push     Push an image or a repository to a registry.
+  rm       Remove one or more images.
+  save     Save an image to a tar archive (streamed to STDOUT by default).
   tag      Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
   version  Show the version information.
 ```
@@ -278,9 +281,9 @@ Successfully tagged jess/thing as jess/otherthing
 
 ```console
 $ img save -h
-Usage: ./img save [OPTIONS] NAME
+Usage: img save [OPTIONS] IMAGE [IMAGE...]
 
-Save an image to a tar archive (streamed to STDOUT by default)
+Save an image to a tar archive (streamed to STDOUT by default).
 
 Flags:
 
@@ -297,6 +300,20 @@ $ img save jess/thing | docker load
 533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
 3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
 Loaded image: jess/thing
+```
+
+### Remove an Image
+
+```console
+Usage: img rm [OPTIONS] IMAGE [IMAGE...]
+
+Remove one or more images.
+
+Flags:
+
+  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -d        enable debug logging (default: false)
+  -state    directory to hold the global state (default: /tmp/img)
 ```
 
 ### Disk Usage
