@@ -55,7 +55,7 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 		return err
 	}
 
-	fmt.Printf("Successfully pushed %s", cmd.image)
+	fmt.Printf("Successfully pushed %s\n", cmd.image)
 
 	return nil
 }
