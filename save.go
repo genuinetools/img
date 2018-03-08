@@ -58,9 +58,6 @@ func (cmd *saveCommand) Run(args []string) (err error) {
 
 	// Loop over the arguments as images and run save.
 	for _, image := range args {
-		// Add the latest lag if they did not provide one.
-		image = addLatestTagSuffix(image)
-
 		if err := c.SaveImage(ctx, image, writer); err != nil {
 			return err
 		}

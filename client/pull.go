@@ -11,18 +11,18 @@ import (
 )
 
 // Pull retrieves an image from a remote registry.
-func (c *Client) Pull(ctx context.Context, i string) (cache.ImmutableRef, error) {
-	// Parse the repository name.
-	image, err := reference.ParseNormalizedNamed(i)
+func (c *Client) Pull(ctx context.Context, image string) (cache.ImmutableRef, error) {
+	// Parse the image name and tag.
+	named, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
-		return nil, fmt.Errorf("not a valid image %q: %v", i, err)
+		return nil, fmt.Errorf("parsing image name %q failed: %v", image, err)
 	}
-
-	// Add latest to the image name if it is empty.
-	image = reference.TagNameOnly(image)
+	// Add the latest lag if they did not provide one.
+	named = reference.TagNameOnly(named)
+	image = named.String()
 
 	// Get the identifier for the image.
-	identifier, err := source.NewImageIdentifier(image.String())
+	identifier, err := source.NewImageIdentifier(image)
 	if err != nil {
 		return nil, err
 	}

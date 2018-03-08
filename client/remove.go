@@ -5,10 +5,19 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/images"
+	"github.com/docker/distribution/reference"
 )
 
 // RemoveImage removes image from the image store.
 func (c *Client) RemoveImage(ctx context.Context, image string) error {
+	named, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return fmt.Errorf("parsing image name %q failed: %v", image, err)
+	}
+	// Add the latest lag if they did not provide one.
+	named = reference.TagNameOnly(named)
+	image = named.String()
+
 	// Create the worker opts.
 	opt, err := c.createWorkerOpt()
 	if err != nil {

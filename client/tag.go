@@ -8,10 +8,29 @@ import (
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
+	"github.com/docker/distribution/reference"
 )
 
 // TagImage creates a reference to an image with a specific name in the image store.
 func (c *Client) TagImage(ctx context.Context, src, dest string) error {
+	// Parse the image name and tag for the src image.
+	named, err := reference.ParseNormalizedNamed(src)
+	if err != nil {
+		return fmt.Errorf("parsing image name %q failed: %v", src, err)
+	}
+	// Add the latest lag if they did not provide one.
+	named = reference.TagNameOnly(named)
+	src = named.String()
+
+	// Parse the image name and tag for the dest image.
+	named, err = reference.ParseNormalizedNamed(dest)
+	if err != nil {
+		return fmt.Errorf("parsing image name %q failed: %v", dest, err)
+	}
+	// Add the latest lag if they did not provide one.
+	named = reference.TagNameOnly(named)
+	dest = named.String()
+
 	// Create the worker opts.
 	opt, err := c.createWorkerOpt()
 	if err != nil {

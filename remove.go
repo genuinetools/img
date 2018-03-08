@@ -43,8 +43,6 @@ func (cmd *removeCommand) Run(args []string) (err error) {
 
 	// Loop over the arguments as images and run remove.
 	for _, image := range args {
-		// Add the latest lag if they did not provide one.
-		image = addLatestTagSuffix(image)
 		fmt.Printf("Removing %s...\n", image)
 
 		err = c.RemoveImage(ctx, image)
