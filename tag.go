@@ -52,7 +52,7 @@ func (cmd *tagCommand) Run(args []string) (err error) {
 		return err
 	}
 
-	fmt.Printf("Successfully tagged %s as %s", cmd.image, cmd.target)
+	fmt.Printf("Successfully tagged %s as %s\n", cmd.image, cmd.target)
 
 	return nil
 }
