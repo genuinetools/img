@@ -57,7 +57,7 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	for _, image := range images {
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
 			image.Name,
-			units.BytesSize(float64(image.Target.Size)),
+			units.BytesSize(float64(image.ContentSize)),
 			units.HumanDuration(time.Now().UTC().Sub(image.CreatedAt))+" ago",
 			units.HumanDuration(time.Now().UTC().Sub(image.UpdatedAt))+" ago",
 			image.Target.Digest,
