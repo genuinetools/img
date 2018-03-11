@@ -16,8 +16,6 @@ const (
 	defaultBackend        = types.NaiveBackend
 	defaultDockerRegistry = "https://index.docker.io/v1/"
 	defaultDockerfileName = "Dockerfile"
-
-	latestTagSuffix = ":latest"
 )
 
 var (
