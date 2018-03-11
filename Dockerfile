@@ -12,7 +12,7 @@ RUN apk add --no-cache \
 	g++ \
 	libseccomp-dev \
 	linux-headers
-RUN git clone https://github.com/genuinetools/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
+RUN git clone https://github.com/jessfraz/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
 	&& cd "$GOPATH/src/github.com/opencontainers/runc" \
 	&& git checkout -q "demo-rootless" \
 	&& make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\"" \
