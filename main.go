@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/jessfraz/img/types"
+	"github.com/genuinetools/img/types"
 	"github.com/sirupsen/logrus"
 )
 

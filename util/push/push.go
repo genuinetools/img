@@ -11,7 +11,7 @@ import (
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
-	"github.com/jessfraz/img/util/auth"
+	"github.com/genuinetools/img/util/auth"
 	"github.com/moby/buildkit/util/imageutil"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

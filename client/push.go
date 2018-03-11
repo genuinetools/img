@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution/reference"
-	"github.com/jessfraz/img/exporter/containerimage"
-	"github.com/jessfraz/img/exporter/imagepush"
+	"github.com/genuinetools/img/exporter/containerimage"
+	"github.com/genuinetools/img/exporter/imagepush"
 )
 
 // Push sends an image to a remote registry.

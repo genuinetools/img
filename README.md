@@ -1,6 +1,6 @@
 # img
 
-[![Build Status](https://travis-ci.org/jessfraz/img.svg?branch=master)](https://travis-ci.org/jessfraz/img)
+[![Build Status](https://travis-ci.org/genuinetools/img.svg?branch=master)](https://travis-ci.org/genuinetools/img)
 
 Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
 container image builder.
@@ -85,19 +85,19 @@ NOTE: These steps work only for Linux. Compile and run in a container (explained
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/jessfraz/img/releases/download/v0.2.4/img-linux-amd64)
+- **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.2.4/img-linux-amd64)
 
 #### Via Go
 
 ```bash
-$ go get github.com/jessfraz/img
+$ go get github.com/genuinetools/img
 ```
 
 #### From Source
 
 ```bash
-$ mkdir -p $GOPATH/src/github.com/jessfraz
-$ git clone https://github.com/jessfraz/img $GOPATH/src/github.com/jessfraz/img
+$ mkdir -p $GOPATH/src/github.com/genuinetools
+$ git clone https://github.com/genuinetools/img $GOPATH/src/github.com/genuinetools/img
 $ cd !$
 $ make
 $ sudo make install
@@ -169,10 +169,10 @@ fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/main/x86_64/APKINDEX.tar.gz
 fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/community/x86_64/APKINDEX.tar.gz
 OK: 5 MiB in 12 packages
 <--- 5e433zdbh8eosea0u9b70axb3 0 <nil>
-RUN [copy /src-0 /dest/go/src/github.com/jessfraz/img]
+RUN [copy /src-0 /dest/go/src/github.com/genuinetools/img]
 --->
 <--- rqku3imaivvjpgl676se1gupc 0 <nil>
-RUN [/bin/sh -c set -x  && apk add --no-cache --virtual .build-deps             bash            git             gcc             libc-dev      libgcc           libseccomp-dev          linux-headers           make    && cd /go/src/github.com/jessfraz/img   && make static  && mv img /usr/bin/img         && mkdir -p /go/src/github.com/opencontainers   && git clone https://github.com/opencontainers/runc /go/src/github.com/opencontainers/runc     && cd /go/src/github.com/opencontainers/runc    && make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\""   && mv runc /usr/bin/runc        && apk del .build-deps  && rm -rf /go   && echo "Build complete."]
+RUN [/bin/sh -c set -x  && apk add --no-cache --virtual .build-deps             bash            git             gcc             libc-dev      libgcc           libseccomp-dev          linux-headers           make    && cd /go/src/github.com/genuinetools/img   && make static  && mv img /usr/bin/img         && mkdir -p /go/src/github.com/opencontainers   && git clone https://github.com/opencontainers/runc /go/src/github.com/opencontainers/runc     && cd /go/src/github.com/opencontainers/runc    && make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\""   && mv runc /usr/bin/runc        && apk del .build-deps  && rm -rf /go   && echo "Build complete."]
 --->
 + apk add --no-cache --virtual .build-deps bash git gcc libc-dev libgcc libseccomp-dev linux-headers make
 fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/main/x86_64/APKINDEX.tar.gz
@@ -336,7 +336,7 @@ Flags:
 $ img du 
 ID                                                                      RECLAIMABLE     SIZE            DESCRIPTION
 sha256:d9a48086f223d28a838263a6c04705c8009fab1dd67cc82c0ee821545de3bf7c true            911.8KiB        pulled from docker.io/tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e
-7ia86xm2e4hzn2u947iqh9ph2                                               true            203.2MiB        mount /dest from exec copy /src-0 /dest/go/src/github.com/jessfraz/img
+7ia86xm2e4hzn2u947iqh9ph2                                               true            203.2MiB        mount /dest from exec copy /src-0 /dest/go/src/github.com/genuinetools/img
 ...
 sha256:9f131fba0383a6aaf25ecd78bd5f37003e41a4385d7f38c3b0cde352ad7676da true            958.6KiB        pulled from docker.io/library/golang:alpine@sha256:a0045fbb52a7ef318937e84cf7ad3301b4d2ba6cecc2d01804f428a1e39d1dfc
 sha256:c4151b5a5de5b7e272b2b6a3a4518c980d6e7f580f39c85370330a1bff5821f1 true            472.3KiB        pulled from docker.io/tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e
@@ -390,7 +390,7 @@ It can be made unprivileged with mounts and that work is being done, see the
 
 You can also use `overlayfs` 
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
-see [#22](https://github.com/jessfraz/img/issues/22).
+see [#22](https://github.com/genuinetools/img/issues/22).
 
 #### fuse
 
@@ -423,14 +423,14 @@ Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5)`](htt
 
 So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
 
-If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/jessfraz/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
+If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/genuinetools/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
 
 For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
 and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
 
 ## Contributing
 
-Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/jessfraz/img/issues).
+Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/genuinetools/img/issues).
 
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.

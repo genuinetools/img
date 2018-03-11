@@ -255,6 +255,12 @@
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
+  name = "github.com/genuinetools/reg"
+  packages = ["registry"]
+  revision = "b2cdf0428ddc051f8a39143b63311b515e26d012"
+  version = "v0.13.0"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -324,12 +330,6 @@
   name = "github.com/hashicorp/golang-lru"
   packages = ["simplelru"]
   revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/jessfraz/reg"
-  packages = ["registry"]
-  revision = "5088b3b142b4984e1dcbe1a7108d39b7e8735172"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -633,6 +633,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a834e49db7864ff9df7c2f989b70f0786952008a64e5dd3e2c256281f6fd73a7"
+  inputs-digest = "95bac0ff0082278424ea89d5717f713fc407433dbdfedd7af9ac89ec09f4b99a"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -30,7 +30,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/mount"
-	tmpmnt "github.com/jessfraz/img/diff/mount"
+	tmpmnt "github.com/genuinetools/img/diff/mount"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"

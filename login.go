@@ -15,7 +15,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
-	registryapi "github.com/jessfraz/reg/registry"
+	registryapi "github.com/genuinetools/reg/registry"
 	"github.com/sirupsen/logrus"
 )
 

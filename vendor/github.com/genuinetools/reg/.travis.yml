@@ -1,0 +1,62 @@
+---
+  language: go
+  sudo: true
+  notifications:
+    email: true
+  go:
+    - 1.x
+    - tip
+  services:
+    - docker
+  env:
+    global:
+      - GO15VENDOREXPERIMENT=1
+  matrix:
+    allow_failures:
+      - go: tip
+    fast_finish: true
+  install:
+    - go get github.com/golang/lint/golint
+    - go get honnef.co/go/tools/cmd/staticcheck
+  script:
+    - go build -v
+    - go vet $(go list ./... | grep -v vendor)
+    - staticcheck $(go list ./... | grep -v vendor)
+    - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
+    - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"
+    - DOCKER_API_VERSION=1.35 make dind dtest
+    - make release
+  after_success:
+    - bash <(curl -s https://codecov.io/bash)
+  deploy:
+    provider: releases
+    api_key:
+      secure: "xz4uJ+vrF5+u3zucCPdnoXR/a0i8/oUzzDABuKiaB9AFFjrM8obLYo2AgMlP5zj/YHpGgTP51m/sx/qwJKfNvCoR2alBb2taYzJnhCfXzOuviZ0RZbM2LqA72lutdAzZ5eyMPCXcqvOjf6INnCmqQeJjDWo8UzGKSlWP2cqU/Qovs1vzurImME86DjqQ4EDaYlZS3tVc5BtEqmhylT2q0aO7gNJcMunDJpIEwb3vo8bbOoS6heQO2DVFf553lnZTSheEOERiF8r/O3vdMBCIqq7Xr2WIzJ4WGoNqzCk4sVcOZYP1yWa4Je/J09TaM8Uam+SZCG8p2lG+lr9toNv9jDHAA3Z986hAj+1NhRXTbwtRYM/KfL38UegvGfFCRvOAc+3AQhQaw1p2hX599in4zl/IcSVjF6IytJGj+JrCHU1p5Bd9qphFQKlXAXQKZwH+TKt3QTnrUQIUOn0QwcfgbvDUaA2XMsR9f0BWNshILvz79JJZmwXY7C7ufVSKdL+T+9dNn/5N7dMn6fWb7ZruwK3N6gLyVSulMinSYyNIHGiEH3mdoBr020KYD1w1+cfK4Ov6B8vf9k7atzHDPRklm2X0hvda2T0UXOv5+hr+OlvdhpqZKDB2HkVOUQUUfk7cL88u+FpU6pktlhJVLSCl292jWS05I1AYOiHChEFONeE="
+    file:
+      - cross/reg-linux-amd64.md5
+      - cross/reg-windows-386.sha256
+      - cross/reg-linux-arm
+      - cross/reg-darwin-amd64.md5
+      - cross/reg-darwin-amd64
+      - cross/reg-linux-arm64.sha256
+      - cross/reg-linux-arm.sha256
+      - cross/reg-linux-386.sha256
+      - cross/reg-darwin-386.md5
+      - cross/reg-windows-386.md5
+      - cross/reg-linux-arm64.md5
+      - cross/reg-linux-arm64
+      - cross/reg-linux-amd64.sha256
+      - cross/reg-linux-386.md5
+      - cross/reg-windows-amd64
+      - cross/reg-windows-amd64.md5
+      - cross/reg-windows-amd64.sha256
+      - cross/reg-linux-arm.md5
+      - cross/reg-darwin-386.sha256
+      - cross/reg-darwin-amd64.sha256
+      - cross/reg-windows-386
+      - cross/reg-darwin-386
+      - cross/reg-linux-386
+      - cross/reg-linux-amd64
+    skip_cleanup: true
+    on:
+      tags: true

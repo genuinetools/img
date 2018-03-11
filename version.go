@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/jessfraz/img/version"
+	"github.com/genuinetools/img/version"
 )
 
 const versionHelp = `Show the version information.`

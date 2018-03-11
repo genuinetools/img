@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/images"
-	"github.com/jessfraz/img/exporter/containerimage"
-	"github.com/jessfraz/img/util/push"
+	"github.com/genuinetools/img/exporter/containerimage"
+	"github.com/genuinetools/img/util/push"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	"github.com/pkg/errors"

@@ -6,7 +6,7 @@ import (
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
-	"github.com/jessfraz/img/util/push"
+	"github.com/genuinetools/img/util/push"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	"github.com/pkg/errors"

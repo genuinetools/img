@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/jessfraz/img/fsutils"
+	"github.com/genuinetools/img/fsutils"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/contenthash"
 	"github.com/moby/buildkit/cache/metadata"

@@ -1,0 +1,13 @@
+{
+  "auths": {
+    "https://index.docker.io/v1/": {
+      "auth": "dXNlcjp0aGluZwo="
+    },
+    "https://reg.j3ss.co": {
+      "auth": "am9lOm90aGVydGhpbmcK"
+    },
+    "r.j3ss.co": {
+      "auth": "dXNlcjpibGFoCg=="
+    }
+  }
+}

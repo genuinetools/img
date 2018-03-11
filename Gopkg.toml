@@ -92,7 +92,7 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/jessfraz/reg"
+  name = "github.com/genuinetools/reg"
   branch = "master"
 
 [[constraint]]

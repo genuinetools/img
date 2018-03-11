@@ -1,0 +1,19 @@
+version: 0.1
+log:
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: 0.0.0.0:5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+  host: https://localhost:5000
+  tls:
+    certificate: /etc/docker/registry/ssl/cert.pem
+    key: /etc/docker/registry/ssl/key.pem

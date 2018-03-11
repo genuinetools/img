@@ -1,9 +1,9 @@
 package client
 
 import (
-	imageexporter "github.com/jessfraz/img/exporter/containerimage"
-	"github.com/jessfraz/img/source/containerimage"
-	"github.com/jessfraz/img/source/local"
+	imageexporter "github.com/genuinetools/img/exporter/containerimage"
+	"github.com/genuinetools/img/source/containerimage"
+	"github.com/genuinetools/img/source/local"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/cacheimport"
 	localcache "github.com/moby/buildkit/cache/instructioncache/local"

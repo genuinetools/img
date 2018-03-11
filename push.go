@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/namespaces"
-	"github.com/jessfraz/img/client"
+	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"

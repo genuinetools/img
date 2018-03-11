@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution/reference"
-	"github.com/jessfraz/img/source/containerimage"
+	"github.com/genuinetools/img/source/containerimage"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/source"
 )

@@ -61,7 +61,7 @@ func doRun(args []string, stdin io.Reader) (string, error) {
 	newargs := []string{args[0], "--state", testStateDir}
 	newargs = append(newargs, args[1:]...)
 
-	// TODO(jessfraz): the sudo here is horrible, I know.
+	// TODO(genuinetools): the sudo here is horrible, I know.
 	cmd := exec.Command(prog, newargs...)
 	if stdin != nil {
 		cmd.Stdin = stdin
