@@ -58,7 +58,7 @@ func MWComponentName(componentName string) MWOption {
 //   mw := nethttp.Middleware(
 //      tracer,
 //      http.DefaultServeMux,
-//      nethttp.OperationName(func(r *http.Request) string {
+//      nethttp.OperationNameFunc(func(r *http.Request) string {
 //	        return "HTTP " + r.Method + ":/api/customers"
 //      }),
 //   )

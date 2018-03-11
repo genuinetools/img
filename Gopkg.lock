@@ -50,7 +50,7 @@
   branch = "master"
   name = "github.com/containerd/console"
   packages = ["."]
-  revision = "2748ece16665b45a47f884001d5831ec79703880"
+  revision = "cb7008ab3d8359b78c5f464cb7cf160107ad5925"
 
 [[projects]]
   branch = "no-lchown"
@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "c26f37c0cce47c2e2c2d8e5f0df261c95c930479"
+  revision = "2731c71c993a4d1e43101eea56e7c343315024f1"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "135f815fb4b1c362c0b212e9f3dd3b0cea81616b"
+  revision = "a575b0b1384b2ba89b79cbd7e770fbeb616758b3"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -443,7 +443,7 @@
   branch = "master"
   name = "github.com/opentracing-contrib/go-stdlib"
   packages = ["nethttp"]
-  revision = "b1a47cfbdd7543e70e9ef3e73d0802ad306cc1cc"
+  revision = "f6b9967a3c699b16f941872d6115b2860915bd5b"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -501,7 +501,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
+  revision = "54d17b57dd7d4a3aa092476596b3f8a933bde349"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -532,7 +532,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
+  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
 
 [[projects]]
   branch = "master"
@@ -548,7 +548,7 @@
     "proxy",
     "trace"
   ]
-  revision = "22ae77b79946ea320088417e4d50825671d82d57"
+  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
 
 [[projects]]
   branch = "master"
@@ -563,7 +563,7 @@
     "unix",
     "windows"
   ]
-  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
+  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -596,7 +596,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "2c5e7ac708aaa719366570dd82bda44541ca2a63"
+  revision = "df60624c1e9b9d2973e889c7a1cff73155da81c4"
 
 [[projects]]
   name = "google.golang.org/grpc"
