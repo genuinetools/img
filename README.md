@@ -85,7 +85,7 @@ NOTE: These steps work only for Linux. Compile and run in a container (explained
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.2.4/img-linux-amd64)
+- **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.3.0/img-linux-amd64)
 
 #### Via Go
 
