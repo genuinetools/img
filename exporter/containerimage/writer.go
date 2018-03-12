@@ -49,7 +49,7 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 	logrus.Info("exporting layers")
 	diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed calculaing diff pairs for exported snapshot")
+		return nil, errors.Wrap(err, "failed calculating diff pairs for exported snapshot")
 	}
 
 	if len(config) == 0 {
