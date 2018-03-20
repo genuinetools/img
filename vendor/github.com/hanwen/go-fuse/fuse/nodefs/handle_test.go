@@ -126,3 +126,36 @@ func TestHandleMapGeneration(t *testing.T) {
 		t.Fatalf("register should increase generation: got %d want greater than %d.", g2, g1)
 	}
 }
+
+func TestHandleMapGenerationKnown(t *testing.T) {
+	hm := newPortableHandleMap()
+
+	o1 := &handled{}
+	h1, g1 := hm.Register(o1)
+
+	o2 := &handled{}
+	h2, _ := hm.Register(o2)
+
+	h3, g3 := hm.Register(o1)
+
+	if h1 != h3 {
+		t.Fatalf("register known should reuse handle: got %d want %d.", h3, h1)
+	}
+	if g1 != g3 {
+		t.Fatalf("register known should reuse generation: got %d want %d.", g3, g1)
+	}
+
+	hm.Forget(h1, 2)
+	hm.Forget(h2, 1)
+
+	h1, g1 = hm.Register(o1)
+	h2, _ = hm.Register(o2)
+	h3, g3 = hm.Register(o1)
+
+	if h1 != h3 {
+		t.Fatalf("register known should reuse handle: got %d want %d.", h3, h1)
+	}
+	if g1 != g3 {
+		t.Fatalf("register known should reuse generation: got %d want %d.", g3, g1)
+	}
+}

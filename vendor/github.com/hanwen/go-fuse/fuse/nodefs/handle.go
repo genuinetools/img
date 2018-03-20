@@ -35,8 +35,9 @@ type handleMap interface {
 }
 
 type handled struct {
-	handle uint64
-	count  int
+	handle     uint64
+	generation uint64
+	count      int
 }
 
 func (h *handled) verify() {
@@ -75,25 +76,29 @@ func newPortableHandleMap() *portableHandleMap {
 
 func (m *portableHandleMap) Register(obj *handled) (handle, generation uint64) {
 	m.Lock()
-	if obj.count == 0 {
-		if len(m.freeIds) == 0 {
-			handle = uint64(len(m.handles))
-			m.handles = append(m.handles, obj)
-		} else {
-			handle = m.freeIds[len(m.freeIds)-1]
-			m.freeIds = m.freeIds[:len(m.freeIds)-1]
-			m.generation++
-			m.handles[handle] = obj
-		}
-		m.used++
-		obj.handle = handle
-	} else {
-		handle = obj.handle
+	defer m.Unlock()
+	// Reuse existing handle
+	if obj.count != 0 {
+		obj.count++
+		return obj.handle, obj.generation
 	}
+	// Create a new handle number or recycle one on from the free list
+	if len(m.freeIds) == 0 {
+		obj.handle = uint64(len(m.handles))
+		m.handles = append(m.handles, obj)
+	} else {
+		obj.handle = m.freeIds[len(m.freeIds)-1]
+		m.freeIds = m.freeIds[:len(m.freeIds)-1]
+		m.handles[obj.handle] = obj
+	}
+	// Increment generation number to guarantee the (handle, generation) tuple
+	// is unique
+	m.generation++
+	m.used++
+	obj.generation = m.generation
 	obj.count++
-	generation = m.generation
-	m.Unlock()
-	return
+
+	return obj.handle, obj.generation
 }
 
 func (m *portableHandleMap) Handle(obj *handled) (h uint64) {

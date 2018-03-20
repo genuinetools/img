@@ -1,2 +1,0 @@
-c1 busybox:latest some.label=value
-c2 busybox:latest foo=bar

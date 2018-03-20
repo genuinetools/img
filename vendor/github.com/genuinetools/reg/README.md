@@ -59,10 +59,13 @@ GLOBAL OPTIONS:
    --force-non-ssl, -f         force allow use of non-ssl
    --username value, -u value  username for the registry
    --password value, -p value  password for the registry
-   --registry value, -r value  URL to the private registry (ex. r.j3ss.co) (default: "https://registry-1.docker.io")
+   --registry value, -r value  URL to the private registry (ex. r.j3ss.co) (default: "https://registry-1.docker.io") [$REG_REGISTRY]
    --help, -h                  show help
    --version, -v               print the version
 ```
+
+Note that the `--registry` can be set by an environment variable `REG_REGISTRY`, so you can set this in your shell login scripts.
+Specifying the registry on the command-line will override an environment variable setting.
 
 ## Auth
 

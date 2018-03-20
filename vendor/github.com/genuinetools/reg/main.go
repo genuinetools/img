@@ -48,9 +48,10 @@ func main() {
 			Usage: "password for the registry",
 		},
 		cli.StringFlag{
-			Name:  "registry, r",
-			Usage: "URL to the private registry (ex. r.j3ss.co)",
-			Value: repoutils.DefaultDockerRegistry,
+			Name:   "registry, r",
+			Usage:  "URL to the private registry (ex. r.j3ss.co)",
+			Value:  repoutils.DefaultDockerRegistry,
+			EnvVar: "REG_REGISTRY",
 		},
 	}
 

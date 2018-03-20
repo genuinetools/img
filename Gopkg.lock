@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "2731c71c993a4d1e43101eea56e7c343315024f1"
+  revision = "c0ffb9491cdffb628e18bb491b566255987fd28d"
 
 [[projects]]
   branch = "master"
@@ -157,7 +157,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "6fca8d6e6713acbdf3f9ca40cf6370fc5ee5ee53"
+  revision = "607ae5d128a82f280e8c7f453d5fb30c535bda17"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "a575b0b1384b2ba89b79cbd7e770fbeb616758b3"
+  revision = "0c1006f1abc1af7aa6b9847754370d054dfa6c68"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -255,10 +255,10 @@
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
+  branch = "master"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
-  revision = "b2cdf0428ddc051f8a39143b63311b515e26d012"
-  version = "v0.13.0"
+  revision = "dd16b5bfefa6d5aac88f1104433f272392fe0aa3"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -443,7 +443,7 @@
   branch = "master"
   name = "github.com/opentracing-contrib/go-stdlib"
   packages = ["nethttp"]
-  revision = "f6b9967a3c699b16f941872d6115b2860915bd5b"
+  revision = "36723135187404d2f4002f4f189938565e64cc5c"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -474,7 +474,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "c3324c1198cf3374996e9d3098edd46a6b55afc9"
+  revision = "d49167c4b9f3c4451707560c5c71471ff5291aaa"
 
 [[projects]]
   branch = "master"
@@ -490,7 +490,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
+  revision = "e4aa40a9169a88835b849a6efb71e05dc04b88f0"
 
 [[projects]]
   branch = "master"
@@ -512,8 +512,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
-  version = "v1.0.4"
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
 
 [[projects]]
   branch = "master"
@@ -532,7 +532,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
+  revision = "80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd"
 
 [[projects]]
   branch = "master"
@@ -548,13 +548,13 @@
     "proxy",
     "trace"
   ]
-  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sync"
   packages = ["errgroup"]
-  revision = "fd80eb99c8f653c847d294a001bdf2a3a6f768f5"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
   branch = "master"
@@ -563,7 +563,7 @@
     "unix",
     "windows"
   ]
-  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
+  revision = "7ceb54c8418b8f9cdf0177b511d5cbb06e9fae39"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -590,13 +590,13 @@
   branch = "master"
   name = "golang.org/x/time"
   packages = ["rate"]
-  revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
+  revision = "26559e0f760e39c24d730d3224364aef164ee23f"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "df60624c1e9b9d2973e889c7a1cff73155da81c4"
+  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
 
 [[projects]]
   name = "google.golang.org/grpc"
