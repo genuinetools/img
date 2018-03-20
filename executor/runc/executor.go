@@ -163,6 +163,9 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		spec.Linux.CgroupsPath = ""
 	}
 
+	// Set the default seccomp profile.
+	spec.Linux.Seccomp = DefaultSeccompProfile
+
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err
 	}
