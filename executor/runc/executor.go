@@ -174,10 +174,10 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		IO:           &forwardIO{stdin: stdin, stdout: stdout, stderr: stderr},
 		NoNewKeyring: true,
 	}
-	if w.unprivileged {
-		// This comes from https://github.com/opencontainers/runc/pull/1693
-		// opts.ForceMappingTool = true
-	}
+	//if w.unprivileged {
+	// This comes from https://github.com/opencontainers/runc/pull/1693
+	// opts.ForceMappingTool = true
+	//}
 	status, err := w.runc.Run(ctx, id, bundle, opts)
 
 	fmt.Printf("<--- %s %v %v\n", id, status, err)
