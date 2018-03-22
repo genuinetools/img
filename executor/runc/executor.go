@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/containerd/containerd/contrib/seccomp"
 	"github.com/containerd/containerd/mount"
 	containerdoci "github.com/containerd/containerd/oci"
 	"github.com/containerd/continuity/fs"
@@ -130,7 +131,7 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	defer f.Close()
 
 	// Generate the spec.
-	spec, cleanup, err := oci.GenerateSpec(ctx, meta, mounts, id, resolvConf, hostsFile, containerdoci.WithUIDGID(uid, gid))
+	spec, cleanup, err := oci.GenerateSpec(ctx, meta, mounts, id, resolvConf, hostsFile, containerdoci.WithUIDGID(uid, gid), seccomp.WithDefaultProfile())
 	if err != nil {
 		return err
 	}
@@ -162,9 +163,6 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""
 	}
-
-	// Set the default seccomp profile.
-	spec.Linux.Seccomp = DefaultSeccompProfile
 
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err

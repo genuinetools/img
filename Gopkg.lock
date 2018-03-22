@@ -38,7 +38,7 @@
   branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
-  revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
   name = "github.com/boltdb/bolt"
@@ -61,6 +61,7 @@
     "containers",
     "content",
     "content/local",
+    "contrib/seccomp",
     "diff",
     "diff/apply",
     "diff/walking",
@@ -134,7 +135,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "c0ffb9491cdffb628e18bb491b566255987fd28d"
+  revision = "c1b58a90961424e0b97956b93a88303a2790d789"
 
 [[projects]]
   branch = "master"
@@ -157,7 +158,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "607ae5d128a82f280e8c7f453d5fb30c535bda17"
+  revision = "23bef416bdd6dcff90083288c284367cf6af955e"
 
 [[projects]]
   branch = "master"
@@ -198,7 +199,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "0c1006f1abc1af7aa6b9847754370d054dfa6c68"
+  revision = "e2bede01e4a6a6f84e33e2a6debf2cfed5938828"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -501,7 +502,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "54d17b57dd7d4a3aa092476596b3f8a933bde349"
+  revision = "780932d4fbbe0e69b84c34c20f5c8d0981e109ea"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -563,7 +564,7 @@
     "unix",
     "windows"
   ]
-  revision = "7ceb54c8418b8f9cdf0177b511d5cbb06e9fae39"
+  revision = "c488ab1dd8481ef762f96a79a9577c27825be697"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -633,6 +634,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6c8752398f49dd208284b06a604cbad0f064a7be4900f29ee98f8a06ae63fcbf"
+  inputs-digest = "eadcb8d0d9794ae0671be28d608259d7219bd8a396d4ed9e7eae634b4fa12015"
   solver-name = "gps-cdcl"
   solver-version = 1
