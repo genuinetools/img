@@ -17,7 +17,7 @@ You might also be interested in reading the
 Currently you can run it as unprivileged and there are a few ways to go about
 this, the default backend `naive` will not mount if you are running as an
 unprivileged user and so it should work. You can learn more about the
-snaphotter backends [here](#snapshotter-backends).
+snapshotter backends [here](#snapshotter-backends).
 
 However, it does not currently work as an unprivileged user _in_ a container
 due to the fact that it cant mount `proc` inside the container. See
