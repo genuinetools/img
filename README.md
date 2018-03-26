@@ -11,8 +11,9 @@ as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 The commands/UX are the same as `docker {build,push,pull,login}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
-You might also be interested in reading the 
-[original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing).
+You might also be interested in reading: 
+* [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
+* [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
 
 Currently you can run it as unprivileged and there are a few ways to go about
 this, the default backend `naive` will not mount if you are running as an
