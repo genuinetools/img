@@ -267,10 +267,13 @@ func untar(dest string, r io.Reader) error {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
 
 			// copy over contents
-			if _, err := io.Copy(f, tr); err != nil {
+			_, err = io.Copy(f, tr)
+			// immediately close the file, as opposed to doing it in a defer.
+			// This is so we don't leak open files.
+			f.Close()
+			if err != nil {
 				return err
 			}
 		}
