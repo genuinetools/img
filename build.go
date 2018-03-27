@@ -250,7 +250,7 @@ func untar(dest string, r io.Reader) error {
 		}
 
 		// the target location where the dir/file should be created
-		target := filepath.Join(dest, header.Name)
+		target := filepath.Join(dest, filepath.Join("/", header.Name))
 
 		// check the file type
 		switch header.Typeflag {
