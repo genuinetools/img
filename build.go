@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/namespaces"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/genuinetools/img/client"
@@ -94,7 +95,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// Set the dockerfile path as the default if one was not given.
 	if cmd.dockerfilePath == "" {
-		cmd.dockerfilePath = filepath.Join(cmd.contextDir, defaultDockerfileName)
+		cmd.dockerfilePath, err = securejoin.SecureJoin(cmd.contextDir, defaultDockerfileName)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Create the context.
@@ -204,7 +208,11 @@ func contextFromStdin(dockerfileName string) (string, error) {
 	}
 
 	// Create the dockerfile in the temporary directory.
-	f, err := os.Create(filepath.Join(tmpDir, dockerfileName))
+	dockerfilePath, err := securejoin.SecureJoin(tmpDir, dockerfileName)
+	if err != nil {
+		return tmpDir, err
+	}
+	f, err := os.Create(dockerfilePath)
 	if err != nil {
 		return tmpDir, err
 	}
@@ -250,7 +258,10 @@ func untar(dest string, r io.Reader) error {
 		}
 
 		// the target location where the dir/file should be created
-		target := filepath.Join(dest, filepath.Join("/", header.Name))
+		target, err := securejoin.SecureJoin(dest, header.Name)
+		if err != nil {
+			return err
+		}
 
 		// check the file type
 		switch header.Typeflag {
