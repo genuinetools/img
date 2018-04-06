@@ -40,6 +40,7 @@ type SourceOpt struct {
 	ContentStore   content.Store
 	Applier        diff.Applier
 	CacheAccessor  cache.Accessor
+	ImageStore     images.Store // optional
 }
 
 type imageSource struct {
@@ -60,10 +61,16 @@ func (is *imageSource) ID() string {
 }
 
 func (is *imageSource) getResolver(ctx context.Context) remotes.Resolver {
-	return docker.NewResolver(docker.ResolverOptions{
+	r := docker.NewResolver(docker.ResolverOptions{
 		Client:      tracing.DefaultClient,
 		Credentials: is.getCredentialsFromSession(ctx),
 	})
+
+	if is.ImageStore == nil {
+		return r
+	}
+
+	return localFallbackResolver{r, is.ImageStore}
 }
 
 func (is *imageSource) getCredentialsFromSession(ctx context.Context) func(string) (string, string, error) {
@@ -115,6 +122,36 @@ func (is *imageSource) Resolve(ctx context.Context, id source.Identifier) (sourc
 		resolver: is.getResolver(ctx),
 	}
 	return p, nil
+}
+
+// A remotes.Resolver which checks the local image store if the real
+// resolver cannot find the image, essentially falling back to a local
+// image if one is present.
+//
+// We do not override the Fetcher or Pusher methods:
+//
+// - Fetcher is called by github.com/containerd/containerd/remotes/:fetch()
+//   only after it has checked for the content locally, so avoid the
+//   hassle of interposing a local-fetch proxy and simply pass on the
+//   request.
+// - Pusher wouldn't make sense to push locally, so just forward.
+
+type localFallbackResolver struct {
+	remotes.Resolver
+	is images.Store
+}
+
+func (r localFallbackResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
+	n, desc, err := r.Resolver.Resolve(ctx, ref)
+	if err == nil {
+		return n, desc, err
+	}
+
+	img, err2 := r.is.Get(ctx, ref)
+	if err2 != nil {
+		return "", ocispec.Descriptor{}, err
+	}
+	return ref, img.Target, nil
 }
 
 type puller struct {
@@ -222,22 +259,55 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 	}
 	stopProgress()
 
+	var usedBlobs, unusedBlobs []ocispec.Descriptor
+
 	if schema1Converter != nil {
+		ongoing.remove(p.desc) // Not left in the content store so this is sufficient.
 		p.desc, err = schema1Converter.Convert(ctx)
 		if err != nil {
 			return nil, err
+		}
+		ongoing.add(p.desc)
+
+		var mu sync.Mutex // images.Dispatch calls handlers in parallel
+		allBlobs := make(map[digest.Digest]ocispec.Descriptor)
+		for _, j := range ongoing.added {
+			allBlobs[j.Digest] = j.Descriptor
+		}
+
+		handlers := []images.Handler{
+			images.HandlerFunc(func(ctx context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				usedBlobs = append(usedBlobs, desc)
+				delete(allBlobs, desc.Digest)
+				return nil, nil
+			}),
+			images.FilterPlatform(platforms.Default(), images.ChildrenHandler(p.is.ContentStore)),
+		}
+
+		if err := images.Dispatch(ctx, images.Handlers(handlers...), p.desc); err != nil {
+			return nil, err
+		}
+
+		for _, j := range allBlobs {
+			unusedBlobs = append(unusedBlobs, j)
+		}
+	} else {
+		for _, j := range ongoing.added {
+			usedBlobs = append(usedBlobs, j.Descriptor)
 		}
 	}
 
 	// split all pulled data to layers and rest. layers remain roots and are deleted with snapshots. rest will be linked to layers.
 	var notLayerBlobs []ocispec.Descriptor
 	var layerBlobs []ocispec.Descriptor
-	for _, j := range ongoing.added {
+	for _, j := range usedBlobs {
 		switch j.MediaType {
 		case ocispec.MediaTypeImageLayer, images.MediaTypeDockerSchema2Layer, ocispec.MediaTypeImageLayerGzip, images.MediaTypeDockerSchema2LayerGzip:
-			layerBlobs = append(layerBlobs, j.Descriptor)
+			layerBlobs = append(layerBlobs, j)
 		default:
-			notLayerBlobs = append(notLayerBlobs, j.Descriptor)
+			notLayerBlobs = append(notLayerBlobs, j)
 		}
 	}
 
@@ -257,8 +327,8 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 		}
 	}
 
-	for _, nl := range notLayerBlobs {
-		if err := p.is.ContentStore.Delete(ctx, nl.Digest); err != nil && !errdefs.IsNotFound(err) {
+	for _, nl := range append(notLayerBlobs, unusedBlobs...) {
+		if err := p.is.ContentStore.Delete(ctx, nl.Digest); err != nil {
 			return nil, err
 		}
 	}
@@ -469,6 +539,13 @@ func (j *jobs) add(desc ocispec.Descriptor) {
 		Descriptor: desc,
 		started:    time.Now(),
 	}
+}
+
+func (j *jobs) remove(desc ocispec.Descriptor) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	delete(j.added, desc.Digest)
 }
 
 func (j *jobs) jobs() []job {

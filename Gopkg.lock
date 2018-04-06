@@ -105,7 +105,7 @@
     "pathdriver",
     "sysx"
   ]
-  revision = "d8fb8589b0e8e85b8c8bbaa8840226d0dfeb7371"
+  revision = "3e8f2ea4b190484acb976a5b378d373429639a1a"
 
 [[projects]]
   branch = "force-mapping-tool"
@@ -119,6 +119,12 @@
   name = "github.com/containerd/typeurl"
   packages = ["."]
   revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
+
+[[projects]]
+  name = "github.com/cyphar/filepath-securejoin"
+  packages = ["."]
+  revision = "06bda8370f45268db985f7af15732444d94ed51c"
+  version = "v0.2.1"
 
 [[projects]]
   branch = "go1.10"
@@ -135,7 +141,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "c1b58a90961424e0b97956b93a88303a2790d789"
+  revision = "eb4a4fe9b91c2b1f04a90c2f165521d55fad53dd"
 
 [[projects]]
   branch = "master"
@@ -158,7 +164,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "23bef416bdd6dcff90083288c284367cf6af955e"
+  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
 
 [[projects]]
   branch = "master"
@@ -199,7 +205,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "e2bede01e4a6a6f84e33e2a6debf2cfed5938828"
+  revision = "18d16885308c35cf38db03b39a779198704a8f42"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -390,6 +396,7 @@
     "util/appcontext",
     "util/appdefaults",
     "util/bgfunc",
+    "util/contentutil",
     "util/dockerexporter",
     "util/flightcontrol",
     "util/imageutil",
@@ -401,7 +408,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "all-changes"
+  revision = "mountless2"
   source = "github.com/jessfraz/buildkit"
 
 [[projects]]
@@ -475,7 +482,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "d49167c4b9f3c4451707560c5c71471ff5291aaa"
+  revision = "f504d69affe11ec1ccb2e5948127f86878c9fd57"
 
 [[projects]]
   branch = "master"
@@ -491,7 +498,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "e4aa40a9169a88835b849a6efb71e05dc04b88f0"
+  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
 
 [[projects]]
   branch = "master"
@@ -533,7 +540,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd"
+  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
@@ -564,7 +571,7 @@
     "unix",
     "windows"
   ]
-  revision = "c488ab1dd8481ef762f96a79a9577c27825be697"
+  revision = "13d03a9a82fba647c21a0ef8fba44a795d0f0835"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -597,7 +604,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
+  revision = "ab0870e398d5dd054b868c0db1481ab029b9a9f2"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -628,12 +635,12 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "afc05b9e1d36f289ea16ba294894486a3e458246"
+  version = "v1.11.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eadcb8d0d9794ae0671be28d608259d7219bd8a396d4ed9e7eae634b4fa12015"
+  inputs-digest = "081531608466b9927495096618fb9df3c769b4ea15cc45a9dea183ae748b7a42"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -42,6 +42,8 @@ func TestClientIntegration(t *testing.T) {
 		testOCIExporter,
 		testWhiteoutParentDir,
 		testDuplicateWhiteouts,
+		testSchema1Image,
+		testMountWithNoSource,
 	})
 }
 
@@ -123,10 +125,8 @@ func testBuildHTTPSource(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(tmpdir)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterLocal,
-		ExporterAttrs: map[string]string{
-			exporterLocalOutputDir: tmpdir,
-		},
+		Exporter:          ExporterLocal,
+		ExporterOutputDir: tmpdir,
 	}, nil)
 	require.NoError(t, err)
 
@@ -144,10 +144,8 @@ func testBuildHTTPSource(t *testing.T, sb integration.Sandbox) {
 	require.NoError(t, err)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterLocal,
-		ExporterAttrs: map[string]string{
-			exporterLocalOutputDir: tmpdir,
-		},
+		Exporter:          ExporterLocal,
+		ExporterOutputDir: tmpdir,
 	}, nil)
 	require.NoError(t, err)
 
@@ -193,10 +191,8 @@ func testResolveAndHosts(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(destDir)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterLocal,
-		ExporterAttrs: map[string]string{
-			"output": destDir,
-		},
+		Exporter:          ExporterLocal,
+		ExporterOutputDir: destDir,
 	}, nil)
 	require.NoError(t, err)
 
@@ -239,10 +235,8 @@ func testUser(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(destDir)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterLocal,
-		ExporterAttrs: map[string]string{
-			"output": destDir,
-		},
+		Exporter:          ExporterLocal,
+		ExporterOutputDir: destDir,
 	}, nil)
 	require.NoError(t, err)
 
@@ -292,14 +286,16 @@ func testOCIExporter(t *testing.T, sb integration.Sandbox) {
 		defer os.RemoveAll(destDir)
 
 		out := filepath.Join(destDir, "out.tar")
+		outW, err := os.Create(out)
+		require.NoError(t, err)
 		target := "example.com/buildkit/testoci:latest"
 
 		err = c.Solve(context.TODO(), def, SolveOpt{
 			Exporter: exp,
 			ExporterAttrs: map[string]string{
-				"output": out,
-				"name":   target,
+				"name": target,
 			},
+			ExporterOutput: outW,
 		}, nil)
 		require.NoError(t, err)
 
@@ -411,10 +407,8 @@ func testBuildPushAndValidate(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(destDir)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterLocal,
-		ExporterAttrs: map[string]string{
-			"output": destDir,
-		},
+		Exporter:          ExporterLocal,
+		ExporterOutputDir: destDir,
 	}, nil)
 	require.NoError(t, err)
 
@@ -580,12 +574,12 @@ func testDuplicateWhiteouts(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(destDir)
 
 	out := filepath.Join(destDir, "out.tar")
+	outW, err := os.Create(out)
+	require.NoError(t, err)
 
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterOCI,
-		ExporterAttrs: map[string]string{
-			"output": out,
-		},
+		Exporter:       ExporterOCI,
+		ExporterOutput: outW,
 	}, nil)
 	require.NoError(t, err)
 
@@ -648,12 +642,11 @@ func testWhiteoutParentDir(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(destDir)
 
 	out := filepath.Join(destDir, "out.tar")
-
+	outW, err := os.Create(out)
+	require.NoError(t, err)
 	err = c.Solve(context.TODO(), def, SolveOpt{
-		Exporter: ExporterOCI,
-		ExporterAttrs: map[string]string{
-			"output": out,
-		},
+		Exporter:       ExporterOCI,
+		ExporterOutput: outW,
 	}, nil)
 	require.NoError(t, err)
 
@@ -684,6 +677,55 @@ func testWhiteoutParentDir(t *testing.T, sb integration.Sandbox) {
 
 	_, ok = m["foo/"]
 	require.True(t, ok)
+}
+
+// #296
+func testSchema1Image(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+	c, err := New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	st := llb.Image("gcr.io/google_containers/pause:3.0@sha256:0d093c962a6c2dd8bb8727b661e2b5f13e9df884af9945b4cc7088d9350cd3ee")
+
+	def, err := st.Marshal()
+	require.NoError(t, err)
+
+	err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.NoError(t, err)
+
+	checkAllReleasable(t, c, sb, true)
+}
+
+// #319
+func testMountWithNoSource(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+	c, err := New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	busybox := llb.Image("docker.io/library/busybox:latest")
+	st := llb.Scratch()
+
+	var nilState llb.State
+
+	// This should never actually be run, but we want to succeed
+	// if it was, because we expect an error below, or a daemon
+	// panic if the issue has regressed.
+	run := busybox.Run(
+		llb.Args([]string{"/bin/true"}),
+		llb.AddMount("/nil", nilState, llb.SourcePath("/"), llb.Readonly))
+
+	st = run.AddMount("/mnt", st)
+
+	def, err := st.Marshal()
+	require.NoError(t, err)
+
+	err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "has no input")
+
+	checkAllReleasable(t, c, sb, true)
 }
 
 func requiresLinux(t *testing.T) {
