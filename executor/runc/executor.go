@@ -160,9 +160,9 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 			// This comes from https://github.com/opencontainers/runc/pull/1692
 			// MapSubUIDGID: true,
 		})
-		// Remove the cgroups path.
-		spec.Linux.CgroupsPath = ""
 	}
+	// Remove the cgroups path.
+	spec.Linux.CgroupsPath = ""
 
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
 		return err
