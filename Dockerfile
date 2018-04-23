@@ -1,5 +1,5 @@
 ARG RUNC_VERSION=9f9c96235cc97674e935002fc3d78361b696a69e
-FROM golang:1.9-alpine AS gobuild-base
+FROM golang:1.10-alpine AS gobuild-base
 RUN apk add --no-cache \
 	bash \
 	build-base \
