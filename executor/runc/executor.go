@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/containerd/containerd/contrib/seccomp"
@@ -162,6 +165,18 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 		})
 		// Remove the cgroups path.
 		spec.Linux.CgroupsPath = ""
+
+		// Set the oom_score_adj of our children containers to that of the current process.
+		b, err := ioutil.ReadFile("/proc/self/oom_score_adj")
+		if err != nil {
+			return fmt.Errorf("reading /proc/self/oom_score_adj failed: %v", err)
+		}
+		s := strings.TrimSpace(string(b))
+		oom, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("converting %s to int failed: %v", s, err)
+		}
+		spec.Process.OOMScoreAdj = &oom
 	}
 
 	if err := json.NewEncoder(f).Encode(spec); err != nil {
