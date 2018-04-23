@@ -375,12 +375,12 @@ type directIO struct {
 	cio.DirectIO
 }
 
-// ioCreate returns IO avaliable for use with task creation
+// ioCreate returns IO available for use with task creation
 func (f *directIO) IOCreate(id string) (cio.IO, error) {
 	return f, nil
 }
 
-// ioAttach returns IO avaliable for use with task attachment
+// ioAttach returns IO available for use with task attachment
 func (f *directIO) IOAttach(set *cio.FIFOSet) (cio.IO, error) {
 	return f, nil
 }
@@ -472,6 +472,80 @@ func TestContainerUsername(t *testing.T) {
 	output := strings.TrimSuffix(buf.String(), "\n")
 	if output != "31" {
 		t.Errorf("expected squid uid to be 31 but received %q", output)
+	}
+}
+
+func TestContainerUser(t *testing.T) {
+	t.Parallel()
+	t.Run("UserNameAndGroupName", func(t *testing.T) { testContainerUser(t, "squid:squid", "31:31") })
+	t.Run("UserIDAndGroupName", func(t *testing.T) { testContainerUser(t, "1001:squid", "1001:31") })
+	t.Run("UserNameAndGroupID", func(t *testing.T) { testContainerUser(t, "squid:1002", "31:1002") })
+	t.Run("UserIDAndGroupID", func(t *testing.T) { testContainerUser(t, "1001:1002", "1001:1002") })
+}
+
+func testContainerUser(t *testing.T, userstr, expectedOutput string) {
+	client, err := newClient(t, address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	var (
+		image       Image
+		ctx, cancel = testContext()
+		id          = strings.Replace(t.Name(), "/", "_", -1)
+	)
+	defer cancel()
+
+	image, err = client.GetImage(ctx, testImage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	direct, err := newDirectIO(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer direct.Delete()
+	var (
+		wg  sync.WaitGroup
+		buf = bytes.NewBuffer(nil)
+	)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		io.Copy(buf, direct.Stdout)
+	}()
+
+	container, err := client.NewContainer(ctx, id,
+		WithNewSnapshot(id, image),
+		WithNewSpec(oci.WithImageConfig(image), oci.WithUser(userstr), oci.WithProcessArgs("sh", "-c", "echo $(id -u):$(id -g)")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Delete(ctx, WithSnapshotCleanup)
+
+	task, err := container.NewTask(ctx, direct.IOCreate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer task.Delete(ctx)
+
+	statusC, err := task.Wait(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := task.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	<-statusC
+
+	wg.Wait()
+
+	output := strings.TrimSuffix(buf.String(), "\n")
+	if output != expectedOutput {
+		t.Errorf("expected uid:gid to be %q, but received %q", expectedOutput, output)
 	}
 }
 

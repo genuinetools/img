@@ -39,7 +39,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/snapshots"
-	"github.com/containerd/containerd/snapshots/naive"
+	"github.com/containerd/containerd/snapshots/native"
 	"github.com/gogo/protobuf/types"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -55,7 +55,7 @@ func testDB(t *testing.T) (context.Context, *DB, func()) {
 		t.Fatal(err)
 	}
 
-	snapshotter, err := naive.NewSnapshotter(filepath.Join(dirname, "naive"))
+	snapshotter, err := native.NewSnapshotter(filepath.Join(dirname, "native"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func testDB(t *testing.T) (context.Context, *DB, func()) {
 		t.Fatal(err)
 	}
 
-	db := NewDB(bdb, cs, map[string]snapshots.Snapshotter{"naive": snapshotter})
+	db := NewDB(bdb, cs, map[string]snapshots.Snapshotter{"native": snapshotter})
 	if err := db.Init(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +102,27 @@ func TestInit(t *testing.T) {
 }
 
 func TestMigrations(t *testing.T) {
+	testRefs := []struct {
+		ref  string
+		bref string
+	}{
+		{
+			ref:  "k1",
+			bref: "bk1",
+		},
+		{
+			ref:  strings.Repeat("longerkey", 30), // 270 characters
+			bref: "short",
+		},
+		{
+			ref:  "short",
+			bref: strings.Repeat("longerkey", 30), // 270 characters
+		},
+		{
+			ref:  "emptykey",
+			bref: "",
+		},
+	}
 	migrationTests := []struct {
 		name  string
 		init  func(*bolt.Tx) error
@@ -197,6 +218,48 @@ func TestMigrations(t *testing.T) {
 							return errors.Errorf("missing child record for %s", ch)
 						}
 					}
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "IngestUpdate",
+			init: func(tx *bolt.Tx) error {
+				bkt, err := createBucketIfNotExists(tx, bucketKeyVersion, []byte("testing"), bucketKeyObjectContent, deprecatedBucketKeyObjectIngest)
+				if err != nil {
+					return err
+				}
+
+				for _, s := range testRefs {
+					if err := bkt.Put([]byte(s.ref), []byte(s.bref)); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+			check: func(tx *bolt.Tx) error {
+				bkt := getIngestsBucket(tx, "testing")
+				if bkt == nil {
+					return errors.Wrap(errdefs.ErrNotFound, "ingests bucket not found")
+				}
+
+				for _, s := range testRefs {
+					sbkt := bkt.Bucket([]byte(s.ref))
+					if sbkt == nil {
+						return errors.Wrap(errdefs.ErrNotFound, "ref does not exist")
+					}
+
+					bref := string(sbkt.Get(bucketKeyRef))
+					if bref != s.bref {
+						return errors.Errorf("unexpected reference key %q, expected %q", bref, s.bref)
+					}
+				}
+
+				dbkt := getBucket(tx, bucketKeyVersion, []byte("testing"), bucketKeyObjectContent, deprecatedBucketKeyObjectIngest)
+				if dbkt != nil {
+					return errors.New("deprecated ingest bucket still exists")
 				}
 
 				return nil
@@ -481,7 +544,7 @@ func create(obj object, tx *bolt.Tx, is images.Store, cs content.Store, sn snaps
 			node = &gc.Node{
 				Type:      ResourceSnapshot,
 				Namespace: namespace,
-				Key:       fmt.Sprintf("naive/%s", v.key),
+				Key:       fmt.Sprintf("native/%s", v.key),
 			}
 		}
 	case testImage:
@@ -500,7 +563,7 @@ func create(obj object, tx *bolt.Tx, is images.Store, cs content.Store, sn snaps
 		container := containers.Container{
 			ID:          v.id,
 			SnapshotKey: v.snapshot,
-			Snapshotter: "naive",
+			Snapshotter: "native",
 			Labels:      obj.labels,
 
 			Runtime: containers.RuntimeInfo{
@@ -595,7 +658,7 @@ func newStores(t testing.TB) (*DB, content.Store, snapshots.Snapshotter, func())
 		t.Fatal(err)
 	}
 
-	nsn, err := naive.NewSnapshotter(filepath.Join(td, "snapshots"))
+	nsn, err := native.NewSnapshotter(filepath.Join(td, "snapshots"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -605,9 +668,9 @@ func newStores(t testing.TB) (*DB, content.Store, snapshots.Snapshotter, func())
 		t.Fatal(err)
 	}
 
-	mdb := NewDB(db, lcs, map[string]snapshots.Snapshotter{"naive": nsn})
+	mdb := NewDB(db, lcs, map[string]snapshots.Snapshotter{"native": nsn})
 
-	return mdb, mdb.ContentStore(), mdb.Snapshotter("naive"), func() {
+	return mdb, mdb.ContentStore(), mdb.Snapshotter("native"), func() {
 		os.RemoveAll(td)
 	}
 }

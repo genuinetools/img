@@ -58,6 +58,8 @@ const (
 	AllPlugins Type = "*"
 	// RuntimePlugin implements a runtime
 	RuntimePlugin Type = "io.containerd.runtime.v1"
+	// ServicePlugin implements a internal service
+	ServicePlugin Type = "io.containerd.service.v1"
 	// GRPCPlugin implements a grpc service
 	GRPCPlugin Type = "io.containerd.grpc.v1"
 	// SnapshotPlugin implements a snapshotter
@@ -87,7 +89,7 @@ type Registration struct {
 
 	// InitFn is called when initializing a plugin. The registration and
 	// context are passed in. The init function may modify the registration to
-	// add exports, capabilites and platform support declarations.
+	// add exports, capabilities and platform support declarations.
 	InitFn func(*InitContext) (interface{}, error)
 }
 
