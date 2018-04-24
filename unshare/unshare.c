@@ -304,6 +304,14 @@ void nsexec(void)
 		return;
 	}
 
+	/*
+	 * Return early if we are not told to do the unshare.
+	 */
+	const char* do_unshare = getenv("IMG_DO_UNSHARE");
+	if (!do_unshare){
+		return;
+	}
+
 	unsigned long propagation = UNSHARE_PROPAGATION_DEFAULT;
 	jmp_buf env;
 	int sync_child_pipe[2];
@@ -314,18 +322,10 @@ void nsexec(void)
 	 * Get our current euid and egid.
 	 */
 	uid_t real_euid = geteuid();
-	uid_t real_uid = getuid();
 	gid_t real_egid = getegid();
 	snprintf(euid_fmt, 16, "%u",real_euid);
 	snprintf(egid_fmt, 16, "%u",real_egid);
 
-	/*
-	 * If we are actually root we do not need to unshare.
-	 * Return early.
-	 */
-	if (real_euid == 0 && real_uid == 0){
-		return;
-	}
 
 	/*
 	 * Read our uid and gid map ranges.

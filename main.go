@@ -5,11 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/genuinetools/img/types"
 	_ "github.com/genuinetools/img/unshare"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,6 +55,62 @@ func (s *stringSlice) Set(value string) error {
 	return nil
 }
 
+func init() {
+	// TODO(jessfraz): This is a hack to rexec our selves and wait for the
+	// process since it was not exiting correctly with the constructor.
+	if len(os.Getenv("IMG_RUNNING_TESTS")) <= 0 && len(os.Getenv("IMG_DO_UNSHARE")) <= 0 && system.GetParentNSeuid() != 0 {
+		var (
+			pgid int
+			err  error
+		)
+
+		// On ^C, or SIGTERM handle exit.
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			for sig := range c {
+				logrus.Infof("Received %s, exiting.", sig.String())
+				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+					logrus.Fatalf("syscall.Kill %d error: %v", pgid, err)
+					continue
+				}
+				os.Exit(0)
+			}
+		}()
+
+		// Initialize and reexec with our unshare.
+		cmd := exec.Command("/proc/self/exe", os.Args[1:]...)
+		cmd.Env = append(os.Environ(), "IMG_DO_UNSHARE=1")
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+		if err := cmd.Start(); err != nil {
+			logrus.Fatalf("cmd.Start error: %v", err)
+		}
+
+		pgid, err = syscall.Getpgid(cmd.Process.Pid)
+		if err != nil {
+			logrus.Fatalf("getpgid error: %v", err)
+		}
+
+		var ws syscall.WaitStatus
+		for {
+			_, err := syscall.Wait4(-pgid, &ws, syscall.WNOHANG, nil)
+			if err != nil {
+				if err.Error() == "no child processes" {
+					// We exited.
+					os.Exit(0)
+				}
+
+				logrus.Fatalf("wait4 error: %v", err)
+			}
+		}
+	}
+}
+
 func main() {
 	// Build the list of available commands.
 	commands := []command{
@@ -67,7 +127,7 @@ func main() {
 	}
 
 	usage := func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <command>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s <command>\n", "img")
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "Commands:")
 		fmt.Fprintln(os.Stderr)
@@ -157,7 +217,7 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 	})
 	flagWriter.Flush()
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", os.Args[0], name, args)
+		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", "img", name, args)
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, strings.TrimSpace(longHelp))
 		fmt.Fprintln(os.Stderr)
