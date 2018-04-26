@@ -44,6 +44,8 @@ func TestClientIntegration(t *testing.T) {
 		testDuplicateWhiteouts,
 		testSchema1Image,
 		testMountWithNoSource,
+		testInvalidExporter,
+		testReadonlyRootFS,
 	})
 }
 
@@ -728,6 +730,35 @@ func testMountWithNoSource(t *testing.T, sb integration.Sandbox) {
 	checkAllReleasable(t, c, sb, true)
 }
 
+// #324
+func testReadonlyRootFS(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+	c, err := New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	busybox := llb.Image("docker.io/library/busybox:latest")
+	st := llb.Scratch()
+
+	// The path /foo should be unwriteable.
+	run := busybox.Run(
+		llb.ReadonlyRootFS(),
+		llb.Args([]string{"/bin/touch", "/foo"}))
+	st = run.AddMount("/mnt", st)
+
+	def, err := st.Marshal()
+	require.NoError(t, err)
+
+	err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.Error(t, err)
+	// Would prefer to detect more specifically "Read-only file
+	// system" but that isn't exposed here (it is on the stdio
+	// which we don't see).
+	require.Contains(t, err.Error(), "executor failed running [/bin/touch /foo]:")
+
+	checkAllReleasable(t, c, sb, true)
+}
+
 func requiresLinux(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skipf("unsupported GOOS: %s", runtime.GOOS)
@@ -852,4 +883,59 @@ loop0:
 		retries++
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+func testInvalidExporter(t *testing.T, sb integration.Sandbox) {
+	requiresLinux(t)
+	t.Parallel()
+	c, err := New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	def, err := llb.Image("busybox:latest").Marshal()
+	require.NoError(t, err)
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	target := "example.com/buildkit/testoci:latest"
+	attrs := map[string]string{
+		"name": target,
+	}
+	for _, exp := range []string{ExporterOCI, ExporterDocker} {
+		err = c.Solve(context.TODO(), def, SolveOpt{
+			Exporter:      exp,
+			ExporterAttrs: attrs,
+		}, nil)
+		// output file writer is required
+		require.Error(t, err)
+		err = c.Solve(context.TODO(), def, SolveOpt{
+			Exporter:          exp,
+			ExporterAttrs:     attrs,
+			ExporterOutputDir: destDir,
+		}, nil)
+		// output directory is not supported
+		require.Error(t, err)
+	}
+
+	err = c.Solve(context.TODO(), def, SolveOpt{
+		Exporter:      ExporterLocal,
+		ExporterAttrs: attrs,
+	}, nil)
+	// output directory is required
+	require.Error(t, err)
+
+	f, err := os.Create(filepath.Join(destDir, "a"))
+	require.NoError(t, err)
+	defer f.Close()
+	err = c.Solve(context.TODO(), def, SolveOpt{
+		Exporter:       ExporterLocal,
+		ExporterAttrs:  attrs,
+		ExporterOutput: f,
+	}, nil)
+	// output file writer is not supported
+	require.Error(t, err)
+
+	checkAllReleasable(t, c, sb, true)
 }

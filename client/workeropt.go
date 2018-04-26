@@ -7,22 +7,19 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/containerd/containerd/content/local"
-	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/diff/apply"
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
-	"github.com/containerd/containerd/snapshots/naive"
+	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
-	mountlessapply "github.com/genuinetools/img/diff/apply"
-	mountlesswalking "github.com/genuinetools/img/diff/walking"
 	"github.com/genuinetools/img/executor/runc"
 	"github.com/genuinetools/img/snapshots/fuse"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/worker/base"
-	"github.com/opencontainers/runc/libcontainer/user"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 // createWorkerOpt creates a base.WorkerOpt to be used for a new worker.
@@ -33,12 +30,7 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		return opt, err
 	}
 
-	// Create the runc executor.
-	cuser, err := user.CurrentUser()
-	if err != nil {
-		return opt, fmt.Errorf("getting current user failed: %v", err)
-	}
-	exe, err := runc.New(filepath.Join(c.root, "executor"), cuser.Uid != 0)
+	exe, err := runc.New(filepath.Join(c.root, "executor"), system.GetParentNSeuid() != 0)
 	if err != nil {
 		return opt, err
 	}
@@ -52,7 +44,7 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		s, c.fuseserver, err = fuse.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 
 	case types.NaiveBackend:
-		s, err = naive.NewSnapshotter(filepath.Join(c.root, "snapshots"))
+		s, err = native.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 	case types.OverlayFSBackend:
 		s, err = overlay.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 	default:
@@ -100,25 +92,6 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 
 	xlabels := base.Labels("oci", c.backend)
 
-	// TODO: remove everything below when we remove mountless.
-	var (
-		applier  diff.Applier
-		comparer diff.Comparer
-	)
-	switch c.backend {
-	case types.FUSEBackend:
-		applier = mountlessapply.NewFileSystemApplier(contentStore)
-		comparer = mountlesswalking.NewWalkingDiff(contentStore)
-	case types.NaiveBackend:
-		applier = mountlessapply.NewFileSystemApplier(contentStore)
-		comparer = mountlesswalking.NewWalkingDiff(contentStore)
-	case types.OverlayFSBackend:
-		applier = apply.NewFileSystemApplier(contentStore)
-		comparer = walking.NewWalkingDiff(contentStore)
-	default:
-		return opt, fmt.Errorf("%s is not a valid snapshots backend", c.backend)
-	}
-
 	opt = base.WorkerOpt{
 		ID:            id,
 		Labels:        xlabels,
@@ -126,8 +99,8 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		Executor:      exe,
 		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
 		ContentStore:  contentStore,
-		Applier:       applier,
-		Differ:        comparer,
+		Applier:       apply.NewFileSystemApplier(contentStore),
+		Differ:        walking.NewWalkingDiff(contentStore),
 		ImageStore:    imageStore,
 	}
 

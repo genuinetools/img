@@ -659,7 +659,7 @@ func TestApplyTar(t *testing.T) {
 					return err
 				}
 				if _, err := os.Stat(p); err != nil {
-					return errors.Wrapf(err, "failure checking existance for %v", d)
+					return errors.Wrapf(err, "failure checking existence for %v", d)
 				}
 			}
 			return nil
@@ -1020,6 +1020,22 @@ func TestDiffTar(t *testing.T) {
 				fstest.RemoveAll("/d1"),
 				fstest.RemoveAll("/d2"),
 				fstest.CreateDir("/d3/", 0755),
+			),
+		},
+		{
+			name: "IgnoreSockets",
+			validators: []tarEntryValidator{
+				fileEntry("f2", []byte("content"), 0644),
+				// There should be _no_ socket here, despite the fstest.CreateSocket below
+				fileEntry("f3", []byte("content"), 0644),
+			},
+			a: fstest.Apply(
+				fstest.CreateFile("/f1", []byte("content"), 0644),
+			),
+			b: fstest.Apply(
+				fstest.CreateFile("/f2", []byte("content"), 0644),
+				fstest.CreateSocket("/s0", 0644),
+				fstest.CreateFile("/f3", []byte("content"), 0644),
 			),
 		},
 	}

@@ -34,8 +34,7 @@
 
 [[override]]
   name = "github.com/moby/buildkit"
-  revision = "mountless2"
-  source = "github.com/jessfraz/buildkit"
+  branch = "master"
 
 [[override]]
   name = "github.com/hanwen/go-fuse"
@@ -57,8 +56,8 @@
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  branch = "demo-rootless"
-  source = "github.com/AkihiroSuda/runc"
+  branch = "all-rootless-patches"
+  source = "github.com/jessfraz/runc"
 
 [[constraint]]
   name = "github.com/containerd/go-runc"
@@ -71,8 +70,7 @@
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  branch = "no-lchown"
-  source = "github.com/jessfraz/containerd"
+  branch = "master"
 
 [[override]]
   name = "github.com/containerd/continuity"

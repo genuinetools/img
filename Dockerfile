@@ -1,5 +1,5 @@
 ARG RUNC_VERSION=9f9c96235cc97674e935002fc3d78361b696a69e
-FROM golang:1.9-alpine AS gobuild-base
+FROM golang:1.10-alpine AS gobuild-base
 RUN apk add --no-cache \
 	bash \
 	build-base \
@@ -13,7 +13,7 @@ FROM gobuild-base AS runc
 ARG RUNC_VERSION
 RUN git clone https://github.com/jessfraz/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
 	&& cd "$GOPATH/src/github.com/opencontainers/runc" \
-	&& git checkout -q "demo-rootless" \
+	&& git checkout -q "all-rootless-patches" \
 	&& make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\"" \
 	&& mv runc /usr/bin/runc
 

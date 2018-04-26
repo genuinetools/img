@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"runtime"
 
 	"github.com/genuinetools/img/version"
@@ -28,7 +27,7 @@ func (cmd *versionCommand) Run(args []string) error {
  go version  : %s
  go compiler : %s
  platform    : %s/%s
-`, os.Args[0], version.VERSION, version.GITCOMMIT,
+`, "img", version.VERSION, version.GITCOMMIT,
 		runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
 	return nil
 }

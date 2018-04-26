@@ -14,7 +14,7 @@
       - go: tip
     fast_finish: true
   install:
-    - go get github.com/golang/lint/golint
+    - go get -u golang.org/x/lint/golint || true
     - go get honnef.co/go/tools/cmd/staticcheck
     - curl -sSL -o runc https://misc.j3ss.co/tmp/runc && chmod +x runc && sudo mv runc /usr/bin/runc
     - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/backports.list
@@ -22,7 +22,7 @@
     - sudo apt install -y --no-install-recommends -t trusty-backports libseccomp-dev uidmap
   script:
     - go build -v
-    - go vet $(go list ./... | grep -v vendor)
+    - go vet $(go list ./... | grep -v unshare | grep -v vendor)
     - staticcheck $(go list ./... | grep -v vendor)
     - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
     - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"

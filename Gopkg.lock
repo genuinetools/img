@@ -53,7 +53,7 @@
   revision = "cb7008ab3d8359b78c5f464cb7cf160107ad5925"
 
 [[projects]]
-  branch = "no-lchown"
+  branch = "master"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -89,13 +89,12 @@
     "remotes/docker/schema1",
     "rootfs",
     "snapshots",
-    "snapshots/naive",
+    "snapshots/native",
     "snapshots/overlay",
     "snapshots/storage",
     "sys"
   ]
-  revision = "5b91bd470c4b43f38ae89d675e1241549fb6adf7"
-  source = "github.com/jessfraz/containerd"
+  revision = "321c52a0bcbde29cb2c197e9f82f891b7999e9de"
 
 [[projects]]
   branch = "master"
@@ -125,12 +124,6 @@
   packages = ["."]
   revision = "06bda8370f45268db985f7af15732444d94ed51c"
   version = "v0.2.1"
-
-[[projects]]
-  branch = "go1.10"
-  name = "github.com/dmcgowan/go-tar"
-  packages = ["."]
-  revision = "01eea4a853c4e9ab63191abd92e8ed55be1f0928"
 
 [[projects]]
   branch = "master"
@@ -351,6 +344,7 @@
   revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
 
 [[projects]]
+  branch = "master"
   name = "github.com/moby/buildkit"
   packages = [
     "api/services/control",
@@ -408,8 +402,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "mountless2"
-  source = "github.com/jessfraz/buildkit"
+  revision = "7e7655c582f64bdf24e978426f5614bb3c3edee5"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -428,7 +421,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "demo-rootless"
+  branch = "all-rootless-patches"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
@@ -438,8 +431,8 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "a8356f2fc7b2d60704f3198b562663c03a032eb9"
-  source = "github.com/AkihiroSuda/runc"
+  revision = "f8fd48436df912e8d5ebb36156ac339aa8a9ff20"
+  source = "github.com/jessfraz/runc"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -641,6 +634,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "081531608466b9927495096618fb9df3c769b4ea15cc45a9dea183ae748b7a42"
+  inputs-digest = "a7c09025edaa35e89327fc6d0f01bc98e68c38c2efbd297fe81d766893979d66"
   solver-name = "gps-cdcl"
   solver-version = 1

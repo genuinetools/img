@@ -12,7 +12,6 @@ import (
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/session/grpchijack"
 	"github.com/moby/buildkit/solver/pb"
@@ -33,7 +32,7 @@ type SolveOpt struct {
 	FrontendAttrs     map[string]string
 	ExportCache       string
 	ImportCache       string
-	// Session string
+	Session           []session.Attachable
 }
 
 // Solve calls Solve on the controller.
@@ -76,33 +75,33 @@ func (c *Client) Solve(ctx context.Context, def *llb.Definition, opt SolveOpt, s
 		s.Allow(filesync.NewFSSyncProvider(syncedDirs))
 	}
 
-	s.Allow(auth.NewDockerAuthProvider())
+	for _, a := range opt.Session {
+		s.Allow(a)
+	}
 
 	switch opt.Exporter {
 	case ExporterLocal:
 		if opt.ExporterOutput != nil {
-			logrus.Warnf("output file writer is ignored for local exporter")
+			return errors.New("output file writer is not supported by local exporter")
 		}
-		// it is ok to have empty output dir (just ignored)
-		// FIXME(AkihiroSuda): maybe disallow empty output dir? (breaks integration tests)
-		if opt.ExporterOutputDir != "" {
-			s.Allow(filesync.NewFSSyncTargetDir(opt.ExporterOutputDir))
+		if opt.ExporterOutputDir == "" {
+			return errors.New("output directory is required for local exporter")
 		}
+		s.Allow(filesync.NewFSSyncTargetDir(opt.ExporterOutputDir))
 	case ExporterOCI, ExporterDocker:
 		if opt.ExporterOutputDir != "" {
-			logrus.Warnf("output directory %s is ignored for %s exporter", opt.ExporterOutputDir, opt.Exporter)
+			return errors.Errorf("output directory %s is not supported by %s exporter", opt.ExporterOutputDir, opt.Exporter)
 		}
-		// it is ok to have empty output file (just ignored)
-		// FIXME(AkihiroSuda): maybe disallow empty output file? (breaks integration tests)
-		if opt.ExporterOutput != nil {
-			s.Allow(filesync.NewFSSyncTarget(opt.ExporterOutput))
+		if opt.ExporterOutput == nil {
+			return errors.Errorf("output file writer is required for %s exporter", opt.Exporter)
 		}
+		s.Allow(filesync.NewFSSyncTarget(opt.ExporterOutput))
 	default:
 		if opt.ExporterOutput != nil {
-			logrus.Warnf("output file writer is ignored for %s exporter", opt.Exporter)
+			return errors.Errorf("output file writer is not supported by %s exporter", opt.Exporter)
 		}
 		if opt.ExporterOutputDir != "" {
-			logrus.Warnf("output directory %s is ignored for %s exporter", opt.ExporterOutputDir, opt.Exporter)
+			return errors.Errorf("output directory %s is not supported by %s exporter", opt.ExporterOutputDir, opt.Exporter)
 		}
 	}
 
