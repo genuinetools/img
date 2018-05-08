@@ -78,7 +78,8 @@ OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-u
 
 ## Installation
 
-You need to have `runc` installed.
+You need to have `runc`, `execv`, and `newuidmap` installed. On ubuntu the former two are provided by the packages
+`setpriv` and `uidmap`
 
 For the FUSE backend, you will also need `fusermount` installed.
 
