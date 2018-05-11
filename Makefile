@@ -23,24 +23,27 @@ CTIMEVAR=-X $(PKG)/version.GITCOMMIT=$(GITCOMMIT) -X $(PKG)/version.VERSION=$(VE
 GO_LDFLAGS=-ldflags "-w $(CTIMEVAR)"
 GO_LDFLAGS_STATIC=-ldflags "-w $(CTIMEVAR) -extldflags -static"
 
-# List the GOOS and GOARCH to build
-GOOSARCHES = linux/amd64
+# Set our default go compiler
+GO := go
 
-all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install
+# List the GOOS and GOARCH to build
+GOOSARCHES = darwin/amd64 darwin/386 freebsd/amd64 freebsd/386 linux/arm linux/arm64 linux/amd64 linux/386 solaris/amd64 windows/amd64 windows/386
 
 .PHONY: build
 build: $(NAME) ## Builds a dynamic executable or package
 
-$(NAME): *.go VERSION.txt
+$(NAME): $(wildcard *.go) $(wildcard */*.go) VERSION.txt
 	@echo "+ $@"
-	go build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o $(NAME) .
+	$(GO) build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o $(NAME) .
 
 .PHONY: static
 static: ## Builds a static executable
 	@echo "+ $@"
-	CGO_ENABLED=1 go build \
+	CGO_ENABLED=0 $(GO) build \
 				-tags "$(BUILDTAGS) static_build" \
 				${GO_LDFLAGS_STATIC} -o $(NAME) .
+
+all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install
 
 .PHONY: fmt
 fmt: ## Verifies all files have men `gofmt`ed
@@ -55,23 +58,23 @@ lint: ## Verifies `golint` passes
 .PHONY: test
 test: ## Runs the go tests
 	@echo "+ $@"
-	@IMG_RUNNING_TESTS=1 go test -v -tags "$(BUILDTAGS) cgo" $(shell go list ./... | grep -v vendor)
+	@$(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor)
 
 .PHONY: vet
 vet: ## Verifies `go vet` passes
 	@echo "+ $@"
-	@go vet $(shell go list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
+	@$(GO) vet $(shell $(GO) list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: staticcheck
 staticcheck: ## Verifies `staticcheck` passes
 	@echo "+ $@"
-	@staticcheck $(shell go list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
+	@staticcheck $(shell $(GO) list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: cover
 cover: ## Runs go test with coverage
 	@echo "" > coverage.txt
-	@for d in $(shell go list ./... | grep -v vendor); do \
-		IMG_RUNNING_TESTS=1 go test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
+	@for d in $(shell $(GO) list ./... | grep -v vendor); do \
+		$(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
 		if [ -f profile.out ]; then \
 			cat profile.out >> coverage.txt; \
 			rm profile.out; \
@@ -81,11 +84,11 @@ cover: ## Runs go test with coverage
 .PHONY: install
 install: ## Installs the executable or package
 	@echo "+ $@"
-	go install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
+	$(GO) install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
 
 define buildpretty
 mkdir -p $(BUILDDIR)/$(1)/$(2);
-GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 go build \
+GOOS=$(1) GOARCH=$(2) CGO_ENABLED=0 $(GO) build \
 	 -o $(BUILDDIR)/$(1)/$(2)/$(NAME) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
 	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
@@ -99,7 +102,7 @@ cross: *.go VERSION.txt ## Builds the cross-compiled binaries, creating a clean 
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
 define buildrelease
-GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 go build \
+GOOS=$(1) GOARCH=$(2) CGO_ENABLED=0 $(GO) build \
 	 -o $(BUILDDIR)/$(NAME)-$(1)-$(2) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
 	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
@@ -115,7 +118,7 @@ release: *.go VERSION.txt ## Builds the cross-compiled binaries, naming them in 
 .PHONY: bump-version
 BUMP := patch
 bump-version: ## Bump the version in the version file. Set BUMP to [ patch | major | minor ]
-	@go get -u github.com/jessfraz/junk/sembump # update sembump tool
+	@$(GO) get -u github.com/jessfraz/junk/sembump # update sembump tool
 	$(eval NEW_VERSION = $(shell sembump --kind $(BUMP) $(VERSION)))
 	@echo "Bumping VERSION.txt from $(VERSION) to $(NEW_VERSION)"
 	echo $(NEW_VERSION) > VERSION.txt
