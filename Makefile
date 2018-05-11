@@ -27,7 +27,7 @@ GO_LDFLAGS_STATIC=-ldflags "-w $(CTIMEVAR) -extldflags -static"
 GO := go
 
 # List the GOOS and GOARCH to build
-GOOSARCHES = darwin/amd64 darwin/386 freebsd/amd64 freebsd/386 linux/arm linux/arm64 linux/amd64 linux/386 solaris/amd64 windows/amd64 windows/386
+GOOSARCHES = linux/amd64
 
 .PHONY: build
 build: $(NAME) ## Builds a dynamic executable or package
@@ -39,7 +39,7 @@ $(NAME): $(wildcard *.go) $(wildcard */*.go) VERSION.txt
 .PHONY: static
 static: ## Builds a static executable
 	@echo "+ $@"
-	CGO_ENABLED=0 $(GO) build \
+	CGO_ENABLED=1 $(GO) build \
 				-tags "$(BUILDTAGS) static_build" \
 				${GO_LDFLAGS_STATIC} -o $(NAME) .
 
@@ -58,7 +58,7 @@ lint: ## Verifies `golint` passes
 .PHONY: test
 test: ## Runs the go tests
 	@echo "+ $@"
-	@$(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor)
+	@IMG_RUNNING_TESTS=1 $(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor)
 
 .PHONY: vet
 vet: ## Verifies `go vet` passes
@@ -74,7 +74,7 @@ staticcheck: ## Verifies `staticcheck` passes
 cover: ## Runs go test with coverage
 	@echo "" > coverage.txt
 	@for d in $(shell $(GO) list ./... | grep -v vendor); do \
-		$(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
+		IMG_RUNNING_TESTS=1 $(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
 		if [ -f profile.out ]; then \
 			cat profile.out >> coverage.txt; \
 			rm profile.out; \
@@ -88,7 +88,7 @@ install: ## Installs the executable or package
 
 define buildpretty
 mkdir -p $(BUILDDIR)/$(1)/$(2);
-GOOS=$(1) GOARCH=$(2) CGO_ENABLED=0 $(GO) build \
+GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 $(GO) build \
 	 -o $(BUILDDIR)/$(1)/$(2)/$(NAME) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
 	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
@@ -102,7 +102,7 @@ cross: *.go VERSION.txt ## Builds the cross-compiled binaries, creating a clean 
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
 define buildrelease
-GOOS=$(1) GOARCH=$(2) CGO_ENABLED=0 $(GO) build \
+GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 $(GO) build \
 	 -o $(BUILDDIR)/$(NAME)-$(1)-$(2) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
 	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
