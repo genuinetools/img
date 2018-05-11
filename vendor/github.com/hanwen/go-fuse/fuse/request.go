@@ -167,7 +167,12 @@ func (r *request) parse() {
 
 	count := r.handler.FileNames
 	if count > 0 {
-		if count == 1 {
+		if count == 1 && r.inHeader.Opcode == _OP_SETXATTR {
+			// SETXATTR is special: the only opcode with a file name AND a
+			// binary argument.
+			splits := bytes.SplitN(r.arg, []byte{0}, 2)
+			r.filenames = []string{string(splits[0])}
+		} else if count == 1 {
 			r.filenames = []string{string(r.arg[:len(r.arg)-1])}
 		} else {
 			names := bytes.SplitN(r.arg[:len(r.arg)-1], []byte{0}, count)

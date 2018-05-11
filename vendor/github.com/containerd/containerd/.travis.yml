@@ -7,7 +7,7 @@ services:
 language: go
 
 go:
-  - "1.10.x"
+  - "1.10"
 
 go_import_path: github.com/containerd/containerd
 
@@ -34,6 +34,8 @@ before_install:
   - uname -r
   - sudo apt-get -q update
   - sudo apt-get install -y libseccomp-dev/trusty-backports
+  # Use jpetazzo/nsenter to install nsenter on ubuntu trusty.
+  - docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
 
 install:
   - sudo PATH=$PATH GOPATH=$GOPATH script/setup/install-protobuf
@@ -73,8 +75,10 @@ script:
       sudo PATH=$PATH containerd -log-level debug &> /tmp/containerd-cri.log &
       sudo ctr version ;
       sudo PATH=$PATH GOPATH=$GOPATH critest --runtime-endpoint=/var/run/containerd/containerd.sock --parallel=8 ;
-      test $? -ne 0 && cat /tmp/containerd-cri.log ;
+      exit_code=$? ;
+      test $exit_code -ne 0 && cat /tmp/containerd-cri.log ;
       sudo pkill containerd ;
+      exit $exit_code ;
     fi
 
 after_success:

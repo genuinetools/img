@@ -50,7 +50,7 @@ info:
     is returned.
 
     If you omit the version-prefix, the current version of the API (v1.37) is used.
-    For example, calling `/info` is the same as calling `/v1.36/info`. Using the
+    For example, calling `/info` is the same as calling `/v1.37/info`. Using the
     API without a version-prefix is deprecated and will be removed in a future release.
 
     Engine releases in the near future should support this version of the API,
@@ -6251,6 +6251,11 @@ paths:
         - name: "platform"
           in: "query"
           description: "Platform in the format os[/arch[/variant]]"
+          type: "string"
+          default: ""
+        - name: "target"
+          in: "query"
+          description: "Target build stage"
           type: "string"
           default: ""
       responses:

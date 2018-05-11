@@ -19,6 +19,7 @@ import (
 	"github.com/containerd/containerd/snapshots"
 	"github.com/genuinetools/img/util/auth"
 	"github.com/moby/buildkit/cache"
+	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/flightcontrol"
@@ -31,13 +32,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO: break apart containerd specifics like contentstore so the resolver
+// code can be used with any implementation
+
 // SourceOpt contains the options for the container image source.
 type SourceOpt struct {
-	Snapshotter   snapshot.Snapshotter
-	ContentStore  content.Store
-	Applier       diff.Applier
-	CacheAccessor cache.Accessor
-	Images        images.Store
+	SessionManager *session.Manager
+	Snapshotter    snapshot.Snapshotter
+	ContentStore   content.Store
+	Applier        diff.Applier
+	CacheAccessor  cache.Accessor
+	ImageStore     images.Store // optional
 }
 
 type imageSource struct {
@@ -59,13 +64,23 @@ func (is *imageSource) ID() string {
 }
 
 func (is *imageSource) getResolver(ctx context.Context) remotes.Resolver {
-	return docker.NewResolver(docker.ResolverOptions{
+	r := docker.NewResolver(docker.ResolverOptions{
 		Client:      tracing.DefaultClient,
-		Credentials: is.getCredentials(ctx),
+		Credentials: is.getCredentialsFromSession(ctx),
 	})
+
+	if is.ImageStore == nil {
+		return r
+	}
+
+	return localFallbackResolver{r, is.ImageStore}
 }
 
-func (is *imageSource) getCredentials(ctx context.Context) func(string) (string, string, error) {
+func (is *imageSource) getCredentialsFromSession(ctx context.Context) func(string) (string, string, error) {
+	id := session.FromContext(ctx)
+	if id == "" {
+		return nil
+	}
 	return func(host string) (string, string, error) {
 		creds, err := auth.DockerAuthCredentials(host)
 		if err != nil {
@@ -105,9 +120,39 @@ func (is *imageSource) Resolve(ctx context.Context, id source.Identifier) (sourc
 		src:      imageIdentifier,
 		is:       is,
 		resolver: is.getResolver(ctx),
-		images:   is.Images,
+		images:   is.ImageStore,
 	}
 	return p, nil
+}
+
+// A remotes.Resolver which checks the local image store if the real
+// resolver cannot find the image, essentially falling back to a local
+// image if one is present.
+//
+// We do not override the Fetcher or Pusher methods:
+//
+// - Fetcher is called by github.com/containerd/containerd/remotes/:fetch()
+//   only after it has checked for the content locally, so avoid the
+//   hassle of interposing a local-fetch proxy and simply pass on the
+//   request.
+// - Pusher wouldn't make sense to push locally, so just forward.
+
+type localFallbackResolver struct {
+	remotes.Resolver
+	is images.Store
+}
+
+func (r localFallbackResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
+	n, desc, err := r.Resolver.Resolve(ctx, ref)
+	if err == nil {
+		return n, desc, err
+	}
+
+	img, err2 := r.is.Get(ctx, ref)
+	if err2 != nil {
+		return "", ocispec.Descriptor{}, err
+	}
+	return ref, img.Target, nil
 }
 
 type puller struct {
@@ -176,7 +221,6 @@ func (p *puller) resolve(ctx context.Context) error {
 			}
 		}
 	})
-
 	return p.resolveErr
 }
 
@@ -230,22 +274,55 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 		return nil, err
 	}
 
+	var usedBlobs, unusedBlobs []ocispec.Descriptor
+
 	if schema1Converter != nil {
+		ongoing.remove(p.desc) // Not left in the content store so this is sufficient.
 		p.desc, err = schema1Converter.Convert(ctx)
 		if err != nil {
 			return nil, err
+		}
+		ongoing.add(p.desc)
+
+		var mu sync.Mutex // images.Dispatch calls handlers in parallel
+		allBlobs := make(map[digest.Digest]ocispec.Descriptor)
+		for _, j := range ongoing.added {
+			allBlobs[j.Digest] = j.Descriptor
+		}
+
+		handlers := []images.Handler{
+			images.HandlerFunc(func(ctx context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				usedBlobs = append(usedBlobs, desc)
+				delete(allBlobs, desc.Digest)
+				return nil, nil
+			}),
+			images.FilterPlatforms(images.ChildrenHandler(p.is.ContentStore), platforms.Default()),
+		}
+
+		if err := images.Dispatch(ctx, images.Handlers(handlers...), p.desc); err != nil {
+			return nil, err
+		}
+
+		for _, j := range allBlobs {
+			unusedBlobs = append(unusedBlobs, j)
+		}
+	} else {
+		for _, j := range ongoing.added {
+			usedBlobs = append(usedBlobs, j.Descriptor)
 		}
 	}
 
 	// split all pulled data to layers and rest. layers remain roots and are deleted with snapshots. rest will be linked to layers.
 	var notLayerBlobs []ocispec.Descriptor
 	var layerBlobs []ocispec.Descriptor
-	for _, j := range ongoing.added {
+	for _, j := range usedBlobs {
 		switch j.MediaType {
 		case ocispec.MediaTypeImageLayer, images.MediaTypeDockerSchema2Layer, ocispec.MediaTypeImageLayerGzip, images.MediaTypeDockerSchema2LayerGzip:
-			layerBlobs = append(layerBlobs, j.Descriptor)
+			layerBlobs = append(layerBlobs, j)
 		default:
-			notLayerBlobs = append(notLayerBlobs, j.Descriptor)
+			notLayerBlobs = append(notLayerBlobs, j)
 		}
 	}
 
@@ -265,22 +342,25 @@ func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
 		}
 	}
 
-	for _, nl := range notLayerBlobs {
+	for _, nl := range append(notLayerBlobs, unusedBlobs...) {
 		if err := p.is.ContentStore.Delete(ctx, nl.Digest); err != nil {
 			return nil, err
 		}
 	}
 
 	logrus.Infof("unpacking %s", p.src.Reference.String())
-	chainid, err := p.is.unpack(ctx, p.desc)
+	csh, release := snapshot.NewContainerdSnapshotter(p.is.Snapshotter)
+	defer release()
+
+	chainid, err := p.is.unpack(ctx, p.desc, csh)
 	if err != nil {
 		return nil, err
 	}
 
-	return p.is.CacheAccessor.Get(ctx, chainid, cache.WithDescription(fmt.Sprintf("pulled from %s", p.ref)))
+	return p.is.CacheAccessor.GetFromSnapshotter(ctx, chainid, cache.WithDescription(fmt.Sprintf("pulled from %s", p.ref)))
 }
 
-func (is *imageSource) unpack(ctx context.Context, desc ocispec.Descriptor) (string, error) {
+func (is *imageSource) unpack(ctx context.Context, desc ocispec.Descriptor, s snapshots.Snapshotter) (string, error) {
 	layers, err := getLayers(ctx, is.ContentStore, desc)
 	if err != nil {
 		return "", err
@@ -292,7 +372,7 @@ func (is *imageSource) unpack(ctx context.Context, desc ocispec.Descriptor) (str
 			"containerd.io/gc.root":      time.Now().UTC().Format(time.RFC3339Nano),
 			"containerd.io/uncompressed": layer.Diff.Digest.String(),
 		}
-		if _, err := rootfs.ApplyLayer(ctx, layer, chain, is.Snapshotter, is.Applier, snapshots.WithLabels(labels)); err != nil {
+		if _, err := rootfs.ApplyLayer(ctx, layer, chain, s, is.Applier, snapshots.WithLabels(labels)); err != nil {
 			return "", err
 		}
 		chain = append(chain, layer.Diff.Digest)
@@ -352,13 +432,15 @@ func getLayers(ctx context.Context, provider content.Provider, desc ocispec.Desc
 // This is very minimal and will probably be replaced with something more
 // featured.
 type jobs struct {
-	name  string
-	added map[digest.Digest]job
-	mu    sync.Mutex
+	name     string
+	added    map[digest.Digest]job
+	mu       sync.Mutex
+	resolved bool
 }
 
 type job struct {
 	ocispec.Descriptor
+	done    bool
 	started time.Time
 }
 
@@ -380,4 +462,28 @@ func (j *jobs) add(desc ocispec.Descriptor) {
 		Descriptor: desc,
 		started:    time.Now(),
 	}
+}
+
+func (j *jobs) remove(desc ocispec.Descriptor) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	delete(j.added, desc.Digest)
+}
+
+func (j *jobs) jobs() []job {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	descs := make([]job, 0, len(j.added))
+	for _, j := range j.added {
+		descs = append(descs, j)
+	}
+	return descs
+}
+
+func (j *jobs) isResolved() bool {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.resolved
 }

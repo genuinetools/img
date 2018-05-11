@@ -9,39 +9,21 @@ import (
 	"time"
 
 	"github.com/hanwen/go-fuse/fuse"
+	"github.com/hanwen/go-fuse/internal/utimens"
 )
 
-const _UTIME_NOW = ((1 << 30) - 1)
-const _UTIME_OMIT = ((1 << 30) - 2)
-
-// timeToTimeval - Convert time.Time to syscall.Timeval
-//
-// Note: This does not use syscall.NsecToTimespec because
-// that does not work properly for times before 1970,
-// see https://github.com/golang/go/issues/12777
-func timeToTimeval(t *time.Time) syscall.Timeval {
-	var tv syscall.Timeval
-	tv.Usec = int32(t.Nanosecond() / 1000)
-	tv.Sec = t.Unix()
-	return tv
-}
-
-// OSX does not have the utimensat syscall neded to implement this properly.
-// We do our best to emulate it using futimes.
 func (fs *loopbackFileSystem) Utimens(path string, a *time.Time, m *time.Time, context *fuse.Context) fuse.Status {
-	tv := make([]syscall.Timeval, 2)
-	if a == nil {
-		tv[0].Usec = _UTIME_OMIT
-	} else {
-		tv[0] = timeToTimeval(a)
+	// MacOS before High Sierra lacks utimensat() and UTIME_OMIT.
+	// We emulate using utimes() and extra GetAttr() calls.
+	var attr *fuse.Attr
+	if a == nil || m == nil {
+		var status fuse.Status
+		attr, status = fs.GetAttr(path, context)
+		if !status.Ok() {
+			return status
+		}
 	}
-
-	if m == nil {
-		tv[1].Usec = _UTIME_OMIT
-	} else {
-		tv[1] = timeToTimeval(m)
-	}
-
+	tv := utimens.Fill(a, m, attr)
 	err := syscall.Utimes(fs.GetPath(path), tv)
 	return fuse.ToStatus(err)
 }

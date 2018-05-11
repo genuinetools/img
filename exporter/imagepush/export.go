@@ -61,19 +61,19 @@ func (e *imagePusherInstance) Name() string {
 }
 
 // Export commits the image and pushes it to a registry if that option is passed.
-func (e *imagePusherInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) error {
+func (e *imagePusherInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) (map[string]string, error) {
 	if e.targetName == "" {
-		return errors.New("target name cannot be empty")
+		return nil, errors.New("target name cannot be empty")
 	}
 
 	if e.opt.Images == nil {
-		return errors.New("image store is nil")
+		return nil, errors.New("image store is nil")
 	}
 
 	image, err := e.opt.Images.Get(ctx, e.targetName)
 	if err != nil {
-		return fmt.Errorf("getting target %s from image store failed: %v", e.targetName, err)
+		return nil, fmt.Errorf("getting target %s from image store failed: %v", e.targetName, err)
 	}
 
-	return push.Push(ctx, e.opt.ImageWriter.ContentStore(), image.Target.Digest, e.targetName, e.insecure)
+	return nil, push.Push(ctx, e.opt.ImageWriter.ContentStore(), image.Target.Digest, e.targetName, e.insecure)
 }

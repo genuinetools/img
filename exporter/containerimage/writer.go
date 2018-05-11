@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/containerd/containerd/content"
@@ -16,6 +15,7 @@ import (
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/snapshot"
+	"github.com/moby/buildkit/util/progress"
 	"github.com/moby/buildkit/util/system"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -45,12 +45,13 @@ type ImageWriter struct {
 }
 
 // Commit takes an image reference and commits it to the cache.
-func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte, targetName string) (*ocispec.Descriptor, error) {
-	logrus.Info("exporting layers")
+func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, config []byte) (*ocispec.Descriptor, error) {
+	layersDone := oneOffProgress(ctx, "exporting layers")
 	diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed calculating diff pairs for exported snapshot")
+		return nil, errors.Wrap(err, "failed calculaing diff pairs for exported snapshot")
 	}
+	layersDone(nil)
 
 	if len(config) == 0 {
 		config, err = emptyImageConfig()
@@ -85,7 +86,6 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 
 	labels := map[string]string{
 		"containerd.io/gc.ref.content.0": configDigest.String(),
-		"name": targetName,
 	}
 
 	for i, dp := range diffPairs {
@@ -107,17 +107,19 @@ func (ic *ImageWriter) Commit(ctx context.Context, ref cache.ImmutableRef, confi
 	}
 
 	mfstDigest := digest.FromBytes(mfstJSON)
-	logrus.Infof("exporting manifest %s", mfstDigest.String())
+	mfstDone := oneOffProgress(ctx, "exporting manifest "+mfstDigest.String())
 
 	if err := content.WriteBlob(ctx, ic.opt.ContentStore, mfstDigest.String(), bytes.NewReader(mfstJSON), int64(len(mfstJSON)), mfstDigest, content.WithLabels(labels)); err != nil {
-		return nil, errors.Wrapf(err, "error writing manifest blob %s", mfstDigest)
+		return nil, mfstDone(errors.Wrapf(err, "error writing manifest blob %s", mfstDigest))
 	}
+	mfstDone(nil)
 
-	logrus.Infof("exporting config %s", configDigest.String())
+	configDone := oneOffProgress(ctx, "exporting config "+configDigest.String())
 
 	if err := content.WriteBlob(ctx, ic.opt.ContentStore, configDigest.String(), bytes.NewReader(config), int64(len(config)), configDigest); err != nil {
-		return nil, errors.Wrap(err, "error writing config blob")
+		return nil, configDone(errors.Wrap(err, "error writing config blob"))
 	}
+	configDone(nil)
 
 	// delete config root. config will remain linked to the manifest
 	if err := ic.opt.ContentStore.Delete(context.TODO(), configDigest); err != nil {
@@ -181,24 +183,35 @@ func patchImageConfig(dt []byte, dps []blobs.DiffPair, history []ocispec.History
 	}
 	m["history"] = dt
 
-	now := time.Now()
-	dt, err = json.Marshal(&now)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal creation time")
+	if _, ok := m["created"]; !ok {
+		var tm *time.Time
+		for _, h := range history {
+			if h.Created != nil {
+				tm = h.Created
+			}
+		}
+		dt, err = json.Marshal(&tm)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal creation time")
+		}
+		m["created"] = dt
 	}
-	m["created"] = dt
 
 	dt, err = json.Marshal(m)
 	return dt, errors.Wrap(err, "failed to marshal config after patch")
 }
 
 func normalizeLayersAndHistory(diffs []blobs.DiffPair, history []ocispec.History, ref cache.ImmutableRef) ([]blobs.DiffPair, []ocispec.History) {
+
+	refMeta := getRefMetadata(ref, len(diffs))
+
 	var historyLayers int
 	for _, h := range history {
 		if !h.EmptyLayer {
 			historyLayers++
 		}
 	}
+
 	if historyLayers > len(diffs) {
 		// this case shouldn't happen but if it does force set history layers empty
 		// from the bottom
@@ -219,11 +232,10 @@ func normalizeLayersAndHistory(diffs []blobs.DiffPair, history []ocispec.History
 
 	if len(diffs) > historyLayers {
 		// some history items are missing. add them based on the ref metadata
-		for _, msg := range getRefDesciptions(ref, len(diffs)-historyLayers) {
-			tm := time.Now().UTC()
+		for _, md := range refMeta[historyLayers:] {
 			history = append(history, ocispec.History{
-				Created:   &tm,
-				CreatedBy: msg,
+				Created:   &md.createdAt,
+				CreatedBy: md.description,
 				Comment:   "buildkit.exporter.image.v0",
 			})
 		}
@@ -232,6 +244,9 @@ func normalizeLayersAndHistory(diffs []blobs.DiffPair, history []ocispec.History
 	var layerIndex int
 	for i, h := range history {
 		if !h.EmptyLayer {
+			if h.Created == nil {
+				h.Created = &refMeta[layerIndex].createdAt
+			}
 			if diffs[layerIndex].Blobsum == emptyGZLayer {
 				h.EmptyLayer = true
 				diffs = append(diffs[:layerIndex], diffs[layerIndex+1:]...)
@@ -245,21 +260,46 @@ func normalizeLayersAndHistory(diffs []blobs.DiffPair, history []ocispec.History
 	return diffs, history
 }
 
-func getRefDesciptions(ref cache.ImmutableRef, limit int) []string {
+type refMetadata struct {
+	description string
+	createdAt   time.Time
+}
+
+func getRefMetadata(ref cache.ImmutableRef, limit int) []refMetadata {
 	if limit <= 0 {
 		return nil
 	}
-	defaultMsg := "created by buildkit" // shouldn't happen but don't fail build
+	meta := refMetadata{
+		description: "created by buildkit", // shouldn't be shown but don't fail build
+		createdAt:   time.Now(),
+	}
 	if ref == nil {
-		_ = strings.Repeat(defaultMsg, limit)
+		return append(getRefMetadata(nil, limit-1), meta)
 	}
-	descr := cache.GetDescription(ref.Metadata())
-	if descr == "" {
-		descr = defaultMsg
+	if descr := cache.GetDescription(ref.Metadata()); descr != "" {
+		meta.description = descr
 	}
+	meta.createdAt = cache.GetCreatedAt(ref.Metadata())
 	p := ref.Parent()
 	if p != nil {
 		defer p.Release(context.TODO())
 	}
-	return append(getRefDesciptions(p, limit-1), descr)
+	return append(getRefMetadata(p, limit-1), meta)
+}
+
+func oneOffProgress(ctx context.Context, id string) func(err error) error {
+	pw, _, _ := progress.FromContext(ctx)
+	now := time.Now()
+	st := progress.Status{
+		Started: &now,
+	}
+	pw.Write(id, st)
+	return func(err error) error {
+		// TODO: set error on status
+		now := time.Now()
+		st.Completed = &now
+		pw.Write(id, st)
+		pw.Close()
+		return err
+	}
 }

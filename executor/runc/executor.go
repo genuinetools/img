@@ -84,10 +84,16 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	}
 
 	// Mount the cache.
-	rootMount, err := root.Mount(ctx, false)
+	mountable, err := root.Mount(ctx, false)
 	if err != nil {
-		return fmt.Errorf("root.Mount failed: %v", err)
+		return err
 	}
+
+	rootMount, err := mountable.Mount()
+	if err != nil {
+		return err
+	}
+	defer mountable.Release()
 
 	// Create a new UUID.
 	id := identity.NewID()

@@ -375,12 +375,12 @@ type directIO struct {
 	cio.DirectIO
 }
 
-// ioCreate returns IO available for use with task creation
+// ioCreate returns IO avaliable for use with task creation
 func (f *directIO) IOCreate(id string) (cio.IO, error) {
 	return f, nil
 }
 
-// ioAttach returns IO available for use with task attachment
+// ioAttach returns IO avaliable for use with task attachment
 func (f *directIO) IOAttach(set *cio.FIFOSet) (cio.IO, error) {
 	return f, nil
 }
@@ -493,7 +493,7 @@ func testContainerUser(t *testing.T, userstr, expectedOutput string) {
 	var (
 		image       Image
 		ctx, cancel = testContext()
-		id          = strings.Replace(t.Name(), "/", "_", -1)
+		id          = t.Name()
 	)
 	defer cancel()
 

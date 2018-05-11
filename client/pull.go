@@ -54,7 +54,7 @@ func (c *Client) Pull(ctx context.Context, image string) (cache.ImmutableRef, er
 		ContentStore:  opt.ContentStore,
 		Applier:       opt.Applier,
 		CacheAccessor: cm,
-		Images:        opt.ImageStore,
+		ImageStore:    opt.ImageStore,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("creating new container image source failed: %v", err)

@@ -2,6 +2,7 @@ package containerimage
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/containerd/containerd/errdefs"
@@ -10,6 +11,7 @@ import (
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/push"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,6 +32,10 @@ type imageExporter struct {
 	opt Opt
 }
 
+// New returns a new containerimage exporter instance that supports exporting
+// to an image store and pushing the image to registry.
+// This exporter supports following values in returned kv map:
+// - containerimage.digest - The digest of the root manifest for the image.
 func New(opt Opt) (exporter.Exporter, error) {
 	im := &imageExporter{opt: opt}
 	return im, nil
@@ -42,9 +48,25 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 		case keyImageName:
 			i.targetName = v
 		case keyPush:
-			i.push = true
+			if v == "" {
+				i.push = true
+				continue
+			}
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
+			}
+			i.push = b
 		case keyInsecure:
-			i.insecure = true
+			if v == "" {
+				i.insecure = true
+				continue
+			}
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
+			}
+			i.insecure = b
 		case exporterImageConfig:
 			i.config = []byte(v)
 		default:
@@ -66,13 +88,13 @@ func (e *imageExporterInstance) Name() string {
 	return "exporting to image"
 }
 
-func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) error {
+func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) (map[string]string, error) {
 	if config, ok := opt[exporterImageConfig]; ok {
 		e.config = config
 	}
 	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer func() {
@@ -90,19 +112,23 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 
 			if _, err := e.opt.Images.Update(ctx, img); err != nil {
 				if !errdefs.IsNotFound(err) {
-					return tagDone(err)
+					return nil, tagDone(err)
 				}
 
 				if _, err := e.opt.Images.Create(ctx, img); err != nil {
-					return tagDone(err)
+					return nil, tagDone(err)
 				}
 			}
 			tagDone(nil)
 		}
 		if e.push {
-			return push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure)
+			if err := push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return nil
+	return map[string]string{
+		"containerimage.digest": desc.Digest.String(),
+	}, nil
 }

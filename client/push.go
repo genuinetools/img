@@ -54,7 +54,7 @@ func (c *Client) Push(ctx context.Context, image string) error {
 	}
 
 	// Snapshot the image.
-	if err := ip.Export(ctx, nil, nil); err != nil {
+	if _, err := ip.Export(ctx, nil, nil); err != nil {
 		return fmt.Errorf("exporting the image %s failed: %v", image, err)
 	}
 

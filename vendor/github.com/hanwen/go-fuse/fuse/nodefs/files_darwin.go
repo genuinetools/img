@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/hanwen/go-fuse/fuse"
+	"github.com/hanwen/go-fuse/internal/utimens"
 )
 
 func (f *loopbackFile) Allocate(off uint64, sz uint64, mode uint32) fuse.Status {
@@ -65,8 +66,6 @@ func (f *loopbackFile) Allocate(off uint64, sz uint64, mode uint32) fuse.Status 
 	return fuse.OK
 }
 
-const _UTIME_OMIT = ((1 << 30) - 2)
-
 // timeToTimeval - Convert time.Time to syscall.Timeval
 //
 // Note: This does not use syscall.NsecToTimespec because
@@ -79,22 +78,18 @@ func timeToTimeval(t *time.Time) syscall.Timeval {
 	return tv
 }
 
-// OSX does not have the utimensat syscall neded to implement this properly.
-// We do our best to emulate it using futimes.
+// MacOS before High Sierra lacks utimensat() and UTIME_OMIT.
+// We emulate using utimes() and extra GetAttr() calls.
 func (f *loopbackFile) Utimens(a *time.Time, m *time.Time) fuse.Status {
-	tv := make([]syscall.Timeval, 2)
-	if a == nil {
-		tv[0].Usec = _UTIME_OMIT
-	} else {
-		tv[0] = timeToTimeval(a)
+	var attr fuse.Attr
+	if a == nil || m == nil {
+		var status fuse.Status
+		status = f.GetAttr(&attr)
+		if !status.Ok() {
+			return status
+		}
 	}
-
-	if m == nil {
-		tv[1].Usec = _UTIME_OMIT
-	} else {
-		tv[1] = timeToTimeval(m)
-	}
-
+	tv := utimens.Fill(a, m, &attr)
 	f.lock.Lock()
 	err := syscall.Futimes(int(f.File.Fd()), tv)
 	f.lock.Unlock()

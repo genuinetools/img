@@ -279,7 +279,7 @@ func Check(ctx context.Context, provider content.Provider, image ocispec.Descrip
 
 	// TODO(stevvooe): It is possible that referenced conponents could have
 	// children, but this is rare. For now, we ignore this and only verify
-	// that manifest components are present.
+	// that manfiest components are present.
 	required = append([]ocispec.Descriptor{mfst.Config}, mfst.Layers...)
 
 	for _, desc := range required {

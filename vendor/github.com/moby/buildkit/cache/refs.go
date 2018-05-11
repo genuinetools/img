@@ -7,6 +7,7 @@ import (
 	"github.com/containerd/containerd/mount"
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/util/flightcontrol"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -33,7 +34,7 @@ type MutableRef interface {
 }
 
 type Mountable interface {
-	Mount(ctx context.Context, readonly bool) ([]mount.Mount, error)
+	Mount(ctx context.Context, readonly bool) (snapshot.Mountable, error)
 }
 
 type cacheRecord struct {
@@ -49,7 +50,7 @@ type cacheRecord struct {
 	dead bool
 
 	view      string
-	viewMount []mount.Mount
+	viewMount snapshot.Mountable
 
 	sizeG flightcontrol.Group
 
@@ -93,8 +94,10 @@ func (cr *cacheRecord) Size(ctx context.Context) (int64, error) {
 		cr.mu.Unlock()
 		usage, err := cr.cm.ManagerOpt.Snapshotter.Usage(ctx, driverID)
 		if err != nil {
-			if cr.isDead() {
-				cr.mu.Unlock()
+			cr.mu.Lock()
+			isDead := cr.isDead()
+			cr.mu.Unlock()
+			if isDead {
 				return int64(0), nil
 			}
 			return s, errors.Wrapf(err, "failed to get usage for %s", cr.ID())
@@ -102,6 +105,7 @@ func (cr *cacheRecord) Size(ctx context.Context) (int64, error) {
 		cr.mu.Lock()
 		setSize(cr.md, usage.Size)
 		if err := cr.md.Commit(); err != nil {
+			cr.mu.Unlock()
 			return s, err
 		}
 		cr.mu.Unlock()
@@ -120,7 +124,7 @@ func (cr *cacheRecord) Parent() ImmutableRef {
 	return p.ref()
 }
 
-func (cr *cacheRecord) Mount(ctx context.Context, readonly bool) ([]mount.Mount, error) {
+func (cr *cacheRecord) Mount(ctx context.Context, readonly bool) (snapshot.Mountable, error) {
 	cr.mu.Lock()
 	defer cr.mu.Unlock()
 
@@ -341,7 +345,19 @@ func (sr *mutableRef) release(ctx context.Context) error {
 	return nil
 }
 
-func setReadonly(mounts []mount.Mount) []mount.Mount {
+func setReadonly(mounts snapshot.Mountable) snapshot.Mountable {
+	return &readOnlyMounter{mounts}
+}
+
+type readOnlyMounter struct {
+	snapshot.Mountable
+}
+
+func (m *readOnlyMounter) Mount() ([]mount.Mount, error) {
+	mounts, err := m.Mountable.Mount()
+	if err != nil {
+		return nil, err
+	}
 	for i, m := range mounts {
 		opts := make([]string, 0, len(m.Options))
 		for _, opt := range m.Options {
@@ -352,5 +368,5 @@ func setReadonly(mounts []mount.Mount) []mount.Mount {
 		opts = append(opts, "ro")
 		mounts[i].Options = opts
 	}
-	return mounts
+	return mounts, nil
 }

@@ -48,7 +48,6 @@ type linuxContainer struct {
 	criuPath             string
 	newuidmapPath        string
 	newgidmapPath        string
-	forceMappingTool     bool
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -377,10 +376,6 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
 				}
 			}
-		}
-	} else {
-		c.state = &runningState{
-			c: c,
 		}
 	}
 	return nil
@@ -1802,9 +1797,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 					Value: []byte(c.newgidmapPath),
 				})
 			}
-			// The following only applies if we are root, unless we are
-			// advised to use the mapping tool.
-			if !(c.config.Rootless && !c.forceMappingTool) {
+			if requiresRootOrMappingTool(c.config) {
 				// check if we have CAP_SETGID to setgroup properly
 				pid, err := capability.NewPid(0)
 				if err != nil {
@@ -1817,12 +1810,6 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 					})
 				}
 			}
-		}
-		if c.forceMappingTool {
-			r.AddData(&Boolmsg{
-				Type:  ForceMappingToolAttr,
-				Value: true,
-			})
 		}
 	}
 
@@ -1856,4 +1843,11 @@ func ignoreTerminateErrors(err error) error {
 		return nil
 	}
 	return err
+}
+
+func requiresRootOrMappingTool(c *configs.Config) bool {
+	gidMap := []configs.IDMap{
+		{ContainerID: 0, HostID: os.Getegid(), Size: 1},
+	}
+	return !reflect.DeepEqual(c.GidMappings, gidMap)
 }

@@ -39,7 +39,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	// We default to cgroupfs, and can only use systemd if the system is a
 	// systemd box.
 	cgroupManager := libcontainer.Cgroupfs
-	if isRootless(context) {
+	if ok, _ := isRootless(context); ok {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
@@ -66,16 +66,11 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		newgidmap = ""
 	}
-	forceMappingTool := context.Bool("force-mapping-tool")
-	if forceMappingTool && (newuidmap == "" || newgidmap == "") {
-		return nil, errors.New("force mapping tool flag passed, but newuidmap/newgidmap tool is not available")
-	}
 
 	return libcontainer.New(abs, cgroupManager, intelRdtManager,
 		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap),
-		libcontainer.ForceMappingTool(forceMappingTool))
+		libcontainer.NewgidmapPath(newgidmap))
 }
 
 // getContainer returns the specified container instance by loading it from state
@@ -226,26 +221,37 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func isRootless(context *cli.Context) bool {
-	if context != nil && context.GlobalBool("force-rootless") {
-		return true
+func isRootless(context *cli.Context) (bool, error) {
+	if context != nil {
+		b, err := parseBoolOrAuto(context.GlobalString("rootless"))
+		if err != nil {
+			return false, err
+		}
+		if b != nil {
+			return *b, nil
+		}
+		// nil b stands for "auto detect"
 	}
 	// Even if os.Geteuid() == 0, it might still require rootless mode,
 	// especially when running within userns.
 	// So we use system.GetParentNSeuid() here.
 	//
 	// TODO(AkihiroSuda): how to support nested userns?
-	return system.GetParentNSeuid() != 0
+	return system.GetParentNSeuid() != 0 || system.RunningInUserNS(), nil
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+	rootless, err := isRootless(context)
+	if err != nil {
+		return nil, err
+	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
 		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
-		Rootless:         isRootless(context),
+		Rootless:         rootless,
 	})
 	if err != nil {
 		return nil, err

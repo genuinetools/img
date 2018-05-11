@@ -49,6 +49,10 @@ func TestIntegration(t *testing.T) {
 		testCopyWildcards,
 		testCopyOverrideFiles,
 		testMultiStageImplicitFrom,
+		testCopyVarSubstitution,
+		testMultiStageCaseInsensitive,
+		testLabels,
+		testReproducibleIDs,
 	})
 }
 
@@ -457,7 +461,7 @@ EXPOSE 5000
 	defer c.Close()
 
 	target := "example.com/moby/dockerfileexpansion:test"
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend: "dockerfile.v0",
 		Exporter: client.ExporterImage,
 		ExporterAttrs: map[string]string{
@@ -546,7 +550,7 @@ Dockerfile
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -684,7 +688,7 @@ USER nobody
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -705,7 +709,7 @@ USER nobody
 
 	// test user in exported
 	target := "example.com/moby/dockerfileuser:test"
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend: "dockerfile.v0",
 		Exporter: client.ExporterImage,
 		ExporterAttrs: map[string]string{
@@ -780,7 +784,7 @@ COPY --from=base /out /
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -832,7 +836,7 @@ COPY files dest
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -850,6 +854,47 @@ COPY files dest
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "dest/foo.go"))
 	require.NoError(t, err)
 	require.Equal(t, string(dt), "foo.go-contents")
+}
+
+func testCopyVarSubstitution(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM scratch AS base
+ENV FOO bar
+COPY $FOO baz
+`)
+
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+		fstest.CreateFile("bar", []byte(`bar-contents`), 0600),
+	)
+
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend:          "dockerfile.v0",
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	dt, err := ioutil.ReadFile(filepath.Join(destDir, "baz"))
+	require.NoError(t, err)
+	require.Equal(t, string(dt), "bar-contents")
 }
 
 func testCopyWildcards(t *testing.T, sb integration.Sandbox) {
@@ -888,7 +933,7 @@ COPY sub/dir1 subdest6
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -992,7 +1037,7 @@ COPY --from=build foo bar2
 	require.NoError(t, err)
 	defer c.Close()
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
 			"context": "git://" + server.URL + "/#first",
@@ -1015,7 +1060,7 @@ COPY --from=build foo bar2
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
 			"context": "git://" + server.URL + "/",
@@ -1056,7 +1101,7 @@ COPY --from=busybox /etc/passwd test
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -1091,7 +1136,7 @@ COPY --from=golang /usr/bin/go go
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	err = c.Solve(context.TODO(), nil, client.SolveOpt{
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
 		Frontend:          "dockerfile.v0",
 		Exporter:          client.ExporterLocal,
 		ExporterOutputDir: destDir,
@@ -1105,6 +1150,196 @@ COPY --from=golang /usr/bin/go go
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "go"))
 	require.NoError(t, err)
 	require.Contains(t, string(dt), "foo")
+}
+
+func testMultiStageCaseInsensitive(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM scratch AS STAge0
+COPY foo bar
+FROM scratch AS staGE1
+COPY --from=staGE0 bar baz
+FROM scratch
+COPY --from=stage1 baz bax
+`)
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+		fstest.CreateFile("foo", []byte("foo-contents"), 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend:          "dockerfile.v0",
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+		FrontendAttrs: map[string]string{
+			"target": "Stage1",
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	dt, err := ioutil.ReadFile(filepath.Join(destDir, "baz"))
+	require.NoError(t, err)
+	require.Contains(t, string(dt), "foo-contents")
+}
+
+func testLabels(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM scratch
+LABEL foo=bar
+`)
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	target := "example.com/moby/dockerfilelabels:test"
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"label:bar": "baz",
+		},
+		Exporter: client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	var cdAddress string
+	if cd, ok := sb.(interface {
+		ContainerdAddress() string
+	}); !ok {
+		t.Skip("only for containerd worker")
+	} else {
+		cdAddress = cd.ContainerdAddress()
+	}
+
+	client, err := containerd.New(cdAddress)
+	require.NoError(t, err)
+	defer client.Close()
+
+	ctx := namespaces.WithNamespace(context.Background(), "buildkit")
+
+	img, err := client.ImageService().Get(ctx, target)
+	require.NoError(t, err)
+
+	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
+	require.NoError(t, err)
+
+	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	require.NoError(t, err)
+
+	var ociimg ocispec.Image
+	err = json.Unmarshal(dt, &ociimg)
+	require.NoError(t, err)
+
+	v, ok := ociimg.Config.Labels["foo"]
+	require.True(t, ok)
+	require.Equal(t, v, "bar")
+
+	v, ok = ociimg.Config.Labels["bar"]
+	require.True(t, ok)
+	require.Equal(t, v, "baz")
+}
+
+func testReproducibleIDs(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM busybox
+ENV foo=bar
+COPY foo /
+RUN echo bar > bar
+`)
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+		fstest.CreateFile("foo", []byte("foo-contents"), 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	target := "example.com/moby/dockerfileids:test"
+	opt := client.SolveOpt{
+		Frontend:      "dockerfile.v0",
+		FrontendAttrs: map[string]string{},
+		Exporter:      client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}
+
+	_, err = c.Solve(context.TODO(), nil, opt, nil)
+	require.NoError(t, err)
+
+	target2 := "example.com/moby/dockerfileids2:test"
+	opt.ExporterAttrs["name"] = target2
+
+	_, err = c.Solve(context.TODO(), nil, opt, nil)
+	require.NoError(t, err)
+
+	var cdAddress string
+	if cd, ok := sb.(interface {
+		ContainerdAddress() string
+	}); !ok {
+		t.Skip("only for containerd worker")
+	} else {
+		cdAddress = cd.ContainerdAddress()
+	}
+
+	client, err := containerd.New(cdAddress)
+	require.NoError(t, err)
+	defer client.Close()
+
+	ctx := namespaces.WithNamespace(context.Background(), "buildkit")
+
+	img, err := client.ImageService().Get(ctx, target)
+	require.NoError(t, err)
+	img2, err := client.ImageService().Get(ctx, target2)
+	require.NoError(t, err)
+
+	require.Equal(t, img.Target, img2.Target)
 }
 
 func tmpdir(appliers ...fstest.Applier) (string, error) {

@@ -41,7 +41,7 @@ func (c *Client) newWorker(opt base.WorkerOpt) (*base.Worker, error) {
 		ContentStore:  opt.ContentStore,
 		Applier:       opt.Applier,
 		CacheAccessor: cm,
-		Images:        opt.ImageStore,
+		ImageStore:    opt.ImageStore,
 	})
 	if err != nil {
 		return nil, err
