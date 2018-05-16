@@ -266,6 +266,8 @@ static char *read_ranges(int type) {
 	uid = getuid();
 	user = getenv("USER");
 	user = user ? user : getlogin();
+	if (user == NULL)
+		bail("USER is unset");
 
 	while (getline(&line, &size, file) >= 0) {
 		if (strtol(line, &entry, 10) != uid || entry == line) {
