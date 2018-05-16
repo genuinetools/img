@@ -37,5 +37,6 @@ ENV HOME /home/user
 RUN useradd --create-home --home-dir $HOME user \
 	&& chown -R user:user $HOME /run /tmp
 USER user
+ENV USER user
 ENTRYPOINT [ "img" ]
 CMD [ "--help" ]
