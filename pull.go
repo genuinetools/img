@@ -7,9 +7,9 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	units "github.com/docker/go-units"
 	"github.com/genuinetools/img/client"
-	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"golang.org/x/sync/errgroup"
 )
 
 const pullHelp = `Pull an image or a repository from a registry.`
@@ -34,12 +34,6 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	// Get the specified image.
 	cmd.image = args[0]
 
-	// Create the context.
-	ctx := appcontext.Context()
-	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
-	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
-
 	// Create the client.
 	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
@@ -49,19 +43,32 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 	fmt.Printf("Pulling %s...\n", cmd.image)
 
-	ref, err := c.Pull(ctx, cmd.image)
+	var listedImage *client.ListedImage
+	// Create the context.
+	ctx := appcontext.Context()
+	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err
 	}
+	ctx = session.NewContext(ctx, sess.ID())
+	ctx = namespaces.WithNamespace(ctx, "buildkit")
+	eg, ctx := errgroup.WithContext(ctx)
 
-	fmt.Printf("Snapshot ref: %s\n", ref.ID())
-
-	// Get the size.
-	size, err := ref.Size(ctx)
-	if err != nil {
+	eg.Go(func() error {
+		return sess.Run(ctx, sessDialer)
+	})
+	eg.Go(func() error {
+		defer sess.Close()
+		var err error
+		listedImage, err = c.Pull(ctx, cmd.image)
+		return err
+	})
+	if err := eg.Wait(); err != nil {
 		return err
 	}
-	fmt.Printf("Size: %s\n", units.BytesSize(float64(size)))
+
+	fmt.Printf("Pulled: %s\n", listedImage.Target.Digest)
+	fmt.Printf("Size: %s\n", units.BytesSize(float64(listedImage.ContentSize)))
 
 	return nil
 }

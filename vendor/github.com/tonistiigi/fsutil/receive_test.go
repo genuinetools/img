@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
@@ -17,6 +18,46 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 )
+
+func TestInvalidExcludePatterns(t *testing.T) {
+	d, err := tmpDir(changeStream([]string{
+		"ADD foo file data1",
+	}))
+	assert.NoError(t, err)
+	defer os.RemoveAll(d)
+
+	dest, err := ioutil.TempDir("", "dest")
+	assert.NoError(t, err)
+	defer os.RemoveAll(dest)
+
+	ts := newNotificationBuffer()
+	chs := &changes{fn: ts.HandleChange}
+
+	eg, ctx := errgroup.WithContext(context.Background())
+	s1, s2 := sockPairProto(ctx)
+
+	eg.Go(func() error {
+		defer s1.(*fakeConnProto).closeSend()
+		return Send(ctx, s1, d, &WalkOpt{ExcludePatterns: []string{"!"}}, nil)
+	})
+	eg.Go(func() error {
+		return Receive(ctx, s2, dest, ReceiveOpt{
+			NotifyHashed:  chs.HandleChange,
+			ContentHasher: simpleSHA256Hasher,
+		})
+	})
+
+	errCh := make(chan error)
+	go func() {
+		errCh <- eg.Wait()
+	}()
+	select {
+	case <-time.After(15 * time.Second):
+		t.Fatal("timeout")
+	case err = <-errCh:
+		assert.Contains(t, err.Error(), "error from sender:")
+	}
+}
 
 func TestCopySimple(t *testing.T) {
 	d, err := tmpDir(changeStream([]string{

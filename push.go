@@ -6,9 +6,9 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/genuinetools/img/client"
-	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"golang.org/x/sync/errgroup"
 )
 
 const pushHelp = `Push an image or a repository to a registry.`
@@ -33,12 +33,6 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 	// Get the specified image.
 	cmd.image = args[0]
 
-	// Create the context.
-	ctx := appcontext.Context()
-	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
-	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
-
 	// Create the client.
 	c, err := client.New(stateDir, backend, nil)
 	if err != nil {
@@ -48,8 +42,24 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 
 	fmt.Printf("Pushing %s...\n", cmd.image)
 
-	// Snapshot the image.
-	if err := c.Push(ctx, cmd.image); err != nil {
+	// Create the context.
+	ctx := appcontext.Context()
+	sess, sessDialer, err := c.Session(ctx)
+	if err != nil {
+		return err
+	}
+	ctx = session.NewContext(ctx, sess.ID())
+	ctx = namespaces.WithNamespace(ctx, "buildkit")
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		return sess.Run(ctx, sessDialer)
+	})
+	eg.Go(func() error {
+		defer sess.Close()
+		return c.Push(ctx, cmd.image)
+	})
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 

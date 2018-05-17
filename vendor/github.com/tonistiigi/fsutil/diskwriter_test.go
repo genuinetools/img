@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -16,7 +17,17 @@ import (
 	"golang.org/x/net/context"
 )
 
+// RequiresRoot skips tests that require root
+func RequiresRoot(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("skipping test that requires root")
+		return
+	}
+}
+
 func TestWriterSimple(t *testing.T) {
+	RequiresRoot(t)
+
 	changes := changeStream([]string{
 		"ADD bar dir",
 		"ADD bar/foo file",
@@ -178,6 +189,7 @@ func newWriteToFunc(baseDir string, delay time.Duration) WriteToFunc {
 
 type notificationBuffer struct {
 	items map[string]digest.Digest
+	sync.Mutex
 }
 
 func newNotificationBuffer() *notificationBuffer {
@@ -192,6 +204,8 @@ type hashed interface {
 }
 
 func (nb *notificationBuffer) HandleChange(kind ChangeKind, p string, fi os.FileInfo, err error) (retErr error) {
+	nb.Lock()
+	defer nb.Unlock()
 	if kind == ChangeKindDelete {
 		delete(nb.items, p)
 	} else {
@@ -205,7 +219,9 @@ func (nb *notificationBuffer) HandleChange(kind ChangeKind, p string, fi os.File
 }
 
 func (nb *notificationBuffer) Hash(p string) (digest.Digest, bool) {
+	nb.Lock()
 	v, ok := nb.items[p]
+	nb.Unlock()
 	return v, ok
 }
 

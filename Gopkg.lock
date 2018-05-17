@@ -94,7 +94,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "fcc66f568594a3dead231d5c9d1df2ace0ff9168"
+  revision = "80272bb691056d0f35800c13a116db7f2975306c"
 
 [[projects]]
   branch = "master"
@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "a6b10c2e8524707a3e6168103bded4b1d7ede330"
+  revision = "96dba79d99d69df9adc67b230d9dd39849733ef2"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "d0a516e2567a67fed3ff3f23ff6c220f1707ad4b"
+  revision = "b7b6b6929c6436145bd12e6fef7efb7d01fa170b"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -258,7 +258,7 @@
   branch = "master"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
-  revision = "54046750d845d7fdac1d54cd4d8c6ac112c8e997"
+  revision = "19f124dca53a83f3e5c91607a280ff42a03ede58"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -293,14 +293,14 @@
 [[projects]]
   name = "github.com/gorilla/context"
   packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
+  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/gorilla/mux"
   packages = ["."]
-  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
-  version = "v1.6.1"
+  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
+  version = "v1.6.2"
 
 [[projects]]
   name = "github.com/grpc-ecosystem/grpc-opentracing"
@@ -314,7 +314,6 @@
     "fuse",
     "fuse/nodefs",
     "fuse/pathfs",
-    "internal/utimens",
     "splice",
     "unionfs"
   ]
@@ -351,11 +350,10 @@
     "api/services/control",
     "cache",
     "cache/blobs",
-    "cache/cacheimport",
     "cache/contenthash",
-    "cache/instructioncache",
-    "cache/instructioncache/local",
     "cache/metadata",
+    "cache/remotecache",
+    "cache/remotecache/v1",
     "client",
     "client/llb",
     "client/llb/imagemetaresolver",
@@ -374,15 +372,19 @@
     "identity",
     "session",
     "session/auth",
+    "session/auth/authprovider",
     "session/filesync",
     "session/grpchijack",
+    "session/testutil",
     "snapshot",
     "snapshot/blobmapping",
     "snapshot/containerd",
     "solver",
-    "solver/llbop",
+    "solver/boltdbcachestorage",
+    "solver/internal/pipe",
+    "solver/llbsolver",
+    "solver/llbsolver/ops",
     "solver/pb",
-    "solver/types",
     "source",
     "source/containerimage",
     "source/git",
@@ -390,20 +392,22 @@
     "source/local",
     "util/appcontext",
     "util/appdefaults",
-    "util/bgfunc",
+    "util/cond",
     "util/contentutil",
     "util/dockerexporter",
     "util/flightcontrol",
     "util/imageutil",
     "util/progress",
     "util/progress/logs",
+    "util/pull",
     "util/push",
     "util/system",
+    "util/throttle",
     "util/tracing",
     "worker",
     "worker/base"
   ]
-  revision = "896e65bd0978ae3b74e78d7ae8f19ef6d906740c"
+  revision = "e3faff8b0da88270939088c45c7fdd1a4727373b"
 
 [[projects]]
   branch = "master"
@@ -524,17 +528,16 @@
   revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
-  branch = "export-some-functions"
+  branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "cb8177f1822111041f040efec0fb3cc7f021f830"
-  source = "github.com/jessfraz/fsutil"
+  revision = "642526b8d2cd0eb3e5471bdd49b34538f4d3b92a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "2d027ae1dddd4694d54f7a8b6cbe78dca8720226"
+  revision = "1a580b3eff7814fc9b40602fd35256c63b50f491"
 
 [[projects]]
   branch = "master"
@@ -566,7 +569,7 @@
     "unix",
     "windows"
   ]
-  revision = "d0faeb539838e250bd0a9db4182d48d4a1915181"
+  revision = "7c87d13f8e835d2fb3a70a2912c811ed0c1d241b"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -599,7 +602,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "86e600f69ee4704c6efbf6a2a40a5c10700e76c2"
+  revision = "7bb2a897381c9c5ab2aeb8614f758d7766af68ff"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -637,6 +640,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fa2bb98e5df4a61a281770d240694cdcd6969bebd54a0426eb8101552ff540c8"
+  inputs-digest = "13b2de26d95538e8b264008e84cf48d0f9c0b8ec03799df873bfeccaf367bc27"
   solver-name = "gps-cdcl"
   solver-version = 1

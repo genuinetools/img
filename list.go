@@ -36,7 +36,7 @@ func (cmd *listCommand) Run(args []string) (err error) {
 	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
-	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
+	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.
 	c, err := client.New(stateDir, backend, nil)

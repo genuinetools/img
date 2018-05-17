@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-type walkerFn func(ctx context.Context, pathC chan<- *CurrentPath) error
+type walkerFn func(ctx context.Context, pathC chan<- *currentPath) error
 
 func Changes(ctx context.Context, a, b walkerFn, changeFn ChangeFunc) error {
 	return nil
@@ -18,15 +18,15 @@ type HandleChangeFn func(ChangeKind, string, os.FileInfo, error) error
 type ContentHasher func(*Stat) (hash.Hash, error)
 
 func GetWalkerFn(root string) walkerFn {
-	return func(ctx context.Context, pathC chan<- *CurrentPath) error {
+	return func(ctx context.Context, pathC chan<- *currentPath) error {
 		return Walk(ctx, root, nil, func(path string, f os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 
-			p := &CurrentPath{
-				Path:     path,
-				FileInfo: f,
+			p := &currentPath{
+				path: path,
+				f:    f,
 			}
 
 			select {
@@ -39,6 +39,6 @@ func GetWalkerFn(root string) walkerFn {
 	}
 }
 
-func emptyWalker(ctx context.Context, pathC chan<- *CurrentPath) error {
+func emptyWalker(ctx context.Context, pathC chan<- *currentPath) error {
 	return nil
 }

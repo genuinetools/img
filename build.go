@@ -23,6 +23,7 @@ import (
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"golang.org/x/sync/errgroup"
 )
 
 const buildHelp = `Build an image from a Dockerfile.`
@@ -101,12 +102,6 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		}
 	}
 
-	// Create the context.
-	ctx := appcontext.Context()
-	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
-	ctx = namespaces.WithNamespace(ctx, namespaces.Default)
-
 	// Create the client.
 	c, err := client.New(stateDir, backend, cmd.getLocalDirs())
 	if err != nil {
@@ -133,20 +128,37 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	fmt.Printf("Building %s\n", cmd.tag)
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
-	// Solve the dockerfile.
-	if err := c.Solve(ctx, &controlapi.SolveRequest{
-		Ref:      id,
-		Session:  id,
-		Exporter: "image",
-		ExporterAttrs: map[string]string{
-			"name": cmd.tag,
-		},
-		Frontend:      "dockerfile.v0",
-		FrontendAttrs: frontendAttrs,
-	}); err != nil {
+	// Create the context.
+	ctx := appcontext.Context()
+	sess, sessDialer, err := c.Session(ctx)
+	if err != nil {
 		return err
 	}
+	id := identity.NewID()
+	ctx = session.NewContext(ctx, sess.ID())
+	ctx = namespaces.WithNamespace(ctx, "buildkit")
+	eg, ctx := errgroup.WithContext(ctx)
 
+	eg.Go(func() error {
+		return sess.Run(ctx, sessDialer)
+	})
+	// Solve the dockerfile.
+	eg.Go(func() error {
+		defer sess.Close()
+		return c.Solve(ctx, &controlapi.SolveRequest{
+			Ref:      id,
+			Session:  sess.ID(),
+			Exporter: "image",
+			ExporterAttrs: map[string]string{
+				"name": cmd.tag,
+			},
+			Frontend:      "dockerfile.v0",
+			FrontendAttrs: frontendAttrs,
+		})
+	})
+	if err := eg.Wait(); err != nil {
+		return err
+	}
 	fmt.Printf("Successfully built %s\n", cmd.tag)
 
 	return nil
