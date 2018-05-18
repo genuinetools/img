@@ -37,10 +37,8 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		return opt, err
 	}
 
-	exe, err := runc.New(filepath.Join(c.root, "executor"), system.GetParentNSeuid() != 0)
-	if err != nil {
-		return opt, err
-	}
+	unprivileged := system.GetParentNSeuid() != 0
+	noMount := unprivileged
 
 	// Create the snapshotter.
 	var (
@@ -49,16 +47,22 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 	switch c.backend {
 	case types.FUSEBackend:
 		s, c.fuseserver, err = fuse.NewSnapshotter(filepath.Join(c.root, "snapshots"))
-
 	case types.NaiveBackend:
 		s, err = native.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 	case types.OverlayFSBackend:
+		// On some distros such as Ubuntu overlayfs can be mounted without privileges
+		noMount = false
 		s, err = overlay.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 	default:
 		return opt, fmt.Errorf("%s is not a valid snapshots backend", c.backend)
 	}
 	if err != nil {
 		return opt, fmt.Errorf("creating %s snapshotter failed: %v", c.backend, err)
+	}
+
+	exe, err := runc.New(filepath.Join(c.root, "executor"), unprivileged, noMount)
+	if err != nil {
+		return opt, err
 	}
 
 	// Create the content store locally.
