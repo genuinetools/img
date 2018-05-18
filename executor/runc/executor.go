@@ -31,10 +31,11 @@ type Executor struct {
 	runc         *runc.Runc
 	root         string
 	unprivileged bool
+	noMount      bool
 }
 
 // New creates a new runc executor.
-func New(root string, unprivileged bool) (executor.Executor, error) {
+func New(root string, unprivileged, noMount bool) (executor.Executor, error) {
 	// Make sure the runc binary exists.
 	if exists := BinaryExists(); !exists {
 		return nil, errors.New("cannot find runc binary locally, please install runc")
@@ -64,6 +65,7 @@ func New(root string, unprivileged bool) (executor.Executor, error) {
 		runc:         runtime,
 		root:         root,
 		unprivileged: unprivileged,
+		noMount:      noMount,
 	}
 
 	return e, nil
@@ -109,10 +111,8 @@ func (w *Executor) Exec(ctx context.Context, meta executor.Meta, root cache.Moun
 	var (
 		rootFSPath string
 	)
-	if w.unprivileged {
-		// If we are running as unprivileged do not do the mounts.
+	if w.noMount {
 		rootFSPath = rootMount[0].Source
-
 	} else {
 		rootFSPath = filepath.Join(bundle, "rootfs")
 		if err := os.Mkdir(rootFSPath, 0700); err != nil {
