@@ -608,7 +608,6 @@ func init() {
 	for op, f := range map[int32]castPointerFunc{
 		_OP_FLUSH:        func(ptr unsafe.Pointer) interface{} { return (*FlushIn)(ptr) },
 		_OP_GETATTR:      func(ptr unsafe.Pointer) interface{} { return (*GetAttrIn)(ptr) },
-		_OP_SETXATTR:     func(ptr unsafe.Pointer) interface{} { return (*SetXAttrIn)(ptr) },
 		_OP_GETXATTR:     func(ptr unsafe.Pointer) interface{} { return (*GetXAttrIn)(ptr) },
 		_OP_LISTXATTR:    func(ptr unsafe.Pointer) interface{} { return (*GetXAttrIn)(ptr) },
 		_OP_SETATTR:      func(ptr unsafe.Pointer) interface{} { return (*SetAttrIn)(ptr) },
@@ -636,7 +635,6 @@ func init() {
 	// File name args.
 	for op, count := range map[int32]int{
 		_OP_CREATE:      1,
-		_OP_SETXATTR:    1,
 		_OP_GETXATTR:    1,
 		_OP_LINK:        1,
 		_OP_LOOKUP:      1,

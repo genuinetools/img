@@ -86,6 +86,9 @@ func (c *FileSystemConnector) internalLookup(out *fuse.Attr, parent *Inode, name
 	}
 
 	if child != nil {
+		parent = nil
+	}
+	if child != nil {
 		code = child.fsInode.GetAttr(out, nil, &header.Context)
 	} else {
 		child, code = parent.fsInode.Lookup(out, name, &header.Context)

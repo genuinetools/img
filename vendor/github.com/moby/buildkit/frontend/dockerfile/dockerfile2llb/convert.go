@@ -29,6 +29,8 @@ const (
 	emptyImageName   = "scratch"
 	localNameContext = "context"
 	historyComment   = "buildkit.dockerfile.v0"
+
+	CopyImage = "tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e"
 )
 
 type ConvertOpt struct {
@@ -39,6 +41,9 @@ type ConvertOpt struct {
 	SessionID    string
 	BuildContext *llb.State
 	Excludes     []string
+	// IgnoreCache contains names of the stages that should not use build cache.
+	// Empty slice means ignore cache for all stages. Nil doesn't disable cache.
+	IgnoreCache []string
 }
 
 func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State, *Image, error) {
@@ -89,6 +94,17 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		allDispatchStates = append(allDispatchStates, ds)
 		if st.Name != "" {
 			dispatchStatesByName[strings.ToLower(st.Name)] = ds
+		}
+		if opt.IgnoreCache != nil {
+			if len(opt.IgnoreCache) == 0 {
+				ds.ignoreCache = true
+			} else if st.Name != "" {
+				for _, n := range opt.IgnoreCache {
+					if strings.EqualFold(n, st.Name) {
+						ds.ignoreCache = true
+					}
+				}
+			}
 		}
 	}
 
@@ -227,6 +243,9 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		}
 	}
 
+	if len(opt.Labels) != 0 && target.image.Config.Labels == nil {
+		target.image.Config.Labels = make(map[string]string, len(opt.Labels))
+	}
 	for k, v := range opt.Labels {
 		target.image.Config.Labels[k] = v
 	}
@@ -352,14 +371,15 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 }
 
 type dispatchState struct {
-	state     llb.State
-	image     Image
-	stage     instructions.Stage
-	base      *dispatchState
-	deps      map[*dispatchState]struct{}
-	buildArgs []instructions.ArgCommand
-	commands  []command
-	ctxPaths  map[string]struct{}
+	state       llb.State
+	image       Image
+	stage       instructions.Stage
+	base        *dispatchState
+	deps        map[*dispatchState]struct{}
+	buildArgs   []instructions.ArgCommand
+	commands    []command
+	ctxPaths    map[string]struct{}
+	ignoreCache bool
 }
 
 type command struct {
@@ -416,6 +436,9 @@ func dispatchRun(d *dispatchState, c *instructions.RunCommand) error {
 		opt = append(opt, llb.AddEnv(arg.Key, getArgValue(arg)))
 	}
 	opt = append(opt, dfCmd(c))
+	if d.ignoreCache {
+		opt = append(opt, llb.IgnoreCache)
+	}
 	d.state = d.state.Run(opt...).Root()
 	return commitToHistory(&d.image, "RUN "+runCommandString(args, d.buildArgs), true, &d.state)
 }
@@ -435,7 +458,7 @@ func dispatchWorkdir(d *dispatchState, c *instructions.WorkdirCommand, commit bo
 
 func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState llb.State, isAddCommand bool, cmdToPrint interface{}, chown string) error {
 	// TODO: this should use CopyOp instead. Current implementation is inefficient
-	img := llb.Image("tonistiigi/copy@sha256:476e0a67a1e4650c6adaf213269a2913deb7c52cbc77f954026f769d51e1a14e")
+	img := llb.Image(CopyImage)
 
 	dest := path.Join("/dest", pathRelativeToWorkingDir(d.state, c.Dest()))
 	if c.Dest() == "." || c.Dest()[len(c.Dest())-1] == filepath.Separator {
@@ -507,7 +530,7 @@ func dispatchMaintainer(d *dispatchState, c *instructions.MaintainerCommand) err
 func dispatchLabel(d *dispatchState, c *instructions.LabelCommand) error {
 	commitMessage := bytes.NewBufferString("LABEL")
 	if d.image.Config.Labels == nil {
-		d.image.Config.Labels = make(map[string]string)
+		d.image.Config.Labels = make(map[string]string, len(c.Labels))
 	}
 	for _, v := range c.Labels {
 		d.image.Config.Labels[v.Key] = v.Value

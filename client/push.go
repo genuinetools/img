@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution/reference"
-	"github.com/genuinetools/img/exporter/containerimage"
-	"github.com/genuinetools/img/exporter/imagepush"
+	"github.com/moby/buildkit/util/push"
 )
 
 // Push sends an image to a remote registry.
@@ -26,37 +25,10 @@ func (c *Client) Push(ctx context.Context, image string) error {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}
 
-	// Create the image writer.
-	iw, err := containerimage.NewImageWriter(containerimage.WriterOpt{
-		Snapshotter:  opt.Snapshotter,
-		ContentStore: opt.ContentStore,
-		Differ:       opt.Differ,
-	})
+	imgObj, err := opt.ImageStore.Get(ctx, image)
 	if err != nil {
-		return fmt.Errorf("creating new container image writer failed: %v", err)
+		return fmt.Errorf("getting image %q failed: %v", image, err)
 	}
 
-	// Create the image pusher.
-	imagePusher, err := imagepush.New(imagepush.Opt{
-		Images:      opt.ImageStore,
-		ImageWriter: iw,
-	})
-	if err != nil {
-		return fmt.Errorf("creating new image pusher failed: %v", err)
-	}
-
-	// Resolve (ie. push) the image.
-	ip, err := imagePusher.Resolve(ctx, map[string]string{
-		"name": image,
-	})
-	if err != nil {
-		return fmt.Errorf("resolving image %s failed: %v", image, err)
-	}
-
-	// Snapshot the image.
-	if _, err := ip.Export(ctx, nil, nil); err != nil {
-		return fmt.Errorf("exporting the image %s failed: %v", image, err)
-	}
-
-	return nil
+	return push.Push(ctx, opt.SessionManager, opt.ContentStore, imgObj.Target.Digest, image, false)
 }

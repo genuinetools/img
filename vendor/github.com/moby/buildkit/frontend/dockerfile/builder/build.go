@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"path"
+	"regexp"
 	"strings"
 
 	"github.com/docker/docker/builder/dockerignore"
@@ -20,13 +20,17 @@ const (
 	LocalNameDockerfile   = "dockerfile"
 	keyTarget             = "target"
 	keyFilename           = "filename"
+	keyCacheFrom          = "cache-from"
 	exporterImageConfig   = "containerimage.config"
 	defaultDockerfileName = "Dockerfile"
 	dockerignoreFilename  = ".dockerignore"
 	buildArgPrefix        = "build-arg:"
 	labelPrefix           = "label:"
 	gitPrefix             = "git://"
+	keyNoCache            = "no-cache"
 )
+
+var httpPrefix = regexp.MustCompile("^https?://")
 
 func Build(ctx context.Context, c client.Client) error {
 	opts := c.Opts()
@@ -35,8 +39,14 @@ func Build(ctx context.Context, c client.Client) error {
 	if filename == "" {
 		filename = defaultDockerfileName
 	}
-	if path.Base(filename) != filename {
-		return errors.Errorf("invalid filename: %s", filename)
+
+	var ignoreCache []string
+	if v, ok := opts[keyNoCache]; ok {
+		if v == "" {
+			ignoreCache = []string{} // means all stages
+		} else {
+			ignoreCache = strings.Split(v, ",")
+		}
 	}
 
 	src := llb.Local(LocalNameDockerfile,
@@ -49,6 +59,14 @@ func Build(ctx context.Context, c client.Client) error {
 		src = parseGitSource(opts[LocalNameContext])
 		buildContext = &src
 	}
+
+	if httpPrefix.MatchString(opts[LocalNameContext]) {
+		unpack := llb.Image(dockerfile2llb.CopyImage).Run(llb.Shlex("copy --unpack /src/context /out/"), llb.ReadonlyRootFS())
+		unpack.AddMount("/src", llb.HTTP(opts[LocalNameContext], llb.Filename("context")), llb.Readonly)
+		src = unpack.AddMount("/out", llb.Scratch())
+		buildContext = &src
+	}
+
 	def, err := src.Marshal()
 	if err != nil {
 		return err
@@ -57,7 +75,9 @@ func Build(ctx context.Context, c client.Client) error {
 	eg, ctx2 := errgroup.WithContext(ctx)
 	var dtDockerfile []byte
 	eg.Go(func() error {
-		ref, err := c.Solve(ctx2, def.ToPB(), "", nil, false)
+		ref, err := c.Solve(ctx2, client.SolveRequest{
+			Definition: def.ToPB(),
+		}, nil, false)
 		if err != nil {
 			return err
 		}
@@ -83,7 +103,9 @@ func Build(ctx context.Context, c client.Client) error {
 		if err != nil {
 			return err
 		}
-		ref, err := c.Solve(ctx2, def.ToPB(), "", nil, false)
+		ref, err := c.Solve(ctx2, client.SolveRequest{
+			Definition: def.ToPB(),
+		}, nil, false)
 		if err != nil {
 			return err
 		}
@@ -101,6 +123,13 @@ func Build(ctx context.Context, c client.Client) error {
 		return err
 	}
 
+	if _, ok := c.Opts()["cmdline"]; !ok {
+		ref, cmdline, ok := dockerfile2llb.DetectSyntax(bytes.NewBuffer(dtDockerfile))
+		if ok {
+			return forwardGateway(ctx, c, ref, cmdline)
+		}
+	}
+
 	st, img, err := dockerfile2llb.Dockerfile2LLB(ctx, dtDockerfile, dockerfile2llb.ConvertOpt{
 		Target:       opts[keyTarget],
 		MetaResolver: c,
@@ -109,6 +138,7 @@ func Build(ctx context.Context, c client.Client) error {
 		SessionID:    c.SessionID(),
 		BuildContext: buildContext,
 		Excludes:     excludes,
+		IgnoreCache:  ignoreCache,
 	})
 
 	if err != nil {
@@ -125,13 +155,35 @@ func Build(ctx context.Context, c client.Client) error {
 		return err
 	}
 
-	_, err = c.Solve(ctx, def.ToPB(), "", map[string][]byte{
+	var cacheFrom []string
+	if cacheFromStr := opts[keyCacheFrom]; cacheFromStr != "" {
+		cacheFrom = strings.Split(cacheFromStr, ",")
+	}
+
+	_, err = c.Solve(ctx, client.SolveRequest{
+		Definition:      def.ToPB(),
+		ImportCacheRefs: cacheFrom,
+	}, map[string][]byte{
 		exporterImageConfig: config,
 	}, true)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func forwardGateway(ctx context.Context, c client.Client, ref string, cmdline string) error {
+	opts := c.Opts()
+	if opts == nil {
+		opts = map[string]string{}
+	}
+	opts["cmdline"] = cmdline
+	opts["source"] = ref
+	_, err := c.Solve(ctx, client.SolveRequest{
+		Frontend:    "gateway.v0",
+		FrontendOpt: opts,
+	}, nil, true)
+	return err
 }
 
 func filter(opt map[string]string, key string) map[string]string {

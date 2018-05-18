@@ -53,41 +53,41 @@ type receiver struct {
 	hlValidator    Hardlinks
 }
 
-type DynamicWalker struct {
-	WalkChan chan *CurrentPath
+type dynamicWalker struct {
+	walkChan chan *currentPath
 	err      error
 	closeCh  chan struct{}
 }
 
-func NewDynamicWalker() *DynamicWalker {
-	return &DynamicWalker{
-		WalkChan: make(chan *CurrentPath, 128),
+func newDynamicWalker() *dynamicWalker {
+	return &dynamicWalker{
+		walkChan: make(chan *currentPath, 128),
 		closeCh:  make(chan struct{}),
 	}
 }
 
-func (w *DynamicWalker) Update(p *CurrentPath) error {
+func (w *dynamicWalker) update(p *currentPath) error {
 	select {
 	case <-w.closeCh:
 		return errors.Wrap(w.err, "walker is closed")
 	default:
 	}
 	if p == nil {
-		close(w.WalkChan)
+		close(w.walkChan)
 		return nil
 	}
 	select {
-	case w.WalkChan <- p:
+	case w.walkChan <- p:
 		return nil
 	case <-w.closeCh:
 		return errors.Wrap(w.err, "walker is closed")
 	}
 }
 
-func (w *DynamicWalker) Fill(ctx context.Context, pathC chan<- *CurrentPath) error {
+func (w *dynamicWalker) fill(ctx context.Context, pathC chan<- *currentPath) error {
 	for {
 		select {
-		case p, ok := <-w.WalkChan:
+		case p, ok := <-w.walkChan:
 			if !ok {
 				return nil
 			}
@@ -114,7 +114,7 @@ func (r *receiver) run(ctx context.Context) error {
 		return err
 	}
 
-	w := NewDynamicWalker()
+	w := newDynamicWalker()
 
 	g.Go(func() (retErr error) {
 		defer func() {
@@ -126,7 +126,7 @@ func (r *receiver) run(ctx context.Context) error {
 		if !r.merge {
 			destWalker = GetWalkerFn(r.dest)
 		}
-		err := DoubleWalkDiff(ctx, dw.HandleChange, destWalker, w.Fill)
+		err := doubleWalkDiff(ctx, dw.HandleChange, destWalker, w.fill)
 		if err != nil {
 			return err
 		}
@@ -158,9 +158,11 @@ func (r *receiver) run(ctx context.Context) error {
 			}
 
 			switch p.Type {
+			case PACKET_ERR:
+				return errors.Errorf("error from sender: %s", p.Data)
 			case PACKET_STAT:
 				if p.Stat == nil {
-					if err := w.Update(nil); err != nil {
+					if err := w.update(nil); err != nil {
 						return err
 					}
 					break
@@ -171,14 +173,14 @@ func (r *receiver) run(ctx context.Context) error {
 					r.mu.Unlock()
 				}
 				i++
-				cp := &CurrentPath{Path: p.Stat.Path, FileInfo: &StatInfo{p.Stat}}
-				if err := r.orderValidator.HandleChange(ChangeKindAdd, cp.Path, cp.FileInfo, nil); err != nil {
+				cp := &currentPath{path: p.Stat.Path, f: &StatInfo{p.Stat}}
+				if err := r.orderValidator.HandleChange(ChangeKindAdd, cp.path, cp.f, nil); err != nil {
 					return err
 				}
-				if err := r.hlValidator.HandleChange(ChangeKindAdd, cp.Path, cp.FileInfo, nil); err != nil {
+				if err := r.hlValidator.HandleChange(ChangeKindAdd, cp.path, cp.f, nil); err != nil {
 					return err
 				}
-				if err := w.Update(cp); err != nil {
+				if err := w.update(cp); err != nil {
 					return err
 				}
 			case PACKET_DATA:

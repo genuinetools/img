@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/containerd/containerd/content/local"
@@ -18,12 +19,18 @@ import (
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
+	"github.com/moby/buildkit/util/throttle"
 	"github.com/moby/buildkit/worker/base"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/sirupsen/logrus"
 )
 
 // createWorkerOpt creates a base.WorkerOpt to be used for a new worker.
 func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
+	sm, err := c.getSessionManager()
+	if err != nil {
+		return opt, err
+	}
 	// Create the metadata store.
 	md, err := metadata.NewStore(filepath.Join(c.root, "metadata.db"))
 	if err != nil {
@@ -78,9 +85,15 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 	imageStore := ctdmetadata.NewImageStore(mdb)
 
 	// Create the garbage collector.
+	throttledGC := throttle.Throttle(time.Second, func() {
+		if _, err := mdb.GarbageCollect(context.TODO()); err != nil {
+			logrus.Errorf("GC error: %+v", err)
+		}
+	})
+
 	gc := func(ctx context.Context) error {
-		_, err := mdb.GarbageCollect(ctx)
-		return err
+		throttledGC()
+		return nil
 	}
 
 	contentStore = containerdsnapshot.NewContentStore(mdb.ContentStore(), "buildkit", gc)
@@ -93,15 +106,16 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 	xlabels := base.Labels("oci", c.backend)
 
 	opt = base.WorkerOpt{
-		ID:            id,
-		Labels:        xlabels,
-		MetadataStore: md,
-		Executor:      exe,
-		Snapshotter:   containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
-		ContentStore:  contentStore,
-		Applier:       apply.NewFileSystemApplier(contentStore),
-		Differ:        walking.NewWalkingDiff(contentStore),
-		ImageStore:    imageStore,
+		ID:             id,
+		Labels:         xlabels,
+		SessionManager: sm,
+		MetadataStore:  md,
+		Executor:       exe,
+		Snapshotter:    containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
+		ContentStore:   contentStore,
+		Applier:        apply.NewFileSystemApplier(contentStore),
+		Differ:         walking.NewWalkingDiff(contentStore),
+		ImageStore:     imageStore,
 	}
 
 	return opt, err

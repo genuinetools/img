@@ -6,6 +6,7 @@ import (
 
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/moby/buildkit/control"
+	"github.com/moby/buildkit/session"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +19,8 @@ type Client struct {
 
 	fuseserver *fuse.Server
 
-	controller *control.Controller
+	sessionManager *session.Manager
+	controller     *control.Controller
 }
 
 // New returns a new client for communicating with the buildkit controller.

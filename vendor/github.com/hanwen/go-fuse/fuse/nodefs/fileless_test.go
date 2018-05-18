@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/hanwen/go-fuse/fuse"
-	"github.com/hanwen/go-fuse/internal/testutil"
 )
 
 type nodeReadNode struct {
@@ -67,7 +66,7 @@ func TestNoOpen(t *testing.T) {
 	root := newNodeReadNode(true, true, nil)
 	root.noOpen = true
 
-	s, _, err := MountRoot(dir, root, &Options{Debug: testutil.VerboseTest()})
+	s, _, err := MountRoot(dir, root, &Options{Debug: VerboseTest()})
 	if err != nil {
 		t.Fatalf("MountRoot: %v", err)
 	}
@@ -109,7 +108,7 @@ func TestNodeRead(t *testing.T) {
 
 	root := newNodeReadNode(false, true, nil)
 	opts := NewOptions()
-	opts.Debug = testutil.VerboseTest()
+	opts.Debug = VerboseTest()
 	s, _, err := MountRoot(dir, root, opts)
 	if err != nil {
 		t.Fatalf("MountRoot: %v", err)
