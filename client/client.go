@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/containerd/containerd/snapshots/overlay"
+	"github.com/genuinetools/img/types"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/session"
@@ -27,6 +29,16 @@ type Client struct {
 func New(root, backend string, localDirs map[string]string) (*Client, error) {
 	// Set the name for the directory executor.
 	name := "runc"
+
+	switch backend {
+	case types.AutoBackend:
+		if overlay.Supported(root) == nil {
+			backend = types.OverlayFSBackend
+		} else {
+			backend = types.NativeBackend
+		}
+		logrus.Debugf("using backend: %s", backend)
+	}
 
 	// Create the root/
 	root = filepath.Join(root, name, backend)
