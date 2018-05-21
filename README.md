@@ -28,6 +28,9 @@ for more info.
 But it will work as an unprivileged user on your host with a `runc` that is
 compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless). I also uploaded one here: [https://misc.j3ss.co/tmp/runc](https://misc.j3ss.co/tmp/runc), if you trust me.
 
+(For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).)
+
+
 **TLDR;** will work unprivileged on your host not in a container til we work out some kinks.
 
 [![asciicast](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC.png)](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC?speed=2)
@@ -78,8 +81,8 @@ OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-u
 
 ## Installation
 
-You need to have `runc`, `execv`, and `newuidmap` installed. On ubuntu the former two are provided by the packages
-`setpriv` and `uidmap`
+You need to have `runc` (see the top section for rootless mode) and `newuidmap` installed.
+On Ubuntu, `newuidmap` is provided by the `uidmap` package.
 
 For the FUSE backend, you will also need `fusermount` installed.
 
@@ -401,34 +404,11 @@ in progress so hang tight.
 
 ### Unprivileged Mounting
 
-To mount a filesystem without root access you need to do it from a mount and
-user namespace.
+To mount a filesystem without root accses, `img` automatically invokes [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
 
-Make sure you have user namespace support enabled. On some distros (Debian and
-Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
-
-You also need a version of `runc` with the patches from
-[opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688).
-
-Example:
-
-```console
-# unshare a mountns and userns 
-# and remap the user inside the namespaces to your current user
-$ unshare -m -U --map-root-user
-
-# then you can run img
-$ img build -t user/myimage .
-```
-
-Note that `unshare -m -U --map-root-user` does not make use of [`subuid(5)`](http://man7.org/linux/man-pages/man5/subuid.5.html)/[`subgid(5)`](http://man7.org/linux/man-pages/man5/subgid.5.html), and also, it disables [`setgroups(2)`](http://man7.org/linux/man-pages/man2/setgroups.2.html), which is typically required by `apt`.
-
-So we might want to use [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to enable these features. See [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692) and [opencontainers/runc#1693](https://github.com/opencontainers/runc/pull/1693).
+Make sure you have sufficient entries (typically `>=65536`) in your `/etc/subuid` and `/etc/subgid`.
 
 If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/genuinetools/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
-
-For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) 
-and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
 
 ## Contributing
 
