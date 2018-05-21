@@ -16,7 +16,7 @@ You might also be interested in reading:
 * [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
 
 Currently you can run it as unprivileged and there are a few ways to go about
-this, the default backend `naive` will not mount if you are running as an
+this, the default backend `native` will not mount if you are running as an
 unprivileged user and so it should work. You can learn more about the
 snapshotter backends [here](#snapshotter-backends).
 
@@ -150,7 +150,7 @@ Build an image from a Dockerfile.
 
 Flags:
 
-  -backend    backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend    backend for snapshots ([fuse native overlayfs]) (default: native)
   -build-arg  Set build-time variables (default: [])
   -d          enable debug logging (default: false)
   -f          Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
@@ -203,7 +203,7 @@ List images and digests.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (default: [])
   -state    directory to hold the global state (default: /tmp/img)
@@ -226,7 +226,7 @@ Pull an image or a repository from a registry.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -248,7 +248,7 @@ Push an image or a repository to a registry.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -269,7 +269,7 @@ Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -289,7 +289,7 @@ Save an image to a tar archive (streamed to STDOUT by default).
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -o        Write to a file, instead of STDOUT (default: <none>)
   -state    directory to hold the global state (default: /tmp/img)
@@ -313,7 +313,7 @@ Remove one or more images.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -328,7 +328,7 @@ Show image disk usage.
 
 Flags:
 
-  -backend  backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend  backend for snapshots ([fuse native overlayfs]) (default: native)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (snapshot ID supported) (default: <none>)
   -state    directory to hold the global state (default: /tmp/img)
@@ -361,7 +361,7 @@ If no server is specified, the default (https://index.docker.io/v1/) is used.
 
 Flags:
 
-  -backend         backend for snapshots ([fuse naive overlayfs]) (default: naive)
+  -backend         backend for snapshots ([fuse native overlayfs]) (default: native)
   -d               enable debug logging (default: false)
   -p               Password (default: <none>)
   -password-stdin  Take the password from stdin (default: false)
@@ -380,9 +380,9 @@ goal of this project is to in the future just be a glorified cli tool on top of
 
 ### Snapshotter Backends
 
-#### naive
+#### native
 
-The default backend is currently set to `naive` and if you run it as an
+The default backend is currently set to `native` and if you run it as an
 unprivileged user is will not attempt to ever mount.
  
 It can be made unprivileged with mounts and that work is being done, see the 

@@ -3,8 +3,8 @@ package types
 const (
 	// FUSEBackend defines the FUSE backend.
 	FUSEBackend = "fuse"
-	// NaiveBackend defines the naive backend.
-	NaiveBackend = "naive"
+	// NativeBackend defines the native backend.
+	NativeBackend = "native"
 	// OverlayFSBackend defines the overlayfs backend.
 	OverlayFSBackend = "overlayfs"
 )

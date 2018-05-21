@@ -47,7 +47,7 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 	switch c.backend {
 	case types.FUSEBackend:
 		s, c.fuseserver, err = fuse.NewSnapshotter(filepath.Join(c.root, "snapshots"))
-	case types.NaiveBackend:
+	case types.NativeBackend:
 		s, err = native.NewSnapshotter(filepath.Join(c.root, "snapshots"))
 	case types.OverlayFSBackend:
 		// On some distros such as Ubuntu overlayfs can be mounted without privileges
