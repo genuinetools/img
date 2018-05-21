@@ -37,6 +37,7 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		return opt, err
 	}
 
+	snapshotRoot := filepath.Join(c.root, "snapshots")
 	unprivileged := system.GetParentNSeuid() != 0
 	noMount := unprivileged
 
@@ -46,14 +47,15 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 	)
 	switch c.backend {
 	case types.FUSEBackend:
-		s, c.fuseserver, err = fuse.NewSnapshotter(filepath.Join(c.root, "snapshots"))
-	case types.NaiveBackend:
-		s, err = native.NewSnapshotter(filepath.Join(c.root, "snapshots"))
+		s, c.fuseserver, err = fuse.NewSnapshotter(snapshotRoot)
+	case types.NativeBackend:
+		s, err = native.NewSnapshotter(snapshotRoot)
 	case types.OverlayFSBackend:
 		// On some distros such as Ubuntu overlayfs can be mounted without privileges
 		noMount = false
-		s, err = overlay.NewSnapshotter(filepath.Join(c.root, "snapshots"))
+		s, err = overlay.NewSnapshotter(snapshotRoot)
 	default:
+		// "auto" backend needs to be already resolved on Client instantiation
 		return opt, fmt.Errorf("%s is not a valid snapshots backend", c.backend)
 	}
 	if err != nil {

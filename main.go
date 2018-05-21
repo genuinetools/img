@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultBackend        = types.NaiveBackend
+	defaultBackend        = types.AutoBackend
 	defaultDockerRegistry = "https://index.docker.io/v1/"
 	defaultDockerfileName = "Dockerfile"
 )
@@ -30,7 +30,7 @@ var (
 
 	defaultStateDirectory = "/tmp/img"
 
-	validBackends = []string{types.FUSEBackend, types.NaiveBackend, types.OverlayFSBackend}
+	validBackends = []string{types.AutoBackend, types.FUSEBackend, types.NativeBackend, types.OverlayFSBackend}
 )
 
 type command interface {
