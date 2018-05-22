@@ -94,7 +94,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "80272bb691056d0f35800c13a116db7f2975306c"
+  revision = "cff5e75df87b39c7c4134ccaf58db3abeec46e3d"
 
 [[projects]]
   branch = "master"
@@ -104,7 +104,7 @@
     "pathdriver",
     "sysx"
   ]
-  revision = "c6cef34830231743494fe2969284df7b82cc0ad0"
+  revision = "7333bda2339f8831e33f63fd0be1b495dcbcc650"
 
 [[projects]]
   branch = "force-mapping-tool"
@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "96dba79d99d69df9adc67b230d9dd39849733ef2"
+  revision = "0022bb83ea6499d089f03eb77cf2dcdfafb7e004"
 
 [[projects]]
   branch = "master"
@@ -157,7 +157,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
+  revision = "ed42a4909a4fd69b80c1f6caeb99be6010f82e8c"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "b7b6b6929c6436145bd12e6fef7efb7d01fa170b"
+  revision = "9bd5d9912f0cb4fe22b994ac1e7e10038e3be65a"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -407,7 +407,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "e3faff8b0da88270939088c45c7fdd1a4727373b"
+  revision = "c2fa5972e2540979f9bbebc2371fffcc2894d591"
 
 [[projects]]
   branch = "master"
@@ -480,7 +480,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "82f5ff156b29e276022b1a958f7d385870fb9814"
+  revision = "c51dc758d4bb30acacbef9eaa2b774969a135086"
 
 [[projects]]
   branch = "master"
@@ -496,7 +496,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "d811d2e9bf898806ecfb6ef6296774b13ffc314c"
+  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
 
 [[projects]]
   branch = "master"
@@ -554,7 +554,7 @@
     "proxy",
     "trace"
   ]
-  revision = "2491c5de3490fced2f6cff376127c667efeed857"
+  revision = "8e0cdda24ed423affc8f35c241e5e9b16180338e"
 
 [[projects]]
   branch = "master"
@@ -602,7 +602,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "7bb2a897381c9c5ab2aeb8614f758d7766af68ff"
+  revision = "11a468237815f3a3ddf9f7c6e8b6b3b382a24d15"
 
 [[projects]]
   name = "google.golang.org/grpc"
