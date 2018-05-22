@@ -35,6 +35,7 @@ import (
 
 func TestIntegration(t *testing.T) {
 	integration.Run(t, []integration.Test{
+		testGlobalArg,
 		testDockerfileDirs,
 		testDockerfileInvalidCommand,
 		testDockerfileADDFromURL,
@@ -59,6 +60,36 @@ func TestIntegration(t *testing.T) {
 		testNoCache,
 		testDockerfileFromHTTP,
 	})
+}
+
+func testGlobalArg(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+	dockerfile := []byte(`
+ARG tag=nosuchtag
+FROM busybox:${tag}
+`)
+
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"build-arg:tag": "latest",
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
 }
 
 func testDockerfileDirs(t *testing.T, sb integration.Sandbox) {
@@ -371,6 +402,32 @@ ADD %s /
 	require.NoError(t, cmd.Run())
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "t.tar.gz"))
+	require.NoError(t, err)
+	require.Equal(t, buf2.Bytes(), dt)
+
+	// https://github.com/moby/buildkit/issues/386
+	dockerfile = []byte(fmt.Sprintf(`
+FROM scratch
+ADD %s /newname.tar.gz
+`, server.URL+"/t.tar.gz"))
+
+	dir, err = tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	args, trace = dfCmdArgs(dir, dir)
+	defer os.RemoveAll(trace)
+
+	destDir, err = tmpdir()
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	cmd = sb.Cmd(args + fmt.Sprintf(" --exporter=local --exporter-opt output=%s", destDir))
+	require.NoError(t, cmd.Run())
+
+	dt, err = ioutil.ReadFile(filepath.Join(destDir, "newname.tar.gz"))
 	require.NoError(t, err)
 	require.Equal(t, buf2.Bytes(), dt)
 }
