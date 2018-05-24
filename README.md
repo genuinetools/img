@@ -62,8 +62,6 @@ compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https:
 You need to have `runc` (see the top section for rootless mode) and `newuidmap` installed.
 On Ubuntu, `newuidmap` is provided by the `uidmap` package.
 
-For the FUSE backend, you will also need `fusermount` installed.
-
 NOTE: These steps work only for Linux. Compile and run in a container (explained below) if you're on Windows or MacOS.
 
 #### Binaries
@@ -131,7 +129,7 @@ Build an image from a Dockerfile.
 
 Flags:
 
-  -backend    backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend    backend for snapshots ([auto native overlayfs]) (default: auto)
   -build-arg  Set build-time variables (default: [])
   -d          enable debug logging (default: false)
   -f          Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
@@ -184,7 +182,7 @@ List images and digests.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (default: [])
   -state    directory to hold the global state (default: /tmp/img)
@@ -207,7 +205,7 @@ Pull an image or a repository from a registry.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -229,7 +227,7 @@ Push an image or a repository to a registry.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -250,7 +248,7 @@ Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -270,7 +268,7 @@ Save an image to a tar archive (streamed to STDOUT by default).
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -o        Write to a file, instead of STDOUT (default: <none>)
   -state    directory to hold the global state (default: /tmp/img)
@@ -294,7 +292,7 @@ Remove one or more images.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -state    directory to hold the global state (default: /tmp/img)
 ```
@@ -309,7 +307,7 @@ Show image disk usage.
 
 Flags:
 
-  -backend  backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (snapshot ID supported) (default: <none>)
   -state    directory to hold the global state (default: /tmp/img)
@@ -342,7 +340,7 @@ If no server is specified, the default (https://index.docker.io/v1/) is used.
 
 Flags:
 
-  -backend         backend for snapshots ([auto fuse native overlayfs]) (default: auto)
+  -backend         backend for snapshots ([auto native overlayfs]) (default: auto)
   -d               enable debug logging (default: false)
   -p               Password (default: <none>)
   -password-stdin  Take the password from stdin (default: false)
@@ -376,11 +374,6 @@ The `native`` backends creates image layers by simply copying files.
 You can also use `overlayfs` 
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/genuinetools/img/issues/22).
-
-#### fuse
-
-The `fuse` backend runs completely in userspace. It is a bit buggy and a work
-in progress so hang tight.
 
 ### Unprivileged Mounting
 

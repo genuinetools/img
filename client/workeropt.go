@@ -15,7 +15,6 @@ import (
 	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
 	"github.com/genuinetools/img/executor/runc"
-	"github.com/genuinetools/img/snapshots/fuse"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
@@ -46,8 +45,6 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		s ctdsnapshot.Snapshotter
 	)
 	switch c.backend {
-	case types.FUSEBackend:
-		s, c.fuseserver, err = fuse.NewSnapshotter(snapshotRoot)
 	case types.NativeBackend:
 		s, err = native.NewSnapshotter(snapshotRoot)
 	case types.OverlayFSBackend:

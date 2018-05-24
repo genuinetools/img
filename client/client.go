@@ -6,7 +6,6 @@ import (
 
 	"github.com/containerd/containerd/snapshots/overlay"
 	"github.com/genuinetools/img/types"
-	"github.com/hanwen/go-fuse/fuse"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/session"
 	"github.com/sirupsen/logrus"
@@ -18,8 +17,6 @@ type Client struct {
 	backend   string
 	localDirs map[string]string
 	root      string
-
-	fuseserver *fuse.Server
 
 	sessionManager *session.Manager
 	controller     *control.Controller
@@ -54,13 +51,7 @@ func New(root, backend string, localDirs map[string]string) (*Client, error) {
 	}, nil
 }
 
-// Close terminates the client and unmount the fuseserver if it is mounted.
-func (c *Client) Close() {
-	if c.fuseserver == nil {
-		return
-	}
-
-	if err := c.fuseserver.Unmount(); err != nil {
-		logrus.Errorf("Unmounting FUSE server failed: %v", err)
-	}
-}
+// Close safely closes the client.
+// This used to shut down the FUSE server but since that was removed
+// it is basically a no-op now.
+func (c *Client) Close() {}

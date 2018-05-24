@@ -21,6 +21,8 @@ func (c *Client) getSessionManager() (*session.Manager, error) {
 	return c.sessionManager, nil
 }
 
+// Session creates the session manager and returns the session and it's
+// dialer.
 func (c *Client) Session(ctx context.Context) (*session.Session, session.Dialer, error) {
 	m, err := c.getSessionManager()
 	if err != nil {

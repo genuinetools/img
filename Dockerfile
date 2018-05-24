@@ -26,7 +26,6 @@ FROM alpine
 MAINTAINER Jessica Frazelle <jess@linux.com>
 RUN apk add --no-cache \
 	bash \
-	fuse \
 	git \
 	shadow \
 	shadow-uidmap \

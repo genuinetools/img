@@ -30,7 +30,7 @@ var (
 
 	defaultStateDirectory = "/tmp/img"
 
-	validBackends = []string{types.AutoBackend, types.FUSEBackend, types.NativeBackend, types.OverlayFSBackend}
+	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend}
 )
 
 type command interface {
