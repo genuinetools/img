@@ -9,7 +9,7 @@ import (
 )
 
 // Push sends an image to a remote registry.
-func (c *Client) Push(ctx context.Context, image string) error {
+func (c *Client) Push(ctx context.Context, image string, insecure bool) error {
 	// Parse the image name and tag.
 	named, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -30,5 +30,5 @@ func (c *Client) Push(ctx context.Context, image string) error {
 		return fmt.Errorf("getting image %q failed: %v", image, err)
 	}
 
-	return push.Push(ctx, opt.SessionManager, opt.ContentStore, imgObj.Target.Digest, image, false)
+	return push.Push(ctx, opt.SessionManager, opt.ContentStore, imgObj.Target.Digest, image, insecure)
 }
