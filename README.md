@@ -72,8 +72,8 @@ NOTE: These steps work only for Linux. Compile and run in a container (explained
 # Install latest img binary
 $ sudo curl -L https://github.com/genuinetools/img/releases/download/v0.3.5/img-linux-amd64 -o /usr/local/bin/img
 # Verify the sha256sum
-$ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/v0.3.5/img-linux-amd64.sha256)
-$ if [ "$SHASUM" != "$(shasum -a 256 /usr/local/bin/img | awk '{ print $1 }')" ]; then echo "sha256sum mismatch!"; exit 1; fi
+$ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/v0.3.5/img-linux-amd64.sha256 | awk '{ print $1 }')
+$ if [ "$SHASUM" != "$(shasum -a 256 /usr/local/bin/img | awk '{ print $1 }')" ]; then echo "sha256sum mismatch!"; fi
 $ sudo chmod a+x /usr/local/bin/img
 $ echo "img installed!"
 
