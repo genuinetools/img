@@ -32,27 +32,6 @@ compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https:
 
 **TLDR;** will work unprivileged on your host not in a container til we work out some kinks.
 
-[![asciicast](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC.png)](https://asciinema.org/a/m6ejohh3CwCoa68wKXOeByBDC?speed=2)
-
-## Acknowledgements
-
-A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
-Thanks [@tonistiigi](https://github.com/tonistiigi) and
-[@AkihiroSuda](https://github.com/AkihiroSuda)!
-
-## Prior Art
-
-The best one you _should_ be using is [cyphar/orca-build](https://github.com/cyphar/orca-build).
-
-You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
-
-THIS IS NOT NOVEL.
-
-You could even probably use [buildah](https://github.com/projectatomic/buildah) as
-unprivileged if you use the same instructions from the [unprivileged
-mounting](#unprivileged-mounting) section below.
-
-OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
 
 **Table of Contents**
 
@@ -418,3 +397,22 @@ Please do! This is a new project and can use some love <3. Check out the [issues
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.
 
+## Acknowledgements
+
+A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
+Thanks [@tonistiigi](https://github.com/tonistiigi) and
+[@AkihiroSuda](https://github.com/AkihiroSuda)!
+
+## Prior Art
+
+The best one you _should_ be using is [cyphar/orca-build](https://github.com/cyphar/orca-build).
+
+You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
+
+THIS IS NOT NOVEL.
+
+You could even probably use [buildah](https://github.com/projectatomic/buildah) as
+unprivileged if you use the same instructions from the [unprivileged
+mounting](#unprivileged-mounting) section below.
+
+OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
