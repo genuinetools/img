@@ -68,6 +68,20 @@ NOTE: These steps work only for Linux. Compile and run in a container (explained
 
 - **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.3.4/img-linux-amd64)
 
+```console
+# Install latest img binary
+$ sudo curl -L https://github.com/genuinetools/img/releases/download/v0.3.4/img-linux-amd64 -o /usr/local/bin/img
+# Verify the sha256sum
+$ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/v0.3.4/img-linux-amd64.sha256)
+$ if [ "$SHASUM" != "$(shasum -a 256 /usr/local/bin/img | awk '{ print $1 }')" ]; then echo "sha256sum mismatch!"; exit 1; fi
+$ sudo chmod a+x /usr/local/bin/img
+$ echo "img installed!"
+
+# Install runc with patches
+$ sudo curl -L https://misc.j3ss.co/tmp/runc -o /usr/local/bin/runc
+$ sudo chmod a+x /usr/local/bin/runc
+```
+
 #### Via Go
 
 ```bash
