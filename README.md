@@ -38,6 +38,7 @@ compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https:
 * [Installation](#installation)
     - [Binaries](#binaries)
     - [Via Go](#via-go)
+    - [From Source](#from-source)
     - [Running with Docker](#running-with-docker)
 * [Usage](#usage)
     + [Build an Image](#build-an-image)
