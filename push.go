@@ -19,10 +19,13 @@ func (cmd *pushCommand) ShortHelp() string { return pushHelp }
 func (cmd *pushCommand) LongHelp() string  { return pushHelp }
 func (cmd *pushCommand) Hidden() bool      { return false }
 
-func (cmd *pushCommand) Register(fs *flag.FlagSet) {}
+func (cmd *pushCommand) Register(fs *flag.FlagSet) {
+	fs.BoolVar(&cmd.insecure, "insecure-registry", false, "Push to insecure registry")
+}
 
 type pushCommand struct {
-	image string
+	image    string
+	insecure bool
 }
 
 func (cmd *pushCommand) Run(args []string) (err error) {
@@ -57,7 +60,7 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 	})
 	eg.Go(func() error {
 		defer sess.Close()
-		return c.Push(ctx, cmd.image)
+		return c.Push(ctx, cmd.image, cmd.insecure)
 	})
 	if err := eg.Wait(); err != nil {
 		return err
