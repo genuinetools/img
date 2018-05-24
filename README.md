@@ -242,9 +242,10 @@ Push an image or a repository to a registry.
 
 Flags:
 
-  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d        enable debug logging (default: false)
-  -state    directory to hold the global state (default: /tmp/img)
+  -backend            backend for snapshots ([auto native overlayfs]) (default: auto)
+  -d                  enable debug logging (default: false)
+  -insecure-registry  Push to insecure registry (default: false)
+  -state              directory to hold the global state (default: /tmp/img)
 ```
 
 ```console
