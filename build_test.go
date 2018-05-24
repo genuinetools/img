@@ -83,3 +83,14 @@ func TestBuildDockerfileNotInContextRoot(t *testing.T) {
 
 	run(t, "build", "-t", name, "-f", "testdata/Dockerfile.test-build-dockerfile-not-in-context", ".")
 }
+
+// apt requires subuid, subgid, setgroups, and networking to be enabled.
+// https://github.com/genuinetools/img/issues/96
+func TestBuildAPT(t *testing.T) {
+	name := "testbuildapt"
+
+	runBuild(t, name, withDockerfile(`
+  FROM debian:9-slim
+  RUN apt update
+  `))
+}
