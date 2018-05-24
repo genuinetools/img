@@ -272,14 +272,27 @@ func (hw *hashedWriter) Digest() digest.Digest {
 }
 
 type lazyFileWriter struct {
-	dest string
-	ctx  context.Context
-	f    *os.File
+	dest     string
+	ctx      context.Context
+	f        *os.File
+	fileMode *os.FileMode
 }
 
 func (lfw *lazyFileWriter) Write(dt []byte) (int, error) {
 	if lfw.f == nil {
 		file, err := os.OpenFile(lfw.dest, os.O_WRONLY, 0) //todo: windows
+		if os.IsPermission(err) {
+			// retry after chmod
+			fi, er := os.Stat(lfw.dest)
+			if er == nil {
+				mode := fi.Mode()
+				lfw.fileMode = &mode
+				er = os.Chmod(lfw.dest, mode|0222)
+				if er == nil {
+					file, err = os.OpenFile(lfw.dest, os.O_WRONLY, 0)
+				}
+			}
+		}
 		if err != nil {
 			return 0, errors.Wrapf(err, "failed to open %s", lfw.dest)
 		}
@@ -289,10 +302,14 @@ func (lfw *lazyFileWriter) Write(dt []byte) (int, error) {
 }
 
 func (lfw *lazyFileWriter) Close() error {
+	var err error
 	if lfw.f != nil {
-		return lfw.f.Close()
+		err = lfw.f.Close()
 	}
-	return nil
+	if err == nil && lfw.fileMode != nil {
+		err = os.Chmod(lfw.dest, *lfw.fileMode)
+	}
+	return err
 }
 
 func mkdev(major int64, minor int64) uint32 {

@@ -24,6 +24,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/continuity/fs/fstest"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/frontend/dockerfile/builder"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/util/testutil/httpserver"
@@ -35,6 +36,7 @@ import (
 
 func TestIntegration(t *testing.T) {
 	integration.Run(t, []integration.Test{
+		testCmdShell,
 		testGlobalArg,
 		testDockerfileDirs,
 		testDockerfileInvalidCommand,
@@ -59,7 +61,221 @@ func TestIntegration(t *testing.T) {
 		testImportExportReproducibleIDs,
 		testNoCache,
 		testDockerfileFromHTTP,
+		testBuiltinArgs,
+		testPullScratch,
 	})
+}
+
+func testCmdShell(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	var cdAddress string
+	if cd, ok := sb.(interface {
+		ContainerdAddress() string
+	}); !ok {
+		t.Skip("requires local image store")
+	} else {
+		cdAddress = cd.ContainerdAddress()
+	}
+
+	dockerfile := []byte(`
+FROM scratch
+CMD ["test"]
+`)
+
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	target := "docker.io/moby/cmdoverridetest:latest"
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		Exporter: client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	dockerfile = []byte(`
+FROM docker.io/moby/cmdoverridetest:latest
+SHELL ["ls"]
+ENTRYPOINT my entrypoint
+`)
+
+	dir, err = tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	target = "docker.io/moby/cmdoverridetest2:latest"
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		Exporter: client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	ctr, err := containerd.New(cdAddress)
+	require.NoError(t, err)
+	defer ctr.Close()
+
+	ctx := namespaces.WithNamespace(context.Background(), "buildkit")
+
+	img, err := ctr.ImageService().Get(ctx, target)
+	require.NoError(t, err)
+
+	desc, err := img.Config(ctx, ctr.ContentStore(), platforms.Default())
+	require.NoError(t, err)
+
+	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc.Digest)
+	require.NoError(t, err)
+
+	var ociimg ocispec.Image
+	err = json.Unmarshal(dt, &ociimg)
+	require.NoError(t, err)
+
+	require.Equal(t, ociimg.Config.Cmd, []string(nil))
+	require.Equal(t, ociimg.Config.Entrypoint, []string{"ls", "my entrypoint"})
+}
+
+func testPullScratch(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	var cdAddress string
+	if cd, ok := sb.(interface {
+		ContainerdAddress() string
+	}); !ok {
+		t.Skip("requires local image store")
+	} else {
+		cdAddress = cd.ContainerdAddress()
+	}
+
+	dockerfile := []byte(`
+FROM scratch
+LABEL foo=bar
+`)
+
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	target := "docker.io/moby/testpullscratch:latest"
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		Exporter: client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	dockerfile = []byte(`
+FROM docker.io/moby/testpullscratch:latest
+LABEL bar=baz
+COPY foo .
+`)
+
+	dir, err = tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+		fstest.CreateFile("foo", []byte("foo-contents"), 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	target = "docker.io/moby/testpullscratch2:latest"
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		Exporter: client.ExporterImage,
+		ExporterAttrs: map[string]string{
+			"name": target,
+		},
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	ctr, err := containerd.New(cdAddress)
+	require.NoError(t, err)
+	defer ctr.Close()
+
+	ctx := namespaces.WithNamespace(context.Background(), "buildkit")
+
+	img, err := ctr.ImageService().Get(ctx, target)
+	require.NoError(t, err)
+
+	desc, err := img.Config(ctx, ctr.ContentStore(), platforms.Default())
+	require.NoError(t, err)
+
+	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc.Digest)
+	require.NoError(t, err)
+
+	var ociimg ocispec.Image
+	err = json.Unmarshal(dt, &ociimg)
+	require.NoError(t, err)
+
+	require.Equal(t, "layers", ociimg.RootFS.Type)
+	require.Equal(t, 1, len(ociimg.RootFS.DiffIDs))
+	v, ok := ociimg.Config.Labels["foo"]
+	require.True(t, ok)
+	require.Equal(t, v, "bar")
+	v, ok = ociimg.Config.Labels["bar"]
+	require.True(t, ok)
+	require.Equal(t, v, "baz")
+
+	echo := llb.Image("busybox").
+		Run(llb.Shlex(`sh -c "echo -n foo0 > /empty/foo"`)).
+		AddMount("/empty", llb.Image("docker.io/moby/testpullscratch:latest"))
+
+	def, err := echo.Marshal()
+	require.NoError(t, err)
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	_, err = c.Solve(context.TODO(), def, client.SolveOpt{
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	dt, err = ioutil.ReadFile(filepath.Join(destDir, "foo"))
+	require.NoError(t, err)
+	require.Equal(t, "foo0", string(dt))
 }
 
 func testGlobalArg(t *testing.T, sb integration.Sandbox) {
@@ -1765,6 +1981,108 @@ COPY --from=s1 unique2 /
 
 	require.Equal(t, string(unique1Dir2), string(unique1Dir3))
 	require.NotEqual(t, string(unique2Dir1), string(unique2Dir3))
+}
+
+func testBuiltinArgs(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM busybox AS build
+ARG FOO
+ARG BAR
+ARG BAZ=bazcontent
+RUN echo -n $HTTP_PROXY::$NO_PROXY::$FOO::$BAR::$BAZ > /out
+FROM scratch
+COPY --from=build /out /
+
+`)
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	destDir, err := ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	opt := client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"build-arg:FOO":        "foocontents",
+			"build-arg:http_proxy": "hpvalue",
+			"build-arg:NO_PROXY":   "npvalue",
+		},
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}
+
+	_, err = c.Solve(context.TODO(), nil, opt, nil)
+	require.NoError(t, err)
+
+	dt, err := ioutil.ReadFile(filepath.Join(destDir, "out"))
+	require.NoError(t, err)
+	require.Equal(t, string(dt), "hpvalue::npvalue::foocontents::::bazcontent")
+
+	// repeat with changed default args should match the old cache
+	destDir, err = ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	opt = client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"build-arg:FOO":        "foocontents",
+			"build-arg:http_proxy": "hpvalue2",
+		},
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}
+
+	_, err = c.Solve(context.TODO(), nil, opt, nil)
+	require.NoError(t, err)
+
+	dt, err = ioutil.ReadFile(filepath.Join(destDir, "out"))
+	require.NoError(t, err)
+	require.Equal(t, string(dt), "hpvalue::npvalue::foocontents::::bazcontent")
+
+	// changing actual value invalidates cache
+	destDir, err = ioutil.TempDir("", "buildkit")
+	require.NoError(t, err)
+	defer os.RemoveAll(destDir)
+
+	opt = client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		FrontendAttrs: map[string]string{
+			"build-arg:FOO":        "foocontents2",
+			"build-arg:http_proxy": "hpvalue2",
+		},
+		Exporter:          client.ExporterLocal,
+		ExporterOutputDir: destDir,
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}
+
+	_, err = c.Solve(context.TODO(), nil, opt, nil)
+	require.NoError(t, err)
+
+	dt, err = ioutil.ReadFile(filepath.Join(destDir, "out"))
+	require.NoError(t, err)
+	require.Equal(t, string(dt), "hpvalue2::::foocontents2::::bazcontent")
 }
 
 func tmpdir(appliers ...fstest.Applier) (string, error) {

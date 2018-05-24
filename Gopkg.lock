@@ -94,7 +94,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "cff5e75df87b39c7c4134ccaf58db3abeec46e3d"
+  revision = "d1435e6e4dcffd99e0da396ff771b5bbe0d93f5e"
 
 [[projects]]
   branch = "master"
@@ -104,7 +104,7 @@
     "pathdriver",
     "sysx"
   ]
-  revision = "7333bda2339f8831e33f63fd0be1b495dcbcc650"
+  revision = "a60600ad77f38aaa70165825f61e2ea72e51c9b1"
 
 [[projects]]
   branch = "force-mapping-tool"
@@ -134,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "0022bb83ea6499d089f03eb77cf2dcdfafb7e004"
+  revision = "57ce5aa18def11128590292476ed85b1bf6feb5c"
 
 [[projects]]
   branch = "master"
@@ -157,7 +157,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "ed42a4909a4fd69b80c1f6caeb99be6010f82e8c"
+  revision = "f0cc927784781fa395c06317c58dea2841ece3a9"
 
 [[projects]]
   branch = "master"
@@ -198,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "9bd5d9912f0cb4fe22b994ac1e7e10038e3be65a"
+  revision = "aa2d23a7357d4e827391705b8796a59df78c466d"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -396,7 +396,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "c2fa5972e2540979f9bbebc2371fffcc2894d591"
+  revision = "c7c9c6cde1387ef288932abde306b5cc41893601"
 
 [[projects]]
   branch = "master"
@@ -520,13 +520,13 @@
   branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "642526b8d2cd0eb3e5471bdd49b34538f4d3b92a"
+  revision = "c3e8efc8d40e57e0ff5152262bff7e6b1f5d0498"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "1a580b3eff7814fc9b40602fd35256c63b50f491"
+  revision = "75e913eb8a8e3d31a97b216de09de106a7b07681"
 
 [[projects]]
   branch = "master"
@@ -543,7 +543,7 @@
     "proxy",
     "trace"
   ]
-  revision = "8e0cdda24ed423affc8f35c241e5e9b16180338e"
+  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
 
 [[projects]]
   branch = "master"
@@ -558,7 +558,7 @@
     "unix",
     "windows"
   ]
-  revision = "7c87d13f8e835d2fb3a70a2912c811ed0c1d241b"
+  revision = "56ad15cc2170219c9fed5b7d059e825c97588071"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -591,7 +591,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "11a468237815f3a3ddf9f7c6e8b6b3b382a24d15"
+  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -629,6 +629,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "297a969275159b597ac0f9ee70f1e94345fc2d3ab5c8d42a918a965ba269910b"
+  inputs-digest = "9bbf4db5883e248a8a38dba33f7c47423a1814ddd22f9a9b863827e43367114e"
   solver-name = "gps-cdcl"
   solver-version = 1

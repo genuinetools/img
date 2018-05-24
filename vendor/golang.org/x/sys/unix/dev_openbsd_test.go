@@ -20,15 +20,12 @@ func TestDevices(t *testing.T) {
 		minor uint32
 	}{
 		// well known major/minor numbers according to /dev/MAKEDEV on
-		// OpenBSD 6.0
+		// OpenBSD 6.3
 		{"/dev/null", 2, 2},
 		{"/dev/zero", 2, 12},
 		{"/dev/ttyp0", 5, 0},
 		{"/dev/ttyp1", 5, 1},
-		{"/dev/random", 45, 0},
-		{"/dev/srandom", 45, 1},
-		{"/dev/urandom", 45, 2},
-		{"/dev/arandom", 45, 3},
+		{"/dev/random", 45, 0}, // symlink to /dev/urandom
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%s %v:%v", tc.path, tc.major, tc.minor), func(t *testing.T) {

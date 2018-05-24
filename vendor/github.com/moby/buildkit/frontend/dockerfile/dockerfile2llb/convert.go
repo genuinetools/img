@@ -56,6 +56,8 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		return nil, nil, err
 	}
 
+	proxyEnv := proxyEnvFromBuildArgs(opt.BuildArgs)
+
 	stages, metaArgs, err := instructions.Parse(dockerfile.AST)
 	if err != nil {
 		return nil, nil, err
@@ -154,6 +156,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 						return err
 					}
 					d.stage.BaseName = reference.TagNameOnly(ref).String()
+					var isScratch bool
 					if metaResolver != nil && reachable {
 						dgst, dt, err := metaResolver.ResolveImageConfig(ctx, d.stage.BaseName)
 						if err == nil { // handle the error while builder is actually running
@@ -171,9 +174,16 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 							}
 							d.stage.BaseName = ref.String()
 							_ = ref
+							if len(img.RootFS.DiffIDs) == 0 {
+								isScratch = true
+							}
 						}
 					}
-					d.state = llb.Image(d.stage.BaseName, dfCmd(d.stage.SourceCode))
+					if isScratch {
+						d.state = llb.Scratch()
+					} else {
+						d.state = llb.Image(d.stage.BaseName, dfCmd(d.stage.SourceCode))
+					}
 					return nil
 				})
 			}(i, d)
@@ -226,6 +236,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 			shlex:                shlex,
 			sessionID:            opt.SessionID,
 			buildContext:         llb.NewState(buildContext),
+			proxyEnv:             proxyEnv,
 		}
 
 		if err = dispatchOnBuild(d, d.image.Config.OnBuild, opt); err != nil {
@@ -303,6 +314,7 @@ type dispatchOpt struct {
 	shlex                *shell.Lex
 	sessionID            string
 	buildContext         llb.State
+	proxyEnv             *llb.ProxyEnv
 }
 
 func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
@@ -322,7 +334,7 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 	case *instructions.EnvCommand:
 		err = dispatchEnv(d, c, true)
 	case *instructions.RunCommand:
-		err = dispatchRun(d, c)
+		err = dispatchRun(d, c, opt.proxyEnv)
 	case *instructions.WorkdirCommand:
 		err = dispatchWorkdir(d, c, true)
 	case *instructions.AddCommand:
@@ -380,6 +392,7 @@ type dispatchState struct {
 	commands    []command
 	ctxPaths    map[string]struct{}
 	ignoreCache bool
+	cmdSet      bool
 }
 
 type command struct {
@@ -424,10 +437,10 @@ func dispatchEnv(d *dispatchState, c *instructions.EnvCommand, commit bool) erro
 	return nil
 }
 
-func dispatchRun(d *dispatchState, c *instructions.RunCommand) error {
+func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyEnv) error {
 	var args []string = c.CmdLine
 	if c.PrependShell {
-		args = append(defaultShell(), strings.Join(args, " "))
+		args = withShell(d.image, args)
 	} else if d.image.Config.Entrypoint != nil {
 		args = append(d.image.Config.Entrypoint, args...)
 	}
@@ -438,6 +451,9 @@ func dispatchRun(d *dispatchState, c *instructions.RunCommand) error {
 	opt = append(opt, dfCmd(c))
 	if d.ignoreCache {
 		opt = append(opt, llb.IgnoreCache)
+	}
+	if proxy != nil {
+		opt = append(opt, llb.WithProxy(*proxy))
 	}
 	d.state = d.state.Run(opt...).Root()
 	return commitToHistory(&d.image, "RUN "+runCommandString(args, d.buildArgs), true, &d.state)
@@ -554,19 +570,23 @@ func dispatchOnbuild(d *dispatchState, c *instructions.OnbuildCommand) error {
 func dispatchCmd(d *dispatchState, c *instructions.CmdCommand) error {
 	var args []string = c.CmdLine
 	if c.PrependShell {
-		args = append(defaultShell(), strings.Join(args, " "))
+		args = withShell(d.image, args)
 	}
 	d.image.Config.Cmd = args
 	d.image.Config.ArgsEscaped = true
+	d.cmdSet = true
 	return commitToHistory(&d.image, fmt.Sprintf("CMD %q", args), false, nil)
 }
 
 func dispatchEntrypoint(d *dispatchState, c *instructions.EntrypointCommand) error {
 	var args []string = c.CmdLine
 	if c.PrependShell {
-		args = append(defaultShell(), strings.Join(args, " "))
+		args = withShell(d.image, args)
 	}
 	d.image.Config.Entrypoint = args
+	if !d.cmdSet {
+		d.image.Config.Cmd = nil
+	}
 	return commitToHistory(&d.image, fmt.Sprintf("ENTRYPOINT %q", args), false, nil)
 }
 
@@ -851,6 +871,43 @@ func normalizeContextPaths(paths map[string]struct{}) []string {
 	return toSort
 }
 
+func proxyEnvFromBuildArgs(args map[string]string) *llb.ProxyEnv {
+	pe := &llb.ProxyEnv{}
+	isNil := true
+	for k, v := range args {
+		if strings.EqualFold(k, "http_proxy") {
+			pe.HttpProxy = v
+			isNil = false
+		}
+		if strings.EqualFold(k, "https_proxy") {
+			pe.HttpsProxy = v
+			isNil = false
+		}
+		if strings.EqualFold(k, "ftp_proxy") {
+			pe.FtpProxy = v
+			isNil = false
+		}
+		if strings.EqualFold(k, "no_proxy") {
+			pe.NoProxy = v
+			isNil = false
+		}
+	}
+	if isNil {
+		return nil
+	}
+	return pe
+}
+
 type mutableOutput struct {
 	llb.Output
+}
+
+func withShell(img Image, args []string) []string {
+	var shell []string
+	if len(img.Config.Shell) > 0 {
+		shell = append([]string{}, img.Config.Shell...)
+	} else {
+		shell = defaultShell()
+	}
+	return append(shell, strings.Join(args, " "))
 }
