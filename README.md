@@ -11,26 +11,45 @@ as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 The commands/UX are the same as `docker {build,push,pull,login}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
+## Goals
+
+This a glorified cli tool built on top of
+[buildkit](https://github.com/moby/buildkit). The goal of this project is to be
+able to build container images as an unprivileged user.
+
+Running unprivileged allows companies who use LDAP and other login mechanisms
+to use `img` without needed root. This is very important in HPC environments
+and academia as well.
+
+Currently this works out of the box on a Linux machine if you install via 
+the directions covered in [installing from binaries](#binaries). This
+installation will ensure you have the correct version of `img` and also the
+patched version of `runc`.
+
+The ultimate goal is to also have this work inside a container. There are
+patches being made to container runtimes and Kubernetes to make this possible. 
+For the on-going work toward getting patches into container runtimes and
+Kubernetes, see:
+
+- [moby/moby#36644](https://github.com/moby/moby/pull/36644)
+- [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934)
+- [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283)
+
+For the on-going work on `runc` patches upstream, please see:
+
+- [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692)
+- [opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688)
+
+For the on-going work toward integrating runc with these patches to `buildkit`, 
+please refer to:
+
+- [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630)
+- [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
+
+
 You might also be interested in reading: 
 * [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
 * [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
-
-Currently you can run it as unprivileged using `native` backend.
-On some distros such as Ubuntu, `overlayfs` backend might work as well.
-You can learn more about the snapshotter backends [here](#snapshotter-backends).
-
-However, it does not currently work as an unprivileged user _in_ a container
-due to the fact that it cant mount `proc` inside the container. See
-[opencontainers/runc#1658](https://github.com/opencontainers/runc/issues/1658)
-for more info.
-
-But it will work as an unprivileged user on your host with a `runc` that is
-compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https://github.com/AkihiroSuda/runc/tree/demo-rootless). I also uploaded one here: [https://misc.j3ss.co/tmp/runc](https://misc.j3ss.co/tmp/runc), if you trust me.
-
-(For the on-going work toward integrating runc with these patches to `buildkit`, please refer to [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630) and [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).)
-
-
-**TLDR;** will work unprivileged on your host not in a container til we work out some kinks.
 
 
 **Table of Contents**
@@ -50,10 +69,11 @@ compiled from the following branch: [AkihiroSuda/runc/tree/demo-rootless](https:
     + [Remove an Image](#remove-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
-* [About](#about)
-    + [Goals](#goals)
-    + [Snapshotter Backends](#snapshotter-backends)
+* [How it Works](#how-it-works)
     + [Unprivileged Mounting](#unprivileged-mounting)
+	+ [High Level](#high-level)
+	+ [Low Level](#low-level)
+    + [Snapshotter Backends](#snapshotter-backends)
 * [Contributing](#contributing)
 * [Acknowledgements](#acknowledgements)
 * [Prior Art](#prior-art)
@@ -364,14 +384,24 @@ Flags:
   -u               Username (default: <none>)
 ```
 
-## About
+## How It Works
 
-### Goals
+### Unprivileged Mounting
 
-This project is not trying to reinvent `buildkit`. If anything all changes and
-modifications for `buildkit` without privileges are being done upstream. The
-goal of this project is to in the future just be a glorified cli tool on top of
-`buildkit`.
+To mount a filesystem without root accsess, `img` automatically invokes 
+[`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) 
+SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
+
+Make sure you have sufficient entries (typically `>=65536`) in your 
+`/etc/subuid` and `/etc/subgid`.
+
+### High Level
+
+<img src="how-it-works-high-level.png" width=300 />
+
+### Low Level
+
+<img src="how-it-works-low-level.png" width=300 />
 
 ### Snapshotter Backends
 
@@ -391,13 +421,6 @@ You can also use `overlayfs`
 backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/genuinetools/img/issues/22).
 
-### Unprivileged Mounting
-
-To mount a filesystem without root accses, `img` automatically invokes [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
-
-Make sure you have sufficient entries (typically `>=65536`) in your `/etc/subuid` and `/etc/subgid`.
-
-If depending on these SUID binaries is problematic, we could use ptrace hacks such as PRoot, although its performance overhead is not negligible. ([#15](https://github.com/genuinetools/img/issues/15) and [AkihiroSuda/runrootless](https://github.com/AkihiroSuda/runrootless))
 
 ## Contributing
 
@@ -411,17 +434,3 @@ be unprivileged.
 A lot of this is based on the work of [moby/buildkit](https://github.com/moby/buildkit). 
 Thanks [@tonistiigi](https://github.com/tonistiigi) and
 [@AkihiroSuda](https://github.com/AkihiroSuda)!
-
-## Prior Art
-
-The best one you _should_ be using is [cyphar/orca-build](https://github.com/cyphar/orca-build).
-
-You can already do the same thing as `img` today with [skopeo](https://github.com/projectatomic/skopeo) and [umoci](https://github.com/openSUSE/umoci). This is just a hack on top of [buildkit](https://github.com/moby/buildkit). I thought it was fun to try a FUSE snapshotter and then I saw [@AkihiroSuda's](https://github.com/AkihiroSuda) runc patches for making buildkit rootless and thought it would be fun to use as well.
-
-THIS IS NOT NOVEL.
-
-You could even probably use [buildah](https://github.com/projectatomic/buildah) as
-unprivileged if you use the same instructions from the [unprivileged
-mounting](#unprivileged-mounting) section below.
-
-OR you can read [this blog post](https://bcksp.blogspot.com/2018/02/diy-docker-using-skopeoostreerunc.html) and use `skopeo`, `ostree` and `runc`.
