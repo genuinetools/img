@@ -18,7 +18,7 @@ This a glorified cli tool built on top of
 able to build container images as an unprivileged user.
 
 Running unprivileged allows companies who use LDAP and other login mechanisms
-to use `img` without needed root. This is very important in HPC environments
+to use `img` without needing root. This is very important in HPC environments
 and academia as well.
 
 Currently this works out of the box on a Linux machine if you install via 
