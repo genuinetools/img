@@ -94,7 +94,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "d1435e6e4dcffd99e0da396ff771b5bbe0d93f5e"
+  revision = "195aec232e5885326d90ccff3f52ed05fa7ea1cc"
 
 [[projects]]
   branch = "master"
@@ -102,9 +102,10 @@
   packages = [
     "fs",
     "pathdriver",
+    "syscallx",
     "sysx"
   ]
-  revision = "a60600ad77f38aaa70165825f61e2ea72e51c9b1"
+  revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
 
 [[projects]]
   branch = "force-mapping-tool"
@@ -134,7 +135,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "57ce5aa18def11128590292476ed85b1bf6feb5c"
+  revision = "0089f172b781ab07dd1410c385da0896e30ca660"
 
 [[projects]]
   branch = "master"
@@ -198,7 +199,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "aa2d23a7357d4e827391705b8796a59df78c466d"
+  revision = "9c2c887b125df56e622d20ebbbe626c55b61e44a"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -396,7 +397,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "c7c9c6cde1387ef288932abde306b5cc41893601"
+  revision = "09fdcb24dc34ec3bcda1b52cd74153e4bb23ee44"
 
 [[projects]]
   branch = "master"
@@ -425,7 +426,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "de56b201ad08102a62234cc957ac977cd839f102"
+  revision = "52cb70f80486e2ad00ad5e614809cb0a8afbcb63"
   source = "github.com/jessfraz/runc"
 
 [[projects]]
@@ -526,7 +527,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "75e913eb8a8e3d31a97b216de09de106a7b07681"
+  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
 
 [[projects]]
   branch = "master"
@@ -543,7 +544,7 @@
     "proxy",
     "trace"
   ]
-  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
+  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
 
 [[projects]]
   branch = "master"
@@ -558,7 +559,7 @@
     "unix",
     "windows"
   ]
-  revision = "56ad15cc2170219c9fed5b7d059e825c97588071"
+  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
   name = "golang.org/x/text"
