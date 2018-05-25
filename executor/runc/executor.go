@@ -52,7 +52,14 @@ func New(root string, unprivileged, noMount bool) (executor.Executor, error) {
 		return nil, err
 	}
 
-	// TODO: check that root is not symlink to fail early
+	// Check that root is not symlink to fail early
+	rootInfo, err := os.Lstat(root)
+	if err != nil {
+		return nil, err
+	}
+	if rootInfo.Mode() & os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("%s is a symlink", root)
+    	}
 
 	runtime := &runc.Runc{
 		Log:          filepath.Join(root, "runc-executor-log.json"),
