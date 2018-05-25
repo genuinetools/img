@@ -412,7 +412,7 @@ the availability of `overlayfs` on the system.
 
 #### native
 
-The `native`` backends creates image layers by simply copying files.
+The `native` backends creates image layers by simply copying files.
 `copy_file_range(2)` is used when available.
 
 #### overlayfs
