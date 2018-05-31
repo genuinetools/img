@@ -20,22 +20,6 @@ build_and_push(){
 	echo "                       ---                                   "
 	echo "Successfully built ${base}:${suite} with context ${build_dir}"
 	echo "                       ---                                   "
-
-	# try push a few times because notary server sometimes returns 401 for
-	# absolutely no reason
-	#n=0
-	#until [ $n -ge 5 ]; do
-	#	docker push --disable-content-trust=false ${REPO_URL}/${base}:${suite} && break
-	#	echo "Try #$n failed... sleeping for 15 seconds"
-	#	n=$[$n+1]
-	#	sleep 15
-	#done
-
-	# also push the tag latest for "stable" (chrome), "tools" (wireguard) or "3.5" tags for zookeeper
-	#if [[ "$suite" == "stable" ]] || [[ "$suite" == "3.5" ]] || [[ "$suite" == "tools" ]]; then
-	#	docker tag ${REPO_URL}/${base}:${suite} ${REPO_URL}/${base}:latest
-	#	docker push --disable-content-trust=false ${REPO_URL}/${base}:latest
-	#fi
 }
 
 dofile() {
