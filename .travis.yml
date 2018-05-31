@@ -36,6 +36,6 @@ jobs:
     - stage: Run e2e Tests
       script: make
       script: ./contrib/e2e-dockerfiles-build-test.sh
-      if: branch = master
+      if: branch != master
       env:
         - STATE_DIR=$HOME/img
