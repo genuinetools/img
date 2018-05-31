@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path"
 	"runtime"
 	"sort"
@@ -36,8 +37,6 @@ type execOp struct {
 }
 
 func NewExecOp(v solver.Vertex, op *pb.Op_Exec, cm cache.Manager, md *metadata.Store, exec executor.Executor, w worker.Worker) (solver.Op, error) {
-	logrus.Debugf("newexecop %#v", op.Exec.Meta)
-
 	return &execOp{
 		op:        op.Exec,
 		cm:        cm,
@@ -324,7 +323,7 @@ func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Res
 		meta.Env = append(meta.Env, proxyEnvList(e.op.Meta.ProxyEnv)...)
 	}
 
-	stdout, stderr := logs.NewLogStreams(ctx)
+	stdout, stderr := logs.NewLogStreams(ctx, os.Getenv("BUILDKIT_DEBUG_EXEC_OUTPUT") == "1")
 	defer stdout.Close()
 	defer stderr.Close()
 

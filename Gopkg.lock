@@ -94,7 +94,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "195aec232e5885326d90ccff3f52ed05fa7ea1cc"
+  revision = "e4ad710ce832df8cb7bf9dd54b5806cff9d90663"
 
 [[projects]]
   branch = "master"
@@ -108,11 +108,10 @@
   revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
 
 [[projects]]
-  branch = "force-mapping-tool"
+  branch = "master"
   name = "github.com/containerd/go-runc"
   packages = ["."]
-  revision = "bd3f4d1748c91f908e3969fcf442eafa120e2e59"
-  source = "github.com/jessfraz/go-runc"
+  revision = "301f7c1fbbc328a0b5b08c4e9942de2f0a147f96"
 
 [[projects]]
   branch = "master"
@@ -135,7 +134,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "0089f172b781ab07dd1410c385da0896e30ca660"
+  revision = "31d99ba630571432e998391badaab16900b34223"
 
 [[projects]]
   branch = "master"
@@ -199,7 +198,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "9c2c887b125df56e622d20ebbbe626c55b61e44a"
+  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -304,10 +303,10 @@
   version = "v1.6.2"
 
 [[projects]]
+  branch = "master"
   name = "github.com/grpc-ecosystem/grpc-opentracing"
   packages = ["go/otgrpc"]
-  revision = "420e5c3331a082e0c873adeeab1819fe1749dd0b"
-  source = "github.com/tonistiigi/grpc-opentracing"
+  revision = "8e809c8a86450a29b90dcc9efbf062d0fe6d9746"
 
 [[projects]]
   name = "github.com/hashicorp/go-immutable-radix"
@@ -324,8 +323,8 @@
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
-  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
-  version = "v1.0.0"
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -397,7 +396,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "09fdcb24dc34ec3bcda1b52cd74153e4bb23ee44"
+  revision = "a3f37e2780560b13b186bb86525b092001909b1f"
 
 [[projects]]
   branch = "master"
@@ -470,7 +469,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "c51dc758d4bb30acacbef9eaa2b774969a135086"
+  revision = "42bc0a18c2207d46ac4039bbb6b4cf1507872837"
 
 [[projects]]
   branch = "master"
@@ -497,7 +496,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "8b1c2da0d56deffdbb9e48d4414b4e674bd8083e"
+  revision = "61aaa706c6d4fda9365b6273c96839eb7e27f6e4"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -521,13 +520,13 @@
   branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "c3e8efc8d40e57e0ff5152262bff7e6b1f5d0498"
+  revision = "04a9f706d65bb25a80b4e918a933de97674ef791"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
+  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
 
 [[projects]]
   branch = "master"
@@ -544,7 +543,7 @@
     "proxy",
     "trace"
   ]
-  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   branch = "master"
@@ -630,6 +629,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9bbf4db5883e248a8a38dba33f7c47423a1814ddd22f9a9b863827e43367114e"
+  inputs-digest = "6f0b68904b5ed71d68d9c740eeb5ff8d3418ac9cb4bdd826399fee8d925f231c"
   solver-name = "gps-cdcl"
   solver-version = 1
