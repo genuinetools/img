@@ -69,6 +69,7 @@ You might also be interested in reading:
     + [Remove an Image](#remove-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
+    + [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 * [How it Works](#how-it-works)
     + [Unprivileged Mounting](#unprivileged-mounting)
 	+ [High Level](#high-level)
@@ -232,6 +233,9 @@ jess/thing:latest       591B            30 minutes ago  30 minutes ago  sha256:d
 
 ### Pull an Image
 
+If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
 ```console
 $ img pull -h
 Usage: img pull [OPTIONS] NAME[:TAG|@DIGEST]
@@ -253,6 +257,9 @@ Size: 365.9KiB
 ```
 
 ### Push an Image
+
+If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
 
 ```console
 $ img push -h
@@ -367,6 +374,9 @@ Total:          1.08GiB
 
 ### Login to a Registry
 
+If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
 ```console
 $ img login -h
 Usage: img login [OPTIONS] [SERVER]
@@ -382,6 +392,38 @@ Flags:
   -password-stdin  Take the password from stdin (default: false)
   -state           directory to hold the global state (default: /tmp/img)
   -u               Username (default: <none>)
+```
+
+### Using Self-Signed Certs with a Registry
+
+We do not allow users to pass all the custom certificate flags on commands
+because it is unnecessarily messy and can be handled through Linux itself.
+Which we believe is a better user experience than having to pass three
+different flags just to communicate with a registry using self-signed or
+private certificates.
+
+Below are instructions on adding a self-signed or private certificate to your
+trusted ca-certificates on Linux.
+
+Make sure you have the package `ca-certificates` installed.
+
+Copy the public half of your CA certificate (the one user to sign the CSR) into
+the CA certificate directory (as root):
+
+```console
+$ cp cacert.pem /usr/share/ca-certificates
+```
+
+Rebuild the directory with your certificate included, run as root:
+
+```console
+# On debian, this will bring up a menu.
+# Select the ask option, scroll to the certificate you are adding,
+# 	mark it for inclusion, and select ok.
+$ dpkg-reconfigure ca-certificates
+
+# On other distros...
+$ update-ca-certificates
 ```
 
 ## How It Works
