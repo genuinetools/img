@@ -87,13 +87,13 @@ NOTE: These steps work only for Linux. Compile and run in a container (explained
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.3.6/img-linux-amd64)
+- **linux** [amd64](https://github.com/genuinetools/img/releases/download/v0.3.7/img-linux-amd64)
 
 ```console
 # Install latest img binary
-$ sudo curl -L https://github.com/genuinetools/img/releases/download/v0.3.6/img-linux-amd64 -o /usr/local/bin/img
+$ sudo curl -L https://github.com/genuinetools/img/releases/download/v0.3.7/img-linux-amd64 -o /usr/local/bin/img
 # Verify the sha256sum
-$ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/v0.3.6/img-linux-amd64.sha256 | awk '{ print $1 }')
+$ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/v0.3.7/img-linux-amd64.sha256 | awk '{ print $1 }')
 $ if [ "$SHASUM" != "$(shasum -a 256 /usr/local/bin/img | awk '{ print $1 }')" ]; then echo "sha256sum mismatch!"; fi
 $ sudo chmod a+x /usr/local/bin/img
 $ echo "img installed!"
