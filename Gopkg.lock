@@ -425,7 +425,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "52cb70f80486e2ad00ad5e614809cb0a8afbcb63"
+  revision = "bc1d5ab2a5cff452977ca0da02027a1e70765391"
   source = "github.com/jessfraz/runc"
 
 [[projects]]
