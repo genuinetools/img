@@ -4,7 +4,6 @@ notifications:
   email: true
 go:
   - 1.x
-  - tip
 before_install:
   - go get github.com/golang/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
@@ -40,7 +39,3 @@ jobs:
       if: branch = master
       env:
         - STATE_DIR=$HOME/img
-matrix:
-  allow_failures:
-    - go: tip
-  fast_finish: true
