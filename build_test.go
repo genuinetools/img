@@ -84,7 +84,20 @@ func TestBuildDockerfileNotInContextRoot(t *testing.T) {
 	run(t, "build", "-t", name, "-f", "testdata/Dockerfile.test-build-dockerfile-not-in-context", ".")
 }
 
-// apt requires subuid, subgid, setgroups, and networking to be enabled.
+// Make sure the client exits with the correct exit code.
+// https://github.com/genuinetools/img/issues/101
+func TestBuildDockerfileFailing(t *testing.T) {
+	name := "testbuilddockerfilefailing"
+
+	args := []string{"build", "-t", name, "-f", "testdata/Dockerfile.test-build-failing", "."}
+	out, err := doRun(args, nil)
+	if err == nil {
+		t.Logf("img %v should have failed but did not: %s", args, out)
+		t.FailNow()
+	}
+}
+
+// Using apt requires subuid, subgid, setgroups, and networking to be enabled.
 // https://github.com/genuinetools/img/issues/96
 func TestBuildAPT(t *testing.T) {
 	name := "testbuildapt"

@@ -220,13 +220,20 @@ func reexec() {
 			logrus.Fatalf("getpgid error: %v", err)
 		}
 
-		var ws syscall.WaitStatus
+		var (
+			ws       syscall.WaitStatus
+			exitCode int
+		)
 		for {
+			// Store the exitCode before calling wait so we get the real one.
+			exitCode = ws.ExitStatus()
 			_, err := syscall.Wait4(-pgid, &ws, syscall.WNOHANG, nil)
 			if err != nil {
 				if err.Error() == "no child processes" {
-					// We exited.
-					os.Exit(0)
+					// We exited. We need to pass the correct error code from
+					// the child.
+					fmt.Printf("exit code: %d\n", exitCode)
+					os.Exit(exitCode)
 				}
 
 				logrus.Fatalf("wait4 error: %v", err)
