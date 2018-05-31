@@ -232,7 +232,6 @@ func reexec() {
 				if err.Error() == "no child processes" {
 					// We exited. We need to pass the correct error code from
 					// the child.
-					fmt.Printf("exit code: %d\n", exitCode)
 					os.Exit(exitCode)
 				}
 
