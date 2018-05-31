@@ -19,6 +19,7 @@ func (cmd *pullCommand) Args() string      { return "[OPTIONS] NAME[:TAG|@DIGEST
 func (cmd *pullCommand) ShortHelp() string { return pullHelp }
 func (cmd *pullCommand) LongHelp() string  { return pullHelp }
 func (cmd *pullCommand) Hidden() bool      { return false }
+func (cmd *pullCommand) DoReexec() bool    { return true }
 
 func (cmd *pullCommand) Register(fs *flag.FlagSet) {}
 

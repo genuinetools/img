@@ -15,6 +15,7 @@ func (cmd *versionCommand) Args() string      { return "" }
 func (cmd *versionCommand) ShortHelp() string { return versionHelp }
 func (cmd *versionCommand) LongHelp() string  { return versionHelp }
 func (cmd *versionCommand) Hidden() bool      { return false }
+func (cmd *versionCommand) DoReexec() bool    { return false }
 
 func (cmd *versionCommand) Register(fs *flag.FlagSet) {}
 

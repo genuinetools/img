@@ -18,6 +18,7 @@ func (cmd *removeCommand) Args() string      { return "[OPTIONS] IMAGE [IMAGE...
 func (cmd *removeCommand) ShortHelp() string { return removeHelp }
 func (cmd *removeCommand) LongHelp() string  { return removeHelp }
 func (cmd *removeCommand) Hidden() bool      { return false }
+func (cmd *removeCommand) DoReexec() bool    { return true }
 
 func (cmd *removeCommand) Register(fs *flag.FlagSet) {}
 

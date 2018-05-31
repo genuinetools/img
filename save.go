@@ -23,6 +23,7 @@ func (cmd *saveCommand) Args() string      { return "[OPTIONS] IMAGE [IMAGE...]"
 func (cmd *saveCommand) ShortHelp() string { return saveHelp }
 func (cmd *saveCommand) LongHelp() string  { return saveHelp }
 func (cmd *saveCommand) Hidden() bool      { return false }
+func (cmd *saveCommand) DoReexec() bool    { return true }
 
 func (cmd *saveCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.output, "o", "", "Write to a file, instead of STDOUT")

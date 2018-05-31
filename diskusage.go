@@ -25,6 +25,7 @@ func (cmd *diskUsageCommand) Args() string      { return "[OPTIONS]" }
 func (cmd *diskUsageCommand) ShortHelp() string { return diskUsageShortHelp }
 func (cmd *diskUsageCommand) LongHelp() string  { return diskUsageLongHelp }
 func (cmd *diskUsageCommand) Hidden() bool      { return false }
+func (cmd *diskUsageCommand) DoReexec() bool    { return true }
 
 func (cmd *diskUsageCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.filter, "f", "", "Filter output based on conditions provided (snapshot ID supported)")

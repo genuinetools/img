@@ -33,6 +33,7 @@ func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }
 func (cmd *buildCommand) ShortHelp() string { return buildHelp }
 func (cmd *buildCommand) LongHelp() string  { return buildHelp }
 func (cmd *buildCommand) Hidden() bool      { return false }
+func (cmd *buildCommand) DoReexec() bool    { return true }
 
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")

@@ -40,6 +40,7 @@ type command interface {
 	LongHelp() string       // "Foo the first bar meeting the following conditions..."
 	Register(*flag.FlagSet) // command-specific flags
 	Hidden() bool           // indicates whether the command should be hidden from help output
+	DoReexec() bool         // indicates whether the command should preform a re-exec or not
 	Run([]string) error
 }
 
@@ -53,62 +54,6 @@ func (s *stringSlice) String() string {
 func (s *stringSlice) Set(value string) error {
 	*s = append(*s, value)
 	return nil
-}
-
-func init() {
-	// TODO(jessfraz): This is a hack to rexec our selves and wait for the
-	// process since it was not exiting correctly with the constructor.
-	if len(os.Getenv("IMG_RUNNING_TESTS")) <= 0 && len(os.Getenv("IMG_DO_UNSHARE")) <= 0 && system.GetParentNSeuid() != 0 {
-		var (
-			pgid int
-			err  error
-		)
-
-		// On ^C, or SIGTERM handle exit.
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			for sig := range c {
-				logrus.Infof("Received %s, exiting.", sig.String())
-				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-					logrus.Fatalf("syscall.Kill %d error: %v", pgid, err)
-					continue
-				}
-				os.Exit(0)
-			}
-		}()
-
-		// Initialize and reexec with our unshare.
-		cmd := exec.Command("/proc/self/exe", os.Args[1:]...)
-		cmd.Env = append(os.Environ(), "IMG_DO_UNSHARE=1")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setpgid: true,
-		}
-		if err := cmd.Start(); err != nil {
-			logrus.Fatalf("cmd.Start error: %v", err)
-		}
-
-		pgid, err = syscall.Getpgid(cmd.Process.Pid)
-		if err != nil {
-			logrus.Fatalf("getpgid error: %v", err)
-		}
-
-		var ws syscall.WaitStatus
-		for {
-			_, err := syscall.Wait4(-pgid, &ws, syscall.WNOHANG, nil)
-			if err != nil {
-				if err.Error() == "no child processes" {
-					// We exited.
-					os.Exit(0)
-				}
-
-				logrus.Fatalf("wait4 error: %v", err)
-			}
-		}
-	}
 }
 
 func main() {
@@ -183,6 +128,11 @@ func main() {
 				logrus.Fatalf("%s is not a valid snapshots backend", backend)
 			}
 
+			// Perform the re-exec if necessary.
+			if command.DoReexec() {
+				reexec()
+			}
+
 			// Run the command with the post-flag-processing args.
 			if err := command.Run(fs.Args()); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -225,6 +175,62 @@ func resetUsage(fs *flag.FlagSet, name, args, longHelp string) {
 			fmt.Fprintln(os.Stderr, "Flags:")
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, flagBlock.String())
+		}
+	}
+}
+
+func reexec() {
+	// TODO(jessfraz): This is a hack to re-exec our selves and wait for the
+	// process since it was not exiting correctly with the constructor.
+	if len(os.Getenv("IMG_RUNNING_TESTS")) <= 0 && len(os.Getenv("IMG_DO_UNSHARE")) <= 0 && system.GetParentNSeuid() != 0 {
+		var (
+			pgid int
+			err  error
+		)
+
+		// On ^C, or SIGTERM handle exit.
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			for sig := range c {
+				logrus.Infof("Received %s, exiting.", sig.String())
+				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+					logrus.Fatalf("syscall.Kill %d error: %v", pgid, err)
+					continue
+				}
+				os.Exit(0)
+			}
+		}()
+
+		// Initialize and re-exec with our unshare.
+		cmd := exec.Command("/proc/self/exe", os.Args[1:]...)
+		cmd.Env = append(os.Environ(), "IMG_DO_UNSHARE=1")
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+		if err := cmd.Start(); err != nil {
+			logrus.Fatalf("cmd.Start error: %v", err)
+		}
+
+		pgid, err = syscall.Getpgid(cmd.Process.Pid)
+		if err != nil {
+			logrus.Fatalf("getpgid error: %v", err)
+		}
+
+		var ws syscall.WaitStatus
+		for {
+			_, err := syscall.Wait4(-pgid, &ws, syscall.WNOHANG, nil)
+			if err != nil {
+				if err.Error() == "no child processes" {
+					// We exited.
+					os.Exit(0)
+				}
+
+				logrus.Fatalf("wait4 error: %v", err)
+			}
 		}
 	}
 }
