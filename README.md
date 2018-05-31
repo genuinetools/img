@@ -37,7 +37,7 @@ Kubernetes, see:
 
 For the on-going work on `runc` patches upstream, please see:
 
-- [opencontainers/runc#1692](https://github.com/opencontainers/runc/pull/1692)
+- [opencontainers/runc#1806](https://github.com/opencontainers/runc/pull/1806)
 - [opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688)
 
 For the on-going work toward integrating runc with these patches to `buildkit`, 
