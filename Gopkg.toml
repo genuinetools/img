@@ -82,6 +82,11 @@
   name = "github.com/docker/cli"
   branch = "master"
 
+[[override]]
+  name = "github.com/boltdb/bolt"
+  source = "github.com/coreos/bbolt"
+  branch = "master"
+
 [[constraint]]
   name = "github.com/docker/distribution"
   branch = "master"

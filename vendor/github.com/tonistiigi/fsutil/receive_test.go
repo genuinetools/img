@@ -2,9 +2,10 @@ package fsutil
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"hash"
-	io "io"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,10 +13,9 @@ import (
 	"testing"
 	"time"
 
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -120,15 +120,15 @@ file zzz.aa
 
 	h, ok := ts.Hash("zzz/aa")
 	assert.True(t, ok)
-	assert.Equal(t, h, digest.Digest("sha256:99b6ef96ee0572b5b3a4eb28f00b715d820bfd73836e59cc1565e241f4d1bb2f"))
+	assert.Equal(t, digest.Digest("sha256:99b6ef96ee0572b5b3a4eb28f00b715d820bfd73836e59cc1565e241f4d1bb2f"), h)
 
 	h, ok = ts.Hash("foo2")
 	assert.True(t, ok)
-	assert.Equal(t, h, digest.Digest("sha256:dd2529f7749ba45ea55de3b2e10086d6494cc45a94e57650c2882a6a14b4ff32"))
+	assert.Equal(t, digest.Digest("sha256:dd2529f7749ba45ea55de3b2e10086d6494cc45a94e57650c2882a6a14b4ff32"), h)
 
 	h, ok = ts.Hash("zzz/bb/cc/dd")
 	assert.True(t, ok)
-	assert.Equal(t, h, digest.Digest("sha256:eca07e8f2d09bd574ea2496312e6de1685ef15b8e6a49a534ed9e722bcac8adc"))
+	assert.Equal(t, digest.Digest("sha256:eca07e8f2d09bd574ea2496312e6de1685ef15b8e6a49a534ed9e722bcac8adc"), h)
 
 	k, ok := chs.c["zzz/aa"]
 	assert.Equal(t, ok, true)
@@ -178,11 +178,11 @@ file zzz.aa
 
 	h, ok = ts.Hash("zzz/bb/cc/dd")
 	assert.True(t, ok)
-	assert.Equal(t, h, digest.Digest("sha256:eca07e8f2d09bd574ea2496312e6de1685ef15b8e6a49a534ed9e722bcac8adc"))
+	assert.Equal(t, digest.Digest("sha256:eca07e8f2d09bd574ea2496312e6de1685ef15b8e6a49a534ed9e722bcac8adc"), h)
 
 	h, ok = ts.Hash("zzz/bb/cc/foo")
 	assert.True(t, ok)
-	assert.Equal(t, h, digest.Digest("sha256:cd14a931fc2e123ded338093f2864b173eecdee578bba6ec24d0724272326c3a"))
+	assert.Equal(t, digest.Digest("sha256:cd14a931fc2e123ded338093f2864b173eecdee578bba6ec24d0724272326c3a"), h)
 
 	_, ok = ts.Hash("foo2")
 	assert.False(t, ok)

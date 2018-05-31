@@ -41,10 +41,11 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  branch = "master"
   name = "github.com/boltdb/bolt"
   packages = ["."]
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
+  revision = "af9db2027c98c61ecd8e17caa5bd265792b9b9a2"
+  source = "github.com/coreos/bbolt"
 
 [[projects]]
   branch = "master"
@@ -118,6 +119,22 @@
   name = "github.com/containerd/typeurl"
   packages = ["."]
   revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
+
+[[projects]]
+  name = "github.com/coreos/go-systemd"
+  packages = [
+    "activation",
+    "dbus",
+    "util"
+  ]
+  revision = "39ca1b05acc7ad1220e09f133283b8859a8b71ab"
+  version = "v17"
+
+[[projects]]
+  name = "github.com/coreos/pkg"
+  packages = ["dlopen"]
+  revision = "97fdf19511ea361ae1c100dd393cc47f8dcfa1e1"
+  version = "v4"
 
 [[projects]]
   name = "github.com/cyphar/filepath-securejoin"
@@ -261,6 +278,12 @@
   revision = "19f124dca53a83f3e5c91607a280ff42a03ede58"
 
 [[projects]]
+  name = "github.com/godbus/dbus"
+  packages = ["."]
+  revision = "a389bdde4dd695d414e47b755e95e72b7826432c"
+  version = "v4.1.0"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -400,6 +423,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mrunalp/fileutils"
+  packages = ["."]
+  revision = "7d4729fb36185a7c1719923406c9d40e54fb93c7"
+
+[[projects]]
+  branch = "master"
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
   revision = "c9281466c8b2f606084ac71339773efd177436e7"
@@ -418,9 +447,21 @@
   branch = "all-rootless-patches"
   name = "github.com/opencontainers/runc"
   packages = [
+    "libcontainer",
+    "libcontainer/apparmor",
+    "libcontainer/cgroups",
+    "libcontainer/cgroups/fs",
+    "libcontainer/cgroups/systemd",
     "libcontainer/configs",
+    "libcontainer/configs/validate",
+    "libcontainer/criurpc",
+    "libcontainer/intelrdt",
+    "libcontainer/keys",
+    "libcontainer/mount",
+    "libcontainer/nsenter",
     "libcontainer/seccomp",
     "libcontainer/specconv",
+    "libcontainer/stacktrace",
     "libcontainer/system",
     "libcontainer/user",
     "libcontainer/utils"
@@ -433,6 +474,15 @@
   packages = ["specs-go"]
   revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
   version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/opencontainers/selinux"
+  packages = [
+    "go-selinux",
+    "go-selinux/label"
+  ]
+  revision = "ba1aefe8057f1d0cfb8e88d0ec1dc85925ef987d"
+  version = "v1.0.0-rc1"
 
 [[projects]]
   branch = "master"
@@ -520,13 +570,34 @@
   branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "04a9f706d65bb25a80b4e918a933de97674ef791"
+  revision = "ab2d22a018cf16a6e806d10bcad1c4c34cceded7"
+
+[[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
+  name = "github.com/vishvananda/netlink"
+  packages = [
+    ".",
+    "nl"
+  ]
+  revision = "a2ad57a690f3caf3015351d2d6e1c0b95c349752"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/vishvananda/netns"
+  packages = ["."]
+  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
+  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
 
 [[projects]]
   branch = "master"
@@ -591,7 +662,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
+  revision = "4065a77fc542a455295382a23a996a08ed18813a"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -629,6 +700,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6f0b68904b5ed71d68d9c740eeb5ff8d3418ac9cb4bdd826399fee8d925f231c"
+  inputs-digest = "a316e27f5f36a24916c3a9f39ef1b6d9d62cc9db94ab1a1a69bcc48c0b6c9309"
   solver-name = "gps-cdcl"
   solver-version = 1

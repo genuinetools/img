@@ -1,6 +1,7 @@
 package fsutil
 
 import (
+	"context"
 	"hash"
 	"io"
 	"os"
@@ -9,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 )
 
