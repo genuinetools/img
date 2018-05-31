@@ -20,9 +20,9 @@ jobs:
       after_success:
         - bash <(curl -s https://codecov.io/bash)
     - stage: Build Release
-      script: make release
-    - stage: Deploy GitHub Release
-      script: echo "Deploying to GitHub releases ..."
+      script:
+        - make release
+        - echo "Deploying to GitHub releases ..."
       deploy:
         provider: releases
         api_key:
