@@ -14,7 +14,7 @@ import (
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
-	"github.com/genuinetools/img/executor/runc"
+	"github.com/genuinetools/img/internal/executor/runc"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"

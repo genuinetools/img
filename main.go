@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"text/tabwriter"
 
+	_ "github.com/genuinetools/img/internal/unshare"
 	"github.com/genuinetools/img/types"
-	_ "github.com/genuinetools/img/unshare"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 )
