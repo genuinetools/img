@@ -11,6 +11,7 @@ before_install:
   - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/backports.list
   - sudo apt update
   - sudo apt install -y --no-install-recommends -t trusty-backports libseccomp-dev parallel uidmap
+  - curl -sSL -o runc https://misc.j3ss.co/tmp/runc && chmod +x runc && sudo mv runc /usr/bin/runc
 jobs:
   include:
     - script: make all
@@ -34,8 +35,9 @@ jobs:
         on:
           tags: true
     - stage: Run e2e Tests
-      script: make
-      script: ./contrib/e2e-dockerfiles-build-test.sh
+      script:
+        - make install
+        - ./contrib/e2e-dockerfiles-build-test.sh
       if: branch != master
       env:
         - STATE_DIR=$HOME/img

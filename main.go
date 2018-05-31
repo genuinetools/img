@@ -134,9 +134,12 @@ func main() {
 			// If the command requires runc and we do not have it installed,
 			// install it from the embedded asset.
 			if command.RequiresRunc() && !binutils.RuncBinaryExists() {
-				if err := binutils.InstallRuncBinary(); err != nil {
+				runcDir, err := binutils.InstallRuncBinary()
+				if err != nil {
+					os.RemoveAll(runcDir)
 					logrus.Fatalf("Installing embedded runc binary failed: %v", err)
 				}
+				defer os.RemoveAll(runcDir)
 			}
 
 			// Run the command with the post-flag-processing args.

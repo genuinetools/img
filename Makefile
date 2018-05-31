@@ -144,7 +144,7 @@ $(RUNCBUILDDIR):
 	git clone --depth 1 --branch all-rootless-patches https://github.com/jessfraz/runc.git "$@"
 
 $(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
-	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static
+	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"
 
 internal/binutils/runc.go: $(RUNCBUILDDIR)/runc
 	go-bindata -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
