@@ -7,6 +7,7 @@ REPO_URL="${REPO_URL:-r.j3ss.co}"
 JOBS=${JOBS:-2}
 
 ERRORS="$(pwd)/errors"
+STATE_DIR="$(mktemp -d)"
 
 build_and_push(){
 	base=$1
@@ -14,7 +15,7 @@ build_and_push(){
 	build_dir=$3
 
 	echo "Building ${REPO_URL}/${base}:${suite} for context ${build_dir}"
-	img build -t ${REPO_URL}/${base}:${suite} ${build_dir}
+	img build -state "$STATE_DIR" -t ${REPO_URL}/${base}:${suite} ${build_dir}
 
 	# on successful build, push the image
 	echo "                       ---                                   "
