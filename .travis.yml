@@ -13,6 +13,7 @@
   install:
     - go get github.com/golang/lint/golint
     - go get honnef.co/go/tools/cmd/staticcheck
+    - go get -u github.com/jteeuwen/go-bindata/...
     - curl -sSL -o runc https://misc.j3ss.co/tmp/runc && chmod +x runc && sudo mv runc /usr/bin/runc
     - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/backports.list
     - sudo apt update

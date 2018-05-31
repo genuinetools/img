@@ -17,12 +17,13 @@ import (
 
 const listHelp = `List images and digests.`
 
-func (cmd *listCommand) Name() string      { return "ls" }
-func (cmd *listCommand) Args() string      { return "[OPTIONS]" }
-func (cmd *listCommand) ShortHelp() string { return listHelp }
-func (cmd *listCommand) LongHelp() string  { return listHelp }
-func (cmd *listCommand) Hidden() bool      { return false }
-func (cmd *listCommand) DoReexec() bool    { return true }
+func (cmd *listCommand) Name() string       { return "ls" }
+func (cmd *listCommand) Args() string       { return "[OPTIONS]" }
+func (cmd *listCommand) ShortHelp() string  { return listHelp }
+func (cmd *listCommand) LongHelp() string   { return listHelp }
+func (cmd *listCommand) Hidden() bool       { return false }
+func (cmd *listCommand) DoReexec() bool     { return true }
+func (cmd *listCommand) RequiresRunc() bool { return false }
 
 func (cmd *listCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")

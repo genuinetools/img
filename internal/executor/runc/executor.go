@@ -3,7 +3,6 @@ package runc
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -36,11 +35,6 @@ type Executor struct {
 
 // New creates a new runc executor.
 func New(root string, unprivileged, noMount bool) (executor.Executor, error) {
-	// Make sure the runc binary exists.
-	if exists := BinaryExists(); !exists {
-		return nil, errors.New("cannot find runc binary locally, please install runc")
-	}
-
 	// Make the root directory.
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create root directory in %s: %v", root, err)
@@ -249,11 +243,4 @@ func (s *forwardIO) Stdout() io.ReadCloser {
 
 func (s *forwardIO) Stderr() io.ReadCloser {
 	return nil
-}
-
-// BinaryExists checks if the runc binary exists.
-func BinaryExists() bool {
-	_, err := exec.LookPath("runc")
-	// Return true when there is no error.
-	return err == nil
 }

@@ -48,3 +48,8 @@ cross/
 # Go coverage results
 coverage.txt
 profile.out
+
+_output/
+
+# Generated embedded runc
+internal/binutils/runc.go

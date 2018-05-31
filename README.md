@@ -81,10 +81,13 @@ You might also be interested in reading:
 
 ## Installation
 
-You need to have `runc` (see the top section for rootless mode) and `newuidmap` installed.
+You need to have `newuidmap` installed.
 On Ubuntu, `newuidmap` is provided by the `uidmap` package.
+`runc` will be installed on start from an embedded binary if it is not already
+available locally.
 
-NOTE: These steps work only for Linux. Compile and run in a container (explained below) if you're on Windows or MacOS.
+NOTE: These steps work only for Linux. Compile and run in a container 
+(explained below) if you're on Windows or MacOS.
 
 #### Binaries
 
@@ -98,10 +101,6 @@ $ export SHASUM=$(curl -L https://github.com/genuinetools/img/releases/download/
 $ if [ "$SHASUM" != "$(shasum -a 256 /usr/local/bin/img | awk '{ print $1 }')" ]; then echo "sha256sum mismatch!"; fi
 $ sudo chmod a+x /usr/local/bin/img
 $ echo "img installed!"
-
-# Install runc with patches
-$ sudo curl -L https://misc.j3ss.co/tmp/runc -o /usr/local/bin/runc
-$ sudo chmod a+x /usr/local/bin/runc
 ```
 
 #### Via Go

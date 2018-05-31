@@ -23,12 +23,13 @@ const loginShortHelp = `Log in to a Docker registry.`
 
 var loginLongHelp = loginShortHelp + fmt.Sprintf("\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
 
-func (cmd *loginCommand) Name() string      { return "login" }
-func (cmd *loginCommand) Args() string      { return "[OPTIONS] [SERVER]" }
-func (cmd *loginCommand) ShortHelp() string { return loginShortHelp }
-func (cmd *loginCommand) LongHelp() string  { return loginLongHelp }
-func (cmd *loginCommand) Hidden() bool      { return false }
-func (cmd *loginCommand) DoReexec() bool    { return false }
+func (cmd *loginCommand) Name() string       { return "login" }
+func (cmd *loginCommand) Args() string       { return "[OPTIONS] [SERVER]" }
+func (cmd *loginCommand) ShortHelp() string  { return loginShortHelp }
+func (cmd *loginCommand) LongHelp() string   { return loginLongHelp }
+func (cmd *loginCommand) Hidden() bool       { return false }
+func (cmd *loginCommand) DoReexec() bool     { return false }
+func (cmd *loginCommand) RequiresRunc() bool { return false }
 
 func (cmd *loginCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.user, "u", "", "Username")

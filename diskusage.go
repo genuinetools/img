@@ -20,12 +20,13 @@ const diskUsageShortHelp = `Show image disk usage.`
 // TODO: make the long help actually useful
 const diskUsageLongHelp = `Show image disk usage.`
 
-func (cmd *diskUsageCommand) Name() string      { return "du" }
-func (cmd *diskUsageCommand) Args() string      { return "[OPTIONS]" }
-func (cmd *diskUsageCommand) ShortHelp() string { return diskUsageShortHelp }
-func (cmd *diskUsageCommand) LongHelp() string  { return diskUsageLongHelp }
-func (cmd *diskUsageCommand) Hidden() bool      { return false }
-func (cmd *diskUsageCommand) DoReexec() bool    { return true }
+func (cmd *diskUsageCommand) Name() string       { return "du" }
+func (cmd *diskUsageCommand) Args() string       { return "[OPTIONS]" }
+func (cmd *diskUsageCommand) ShortHelp() string  { return diskUsageShortHelp }
+func (cmd *diskUsageCommand) LongHelp() string   { return diskUsageLongHelp }
+func (cmd *diskUsageCommand) Hidden() bool       { return false }
+func (cmd *diskUsageCommand) DoReexec() bool     { return true }
+func (cmd *diskUsageCommand) RequiresRunc() bool { return false }
 
 func (cmd *diskUsageCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.filter, "f", "", "Filter output based on conditions provided (snapshot ID supported)")

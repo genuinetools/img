@@ -30,14 +30,14 @@ GO := go
 GOOSARCHES = linux/amd64
 
 .PHONY: build
-build: $(NAME) ## Builds a dynamic executable or package
+build: runc $(NAME) ## Builds a dynamic executable or package
 
 $(NAME): $(wildcard *.go) $(wildcard */*.go) VERSION.txt
 	@echo "+ $@"
 	$(GO) build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o $(NAME) .
 
 .PHONY: static
-static: ## Builds a static executable
+static: runc ## Builds a static executable
 	@echo "+ $@"
 	CGO_ENABLED=1 $(GO) build \
 				-tags "$(BUILDTAGS) static_build" \
@@ -48,32 +48,32 @@ all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, f
 .PHONY: fmt
 fmt: ## Verifies all files have men `gofmt`ed
 	@echo "+ $@"
-	@gofmt -s -l . | grep -v '.pb.go:' | grep -v vendor | tee /dev/stderr
+	@gofmt -s -l . | grep -v '.pb.go:' | grep -v vendor | grep -v cross | tee /dev/stderr
 
 .PHONY: lint
 lint: ## Verifies `golint` passes
 	@echo "+ $@"
-	@golint ./... | grep -v '.pb.go:' | grep -v vendor | tee /dev/stderr
+	@golint ./... | grep -v '.pb.go:' | grep -v vendor | grep -v cross | tee /dev/stderr
 
 .PHONY: test
 test: ## Runs the go tests
 	@echo "+ $@"
-	@IMG_RUNNING_TESTS=1 $(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor)
+	@IMG_RUNNING_TESTS=1 $(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor | grep -v cross)
 
 .PHONY: vet
 vet: ## Verifies `go vet` passes
 	@echo "+ $@"
-	@$(GO) vet $(shell $(GO) list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
+	@$(GO) vet $(shell $(GO) list ./... | grep -v vendor | grep -v cross) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: staticcheck
 staticcheck: ## Verifies `staticcheck` passes
 	@echo "+ $@"
-	@staticcheck $(shell $(GO) list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
+	@staticcheck $(shell $(GO) list ./... | grep -v vendor | grep -v cross) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: cover
 cover: ## Runs go test with coverage
 	@echo "" > coverage.txt
-	@for d in $(shell $(GO) list ./... | grep -v vendor); do \
+	@for d in $(shell $(GO) list ./... | grep -v vendor | grep -v cross); do \
 		IMG_RUNNING_TESTS=1 $(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
 		if [ -f profile.out ]; then \
 			cat profile.out >> coverage.txt; \
@@ -82,7 +82,7 @@ cover: ## Runs go test with coverage
 	done;
 
 .PHONY: install
-install: ## Installs the executable or package
+install: runc ## Installs the executable or package
 	@echo "+ $@"
 	$(GO) install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
 
@@ -139,11 +139,26 @@ AUTHORS:
 	@$(file >>$@,# For how it is generated, see `make AUTHORS`.)
 	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" >> $@
 
+RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
+$(RUNCBUILDDIR):
+	git clone --depth 1 --branch all-rootless-patches https://github.com/jessfraz/runc.git "$@"
+
+$(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
+	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static
+
+internal/binutils/runc.go: $(RUNCBUILDDIR)/runc
+	go-bindata -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
+	gofmt -s -w $(CURDIR)/internal/binutils/runc.go
+
+.PHONY: runc
+runc: internal/binutils/runc.go ## Builds runc locally so it can be embedded in the resulting binary.
+
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages
 	@echo "+ $@"
 	$(RM) $(NAME)
 	$(RM) -r $(BUILDDIR)
+	$(RM) internal/binutils/runc.go
 
 .PHONY: help
 help:

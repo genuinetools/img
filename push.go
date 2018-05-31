@@ -13,12 +13,13 @@ import (
 
 const pushHelp = `Push an image or a repository to a registry.`
 
-func (cmd *pushCommand) Name() string      { return "push" }
-func (cmd *pushCommand) Args() string      { return "[OPTIONS] NAME[:TAG]" }
-func (cmd *pushCommand) ShortHelp() string { return pushHelp }
-func (cmd *pushCommand) LongHelp() string  { return pushHelp }
-func (cmd *pushCommand) Hidden() bool      { return false }
-func (cmd *pushCommand) DoReexec() bool    { return true }
+func (cmd *pushCommand) Name() string       { return "push" }
+func (cmd *pushCommand) Args() string       { return "[OPTIONS] NAME[:TAG]" }
+func (cmd *pushCommand) ShortHelp() string  { return pushHelp }
+func (cmd *pushCommand) LongHelp() string   { return pushHelp }
+func (cmd *pushCommand) Hidden() bool       { return false }
+func (cmd *pushCommand) DoReexec() bool     { return true }
+func (cmd *pushCommand) RequiresRunc() bool { return false }
 
 func (cmd *pushCommand) Register(fs *flag.FlagSet) {
 	fs.BoolVar(&cmd.insecure, "insecure-registry", false, "Push to insecure registry")

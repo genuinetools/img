@@ -13,12 +13,13 @@ import (
 
 const tagHelp = `Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.`
 
-func (cmd *tagCommand) Name() string      { return "tag" }
-func (cmd *tagCommand) Args() string      { return "SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]" }
-func (cmd *tagCommand) ShortHelp() string { return tagHelp }
-func (cmd *tagCommand) LongHelp() string  { return tagHelp }
-func (cmd *tagCommand) Hidden() bool      { return false }
-func (cmd *tagCommand) DoReexec() bool    { return true }
+func (cmd *tagCommand) Name() string       { return "tag" }
+func (cmd *tagCommand) Args() string       { return "SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]" }
+func (cmd *tagCommand) ShortHelp() string  { return tagHelp }
+func (cmd *tagCommand) LongHelp() string   { return tagHelp }
+func (cmd *tagCommand) Hidden() bool       { return false }
+func (cmd *tagCommand) DoReexec() bool     { return true }
+func (cmd *tagCommand) RequiresRunc() bool { return false }
 
 func (cmd *tagCommand) Register(fs *flag.FlagSet) {}
 
