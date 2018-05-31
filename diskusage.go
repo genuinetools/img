@@ -67,7 +67,11 @@ func (cmd *diskUsageCommand) Run(args []string) (err error) {
 			if di.Mutable {
 				id += "*"
 			}
-			fmt.Fprintf(tw, "%-71s\t%-11v\t%s\t%s\n", id, !di.InUse, units.BytesSize(float64(di.Size_)), di.Description)
+			desc := di.Description
+			if len(desc) > 50 {
+				desc = desc[0:50] + "..."
+			}
+			fmt.Fprintf(tw, "%s\t%t\t%s\t%s\n", id, !di.InUse, units.BytesSize(float64(di.Size_)), desc)
 		}
 
 		tw.Flush()
