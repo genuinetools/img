@@ -56,12 +56,12 @@ lint: ## Verifies `golint` passes
 	@golint ./... | grep -v '.pb.go:' | grep -v vendor | grep -v cross | tee /dev/stderr
 
 .PHONY: test
-test: ## Runs the go tests
+test: runc ## Runs the go tests
 	@echo "+ $@"
 	@IMG_RUNNING_TESTS=1 $(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor | grep -v cross)
 
 .PHONY: vet
-vet: ## Verifies `go vet` passes
+vet: runc ## Verifies `go vet` passes
 	@echo "+ $@"
 	@$(GO) vet $(shell $(GO) list ./... | grep -v vendor | grep -v cross) | grep -v '.pb.go:' | tee /dev/stderr
 
@@ -71,7 +71,7 @@ staticcheck: ## Verifies `staticcheck` passes
 	@staticcheck $(shell $(GO) list ./... | grep -v vendor | grep -v cross) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: cover
-cover: ## Runs go test with coverage
+cover: runc ## Runs go test with coverage
 	@echo "" > coverage.txt
 	@for d in $(shell $(GO) list ./... | grep -v vendor | grep -v cross); do \
 		IMG_RUNNING_TESTS=1 $(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
@@ -97,7 +97,7 @@ sha256sum $(BUILDDIR)/$(1)/$(2)/$(NAME) > $(BUILDDIR)/$(1)/$(2)/$(NAME).sha256;
 endef
 
 .PHONY: cross
-cross: *.go VERSION.txt ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary)
+cross: *.go VERSION.txt runc ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary)
 	@echo "+ $@"
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
