@@ -16,7 +16,7 @@ func (c *Client) DiskUsage(ctx context.Context, req *controlapi.DiskUsageRequest
 		}
 	}
 
-	// Call solve.
+	// Call diskusage.
 	resp, err := c.controller.DiskUsage(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("getting disk usage failed: %v", err)
