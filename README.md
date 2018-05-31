@@ -397,11 +397,11 @@ Make sure you have sufficient entries (typically `>=65536`) in your
 
 ### High Level
 
-<img src="how-it-works-high-level.png" width=300 />
+<img src="contrib/how-it-works-high-level.png" width=300 />
 
 ### Low Level
 
-<img src="how-it-works-low-level.png" width=300 />
+<img src="contrib/how-it-works-low-level.png" width=300 />
 
 ### Snapshotter Backends
 
