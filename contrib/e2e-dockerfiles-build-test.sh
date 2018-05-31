@@ -7,7 +7,12 @@ REPO_URL="${REPO_URL:-r.j3ss.co}"
 JOBS=${JOBS:-2}
 
 ERRORS="$(pwd)/errors"
-STATE_DIR="$(mktemp -d)"
+
+
+# Set the state directory.
+if [[ -z "$STATE_DIR" ]]; then
+	STATE_DIR="$(mktemp -d)"
+fi
 
 build_and_push(){
 	base=$1
