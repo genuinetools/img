@@ -20,10 +20,11 @@
     - sudo apt install -y --no-install-recommends -t trusty-backports libseccomp-dev uidmap
   jobs:
     include:
-      - stage: Run all
-        script: make all
+      - script: make all
       - stage: Run Test Coverage
         script: make cover
+        after_success:
+          - bash <(curl -s https://codecov.io/bash)
       - stage: Build Release
         script: make release
       - stage: Deploy GitHub Release
@@ -44,5 +45,3 @@
         if: branch = master
         env:
           - STATE_DIR=$HOME/img
-  after_success:
-    - bash <(curl -s https://codecov.io/bash)
