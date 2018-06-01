@@ -141,7 +141,7 @@ AUTHORS:
 
 RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
 $(RUNCBUILDDIR):
-	git clone --depth 1 --branch all-rootless-patches https://github.com/jessfraz/runc.git "$@"
+	git clone --depth 1 https://github.com/opencontainers/runc.git "$@"
 
 $(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
 	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"

@@ -14,9 +14,9 @@ import (
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
-	"github.com/genuinetools/img/internal/executor/runc"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
+	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/throttle"
 	"github.com/moby/buildkit/worker/base"
@@ -38,7 +38,6 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 
 	snapshotRoot := filepath.Join(c.root, "snapshots")
 	unprivileged := system.GetParentNSeuid() != 0
-	noMount := unprivileged
 
 	// Create the snapshotter.
 	var (
@@ -49,7 +48,6 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		s, err = native.NewSnapshotter(snapshotRoot)
 	case types.OverlayFSBackend:
 		// On some distros such as Ubuntu overlayfs can be mounted without privileges
-		noMount = false
 		s, err = overlay.NewSnapshotter(snapshotRoot)
 	default:
 		// "auto" backend needs to be already resolved on Client instantiation
@@ -59,7 +57,11 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		return opt, fmt.Errorf("creating %s snapshotter failed: %v", c.backend, err)
 	}
 
-	exe, err := runc.New(filepath.Join(c.root, "executor"), unprivileged, noMount)
+	exeOpt := runcexecutor.Opt{
+		Root:     filepath.Join(c.root, "executor"),
+		Rootless: unprivileged,
+	}
+	exe, err := runcexecutor.New(exeOpt)
 	if err != nil {
 		return opt, err
 	}
