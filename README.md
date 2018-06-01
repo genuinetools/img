@@ -116,7 +116,7 @@ $ sudo make install
 There is an [AUR build](https://aur.archlinux.org/packages/img/).
 
 ```console
-sudo pacman -S img
+$ sudo pacman -S img
 ```
 
 #### Gentoo
