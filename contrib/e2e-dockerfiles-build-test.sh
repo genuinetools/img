@@ -58,7 +58,7 @@ main(){
 
 	# find the dockerfiles
 	IFS=$'\n'
-	files=( $(find -L . -iname '*Dockerfile' | sed 's|./||' | sort -R --random-source=/dev/urandom | head -n 5) )
+	files=( $(find -L . -iname '*Dockerfile' | sed 's|./||' | sort -R --random-source=/dev/urandom | head -n 1) )
 	unset IFS
 
 	# build all dockerfiles
