@@ -48,6 +48,8 @@ You might also be interested in reading:
     - [Binaries](#binaries)
     - [Via Go](#via-go)
     - [From Source](#from-source)
+    - [Arch Linux](#arch-linux)
+    - [Gentoo](#gentoo)
     - [Running with Docker](#running-with-docker)
 * [Usage](#usage)
     + [Build an Image](#build-an-image)
@@ -107,6 +109,22 @@ $ git clone https://github.com/genuinetools/img $GOPATH/src/github.com/genuineto
 $ cd !$
 $ make
 $ sudo make install
+```
+
+#### Arch Linux
+
+There is an [AUR build](https://aur.archlinux.org/packages/img/).
+
+```console
+sudo pacman -S img
+```
+
+#### Gentoo
+
+There is an [ebuild](https://github.com/gentoo/gentoo/tree/master/app-emulation/img).
+
+```console
+$ sudo emerge -a app-emulation/img
 ```
 
 #### Running with Docker
