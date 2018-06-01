@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,15 +15,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containerd/console"
 	"github.com/containerd/containerd/namespaces"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/genuinetools/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
+	bkclient "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
+	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/opencontainers/go-digest"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -141,6 +146,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 	eg, ctx := errgroup.WithContext(ctx)
 
+	ch := make(chan *controlapi.StatusResponse)
 	eg.Go(func() error {
 		return sess.Run(ctx, sessDialer)
 	})
@@ -156,7 +162,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 			},
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,
-		})
+		}, ch)
+	})
+	eg.Go(func() error {
+		return showProgress(ch)
 	})
 	if err := eg.Wait(); err != nil {
 		return err
@@ -310,4 +319,74 @@ func (cmd *buildCommand) getLocalDirs() map[string]string {
 		"context":    cmd.contextDir,
 		"dockerfile": filepath.Dir(cmd.dockerfilePath),
 	}
+}
+
+func showProgress(ch chan *controlapi.StatusResponse) error {
+	c, err := console.ConsoleFromFile(os.Stderr)
+	if err != nil {
+		vtxNames := make(map[digest.Digest]string)
+		// FIXME: more beautiful logs for non-console session
+		for resp := range ch {
+			for _, v := range resp.Vertexes {
+				vtxNames[v.Digest] = v.Name
+			}
+			for _, v := range resp.Logs {
+				name := vtxNames[v.Vertex]
+				if name == "" {
+					name = "?"
+				}
+				log := fmt.Sprintf("[%s]: %s", name, string(v.Msg))
+				if !strings.HasSuffix(log, "\n") {
+					log += "\n"
+				}
+				if v.Stream == 1 {
+					os.Stdout.Write([]byte(log))
+				} else {
+					os.Stderr.Write([]byte(log))
+				}
+			}
+		}
+		return nil
+	}
+	// Use BuildKit progress UI if console is available
+	displayCh := make(chan *bkclient.SolveStatus)
+	go func() {
+		for resp := range ch {
+			s := bkclient.SolveStatus{}
+			for _, v := range resp.Vertexes {
+				s.Vertexes = append(s.Vertexes, &bkclient.Vertex{
+					Digest:    v.Digest,
+					Inputs:    v.Inputs,
+					Name:      v.Name,
+					Started:   v.Started,
+					Completed: v.Completed,
+					Error:     v.Error,
+					Cached:    v.Cached,
+				})
+			}
+			for _, v := range resp.Statuses {
+				s.Statuses = append(s.Statuses, &bkclient.VertexStatus{
+					ID:        v.ID,
+					Vertex:    v.Vertex,
+					Name:      v.Name,
+					Total:     v.Total,
+					Current:   v.Current,
+					Timestamp: v.Timestamp,
+					Started:   v.Started,
+					Completed: v.Completed,
+				})
+			}
+			for _, v := range resp.Logs {
+				s.Logs = append(s.Logs, &bkclient.VertexLog{
+					Vertex:    v.Vertex,
+					Stream:    int(v.Stream),
+					Data:      v.Msg,
+					Timestamp: v.Timestamp,
+				})
+			}
+			displayCh <- &s
+		}
+		close(displayCh)
+	}()
+	return progressui.DisplaySolveStatus(context.TODO(), c, displayCh)
 }

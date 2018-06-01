@@ -23,8 +23,7 @@ and academia as well.
 
 Currently this works out of the box on a Linux machine if you install via 
 the directions covered in [installing from binaries](#binaries). This
-installation will ensure you have the correct version of `img` and also the
-patched version of `runc`.
+installation will ensure you have the correct version of `img` and also `runc`.
 
 The ultimate goal is to also have this work inside a container. There are
 patches being made to container runtimes and Kubernetes to make this possible. 
@@ -35,17 +34,8 @@ Kubernetes, see:
 - [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934)
 - [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283)
 
-For the on-going work on `runc` patches upstream, please see:
-
-- [opencontainers/runc#1806](https://github.com/opencontainers/runc/pull/1806)
-- [opencontainers/runc#1688](https://github.com/opencontainers/runc/pull/1688)
-
-For the on-going work toward integrating runc with these patches to `buildkit`, 
-please refer to:
-
-- [moby/buildkit#252](https://github.com/moby/buildkit/issues/252#issuecomment-359696630)
-- [AkihiroSuda/buildkit_poc@511c7e71](https://github.com/AkihiroSuda/buildkit_poc/commit/511c7e71156fb349dca52475d8c0dc0946159b7b).
-
+The patches for runc has been merged into the upstream since `ecd55a4135e0a26de884ce436442914f945b1e76` (May 30, 2018).
+The upstream BuildKit can also run in rootless mode since `65b526438b86a17cf35042011051ce15c8bfb92a` (June 1, 2018).
 
 You might also be interested in reading: 
 * [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)

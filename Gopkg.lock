@@ -372,6 +372,7 @@
     "control",
     "executor",
     "executor/oci",
+    "executor/runcexecutor",
     "exporter",
     "exporter/containerimage",
     "exporter/local",
@@ -409,8 +410,10 @@
     "util/dockerexporter",
     "util/flightcontrol",
     "util/imageutil",
+    "util/libcontainer_specconv",
     "util/progress",
     "util/progress/logs",
+    "util/progress/progressui",
     "util/pull",
     "util/push",
     "util/system",
@@ -419,7 +422,13 @@
     "worker",
     "worker/base"
   ]
-  revision = "a3f37e2780560b13b186bb86525b092001909b1f"
+  revision = "65b526438b86a17cf35042011051ce15c8bfb92a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/morikuni/aec"
+  packages = ["."]
+  revision = "39771216ff4c63d11f5e604076f9c45e8be1067b"
 
 [[projects]]
   branch = "master"
@@ -573,6 +582,12 @@
   revision = "ab2d22a018cf16a6e806d10bcad1c4c34cceded7"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/tonistiigi/units"
+  packages = ["."]
+  revision = "29de085e9400559bd68aea2e7bc21566e7b8281d"
+
+[[projects]]
   name = "github.com/urfave/cli"
   packages = ["."]
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
@@ -700,6 +715,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a316e27f5f36a24916c3a9f39ef1b6d9d62cc9db94ab1a1a69bcc48c0b6c9309"
+  inputs-digest = "745b4059aaba3e5960ffbcad647c1a5264df71fecc1474b856e1b4e38f99a9fa"
   solver-name = "gps-cdcl"
   solver-version = 1

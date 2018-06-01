@@ -11,9 +11,8 @@ RUN apk add --no-cache \
 
 FROM gobuild-base AS runc
 ARG RUNC_VERSION
-RUN git clone https://github.com/jessfraz/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
+RUN git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
 	&& cd "$GOPATH/src/github.com/opencontainers/runc" \
-	&& git checkout -q "all-rootless-patches" \
 	&& make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\"" \
 	&& mv runc /usr/bin/runc
 
