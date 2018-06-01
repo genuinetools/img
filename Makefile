@@ -147,11 +147,15 @@ $(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
 	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"
 
 internal/binutils/runc.go: $(RUNCBUILDDIR)/runc
-	go-bindata -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
+	go-bindata -tags \!noembed -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
 	gofmt -s -w $(CURDIR)/internal/binutils/runc.go
 
 .PHONY: runc
+ifneq (,$(findstring noembed,$(BUILDTAGS)))
+runc: ## No-op when not embedding runc.
+else
 runc: internal/binutils/runc.go ## Builds runc locally so it can be embedded in the resulting binary.
+endif
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages

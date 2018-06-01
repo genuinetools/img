@@ -134,6 +134,10 @@ func main() {
 			// If the command requires runc and we do not have it installed,
 			// install it from the embedded asset.
 			if command.RequiresRunc() && !binutils.RuncBinaryExists() {
+				if len(os.Getenv("IMG_DISABLE_EMBEDDED_RUNC")) > 0 {
+					// Fail early with the error to install runc.
+					logrus.Fatal("please install `runc`")
+				}
 				runcDir, err := binutils.InstallRuncBinary()
 				if err != nil {
 					os.RemoveAll(runcDir)

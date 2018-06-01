@@ -38,6 +38,5 @@ jobs:
       script:
         - make install
         - ./contrib/e2e-dockerfiles-build-test.sh
-      if: branch != master
       env:
         - STATE_DIR=$HOME/img
