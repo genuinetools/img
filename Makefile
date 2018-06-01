@@ -147,6 +147,7 @@ $(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
 	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"
 
 internal/binutils/runc.go: $(RUNCBUILDDIR)/runc
+	@$(GO) get -u github.com/jteeuwen/go-bindata/... # update go-bindata tool
 	go-bindata -tags \!noembed -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
 	gofmt -s -w $(CURDIR)/internal/binutils/runc.go
 
