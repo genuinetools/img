@@ -76,6 +76,10 @@ On Ubuntu, `newuidmap` is provided by the `uidmap` package.
 `runc` will be installed on start from an embedded binary if it is not already
 available locally.
 
+If you would like to disable the embedded runc you can use `BUILDTAGS="seccomp
+noembed"` while building from source with `make`. Or the environment variable
+`IMG_DISABLE_EMBEDDED_RUNC=1` on execution of the `img` binary.
+
 NOTE: These steps work only for Linux. Compile and run in a container 
 (explained below) if you're on Windows or MacOS.
 
@@ -107,6 +111,9 @@ $ git clone https://github.com/genuinetools/img $GOPATH/src/github.com/genuineto
 $ cd !$
 $ make
 $ sudo make install
+
+# For packagers if you would like to disable the embedded `runc`, please use:
+$ make BUILDTAGS="seccomp noembed"
 ```
 
 #### Running with Docker
