@@ -4,7 +4,7 @@ set -o pipefail
 
 SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 REPO_URL="${REPO_URL:-r.j3ss.co}"
-JOBS=${JOBS:-2}
+JOBS=${JOBS:-1}
 
 ERRORS="$(pwd)/errors"
 
@@ -58,7 +58,7 @@ main(){
 
 	# find the dockerfiles
 	IFS=$'\n'
-	files=( $(find -L . -iname '*Dockerfile' | sed 's|./||' | sort) )
+	files=( $(find -L . -iname '*Dockerfile' | sed 's|./||' | sort -R --random-source=/dev/urandom | head -n 5) )
 	unset IFS
 
 	# build all dockerfiles
