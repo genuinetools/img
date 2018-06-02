@@ -183,7 +183,7 @@ Flags:
   -build-arg  Set build-time variables (default: [])
   -d          enable debug logging (default: false)
   -f          Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
-  -state      directory to hold the global state (default: /tmp/img)
+  -state      directory to hold the global state (default: /home/user/.local/share/img)
   -t          Name and optionally a tag in the 'name:tag' format (default: <none>)
   -target     Set the target build stage to build (default: <none>)
 ```
@@ -235,7 +235,7 @@ Flags:
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (default: [])
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -260,7 +260,7 @@ Flags:
 
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -286,7 +286,7 @@ Flags:
   -backend            backend for snapshots ([auto native overlayfs]) (default: auto)
   -d                  enable debug logging (default: false)
   -insecure-registry  Push to insecure registry (default: false)
-  -state              directory to hold the global state (default: /tmp/img)
+  -state              directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -307,7 +307,7 @@ Flags:
 
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -328,7 +328,7 @@ Flags:
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -o        Write to a file, instead of STDOUT (default: <none>)
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -351,7 +351,7 @@ Flags:
 
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ### Disk Usage
@@ -367,7 +367,7 @@ Flags:
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -f        Filter output based on conditions provided (snapshot ID supported) (default: <none>)
-  -state    directory to hold the global state (default: /tmp/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
@@ -404,7 +404,7 @@ Flags:
   -d               enable debug logging (default: false)
   -p               Password (default: <none>)
   -password-stdin  Take the password from stdin (default: false)
-  -state           directory to hold the global state (default: /tmp/img)
+  -state           directory to hold the global state (default: /home/user/.local/share/img)
   -u               Username (default: <none>)
 ```
 

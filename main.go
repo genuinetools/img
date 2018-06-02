@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
@@ -24,8 +25,6 @@ var (
 	backend  string
 	stateDir string
 	debug    bool
-
-	defaultStateDirectory = "/tmp/img"
 
 	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend}
 )
@@ -52,6 +51,20 @@ func (s *stringSlice) String() string {
 func (s *stringSlice) Set(value string) error {
 	*s = append(*s, value)
 	return nil
+}
+
+func defaultStateDirectory() string {
+	//  pam_systemd sets XDG_RUNTIME_DIR but not other dirs.
+	xdgDataHome := os.Getenv("XDG_DATA_HOME")
+	if xdgDataHome != "" {
+		dirs := strings.Split(xdgDataHome, ":")
+		return filepath.Join(dirs[0], "img")
+	}
+	home := os.Getenv("HOME")
+	if home != "" {
+		return filepath.Join(home, ".local", "share", "img")
+	}
+	return "/tmp/img"
 }
 
 func main() {
@@ -89,13 +102,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	defaultStateDir := defaultStateDirectory()
 	for _, command := range commands {
 		if name := command.Name(); os.Args[1] == name {
 			// Build flag set with global flags in there.
 			fs := flag.NewFlagSet(name, flag.ExitOnError)
 			fs.BoolVar(&debug, "d", false, "enable debug logging")
 			fs.StringVar(&backend, "backend", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
-			fs.StringVar(&stateDir, "state", defaultStateDirectory, fmt.Sprintf("directory to hold the global state"))
+			fs.StringVar(&stateDir, "state", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
 
 			// Register the subcommand flags in there, too.
 			command.Register(fs)
