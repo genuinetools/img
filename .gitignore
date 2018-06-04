@@ -53,3 +53,7 @@ _output/
 
 # Generated embedded runc
 internal/binutils/runc.go
+
+# direnv files
+.envrc
+
