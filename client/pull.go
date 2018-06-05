@@ -3,14 +3,13 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/distribution/reference"
+	"github.com/moby/buildkit/cache"
+	imageexporter "github.com/moby/buildkit/exporter/containerimage"
 	"github.com/moby/buildkit/source"
-	"github.com/moby/buildkit/util/pull"
+	"github.com/moby/buildkit/source/containerimage"
 )
 
 // Pull retrieves an image from a remote registry.
@@ -36,36 +35,71 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 		return nil, fmt.Errorf("creating worker opt failed: %v", err)
 	}
 
-	puller := &pull.Puller{
-		Snapshotter:  opt.Snapshotter,
-		ContentStore: opt.ContentStore,
-		Applier:      opt.Applier,
-		Src:          identifier.Reference,
-		Resolver:     pull.NewResolver(ctx, opt.SessionManager, opt.ImageStore),
-	}
-	pulled, err := puller.Pull(ctx)
+	cm, err := cache.NewManager(cache.ManagerOpt{
+		Snapshotter:   opt.Snapshotter,
+		MetadataStore: opt.MetadataStore,
+	})
 	if err != nil {
 		return nil, err
 	}
-	// Update the target image. Create it if it does not exist.
-	img := images.Image{
-		Name:      image,
-		Target:    pulled.Descriptor,
-		CreatedAt: time.Now(),
-	}
-	if _, err := opt.ImageStore.Update(ctx, img); err != nil {
-		if !errdefs.IsNotFound(err) {
-			return nil, fmt.Errorf("updating image store for %s failed: %v", image, err)
-		}
 
-		// Create it if we didn't find it.
-		if _, err := opt.ImageStore.Create(ctx, img); err != nil {
-			return nil, fmt.Errorf("creating image in image store for %s failed: %v", image, err)
-		}
+	// Create the source for the pull.
+	srcOpt := containerimage.SourceOpt{
+		SessionManager: opt.SessionManager,
+		Snapshotter:    opt.Snapshotter,
+		ContentStore:   opt.ContentStore,
+		Applier:        opt.Applier,
+		CacheAccessor:  cm,
+		ImageStore:     opt.ImageStore,
+	}
+	src, err := containerimage.NewSource(srcOpt)
+	if err != nil {
+		return nil, err
+	}
+	s, err := src.Resolve(ctx, identifier)
+	if err != nil {
+		return nil, err
+	}
+	ref, err := s.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the exporter for the pull.
+	iw, err := imageexporter.NewImageWriter(imageexporter.WriterOpt{
+		Snapshotter:  opt.Snapshotter,
+		ContentStore: opt.ContentStore,
+		Differ:       opt.Differ,
+	})
+	if err != nil {
+		return nil, err
+	}
+	expOpt := imageexporter.Opt{
+		SessionManager: opt.SessionManager,
+		Images:         opt.ImageStore,
+		ImageWriter:    iw,
+	}
+	exp, err := imageexporter.New(expOpt)
+	if err != nil {
+		return nil, err
+	}
+	e, err := exp.Resolve(ctx, map[string]string{"name": image})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := e.Export(ctx, ref, nil); err != nil {
+		return nil, err
+	}
+
+	// Get the image.
+	img, err := opt.ImageStore.Get(ctx, image)
+	if err != nil {
+		return nil, fmt.Errorf("getting image %s from image store failed: %v", image, err)
 	}
 	size, err := img.Size(ctx, opt.ContentStore, platforms.Default())
 	if err != nil {
-		return nil, fmt.Errorf("calculating size of image %s failed: %v", image, err)
+		return nil, fmt.Errorf("calculating size of image %s failed: %v", img.Name, err)
 	}
+
 	return &ListedImage{Image: img, ContentSize: size}, nil
 }
