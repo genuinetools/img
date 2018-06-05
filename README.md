@@ -58,6 +58,7 @@ You might also be interested in reading:
     + [Push an Image](#push-an-image)
     + [Tag an Image](#tag-an-image)
     + [Export an Image to Docker](#export-an-image-to-docker)
+    + [Unpack an Image to a rootfs](#unpack-an-image-to-a-rootfs)
     + [Remove an Image](#remove-an-image)
     + [Disk Usage](#disk-usage)
     + [Login to a Registry](#login-to-a-registry)
@@ -338,6 +339,27 @@ $ img save jess/thing | docker load
 533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
 3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
 Loaded image: jess/thing
+```
+
+### Unpack an Image to a rootfs
+
+```console
+$ img unpack -h
+Usage: img unpack [OPTIONS] IMAGE
+
+Unpack an image to a rootfs directory.
+
+Flags:
+
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
+  -d        enable debug logging (default: false)
+  -o        Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory) (default: <none>)
+  -state    directory to hold the global state (default: /home/jessie/.local/share/img)
+```
+
+```console
+$ img unpack busybox
+Successfully unpacked rootfs for busybox to: /home/jessie/.go/src/github.com/genuinetools/img/rootfs
 ```
 
 ### Remove an Image

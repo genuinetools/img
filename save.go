@@ -14,7 +14,6 @@ import (
 	"github.com/moby/buildkit/util/appcontext"
 )
 
-// TODO(AkihiroSuda): support saving multiple images
 // TODO(AkihiroSuda): support OCI archive
 const saveHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
 

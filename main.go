@@ -79,6 +79,7 @@ func main() {
 		&removeCommand{},
 		&saveCommand{},
 		&tagCommand{},
+		&unpackCommand{},
 		&versionCommand{},
 	}
 
