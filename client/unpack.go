@@ -11,6 +11,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/sirupsen/logrus"
 )
 
 // Unpack exports an image to a rootfs destination directory.
@@ -55,6 +56,8 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 	// Make the destination directory.
 
 	for _, desc := range manifest.Layers {
+		logrus.Debugf("Unpacking layer %s", desc.Digest.String())
+
 		// Read the blob from the content store.
 		layer, err := opt.ContentStore.ReaderAt(ctx, desc.Digest)
 		if err != nil {
