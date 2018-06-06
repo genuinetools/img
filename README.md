@@ -354,12 +354,12 @@ Flags:
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
   -o        Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory) (default: <none>)
-  -state    directory to hold the global state (default: /home/jessie/.local/share/img)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 
 ```console
 $ img unpack busybox
-Successfully unpacked rootfs for busybox to: /home/jessie/.go/src/github.com/genuinetools/img/rootfs
+Successfully unpacked rootfs for busybox to: /home/user/rootfs
 ```
 
 ### Remove an Image
