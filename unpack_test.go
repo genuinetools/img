@@ -33,7 +33,7 @@ func TestUnpackFromBuild(t *testing.T) {
 }
 
 func TestUnpackFromPull(t *testing.T) {
-	run(t, "pull", "alpine")
+	run(t, "pull", "r.j3ss.co/stress")
 
 	tmpd, err := ioutil.TempDir("", "img-unpack")
 	if err != nil {
@@ -43,7 +43,7 @@ func TestUnpackFromPull(t *testing.T) {
 
 	rootfs := filepath.Join(tmpd, "rootfs")
 
-	run(t, "unpack", "-o", rootfs, "alpine")
+	run(t, "unpack", "-o", rootfs, "r.j3ss.co/stress")
 
 	// Make sure the image actually is unpacked in the directory.
 	etc := filepath.Join(rootfs, "etc")

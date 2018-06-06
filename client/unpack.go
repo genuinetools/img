@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/distribution/reference"
-	"github.com/genuinetools/img/internal/ioutils"
-	bkidentity "github.com/moby/buildkit/identity"
-	"github.com/opencontainers/image-spec/identity"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/sirupsen/logrus"
 )
 
 // Unpack exports an image to a rootfs destination directory.
@@ -51,30 +51,26 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 	if err != nil {
 		return fmt.Errorf("getting image rootfs digest failed: %v", err)
 	}
+	logrus.Infof("rootfs: %#v", rootfs)
 
-	chainID := identity.ChainID(rootfs)
+	// Make the destination directory.
 
-	// TODO(jessfraz): do a better containerKey.
-	containerKey := bkidentity.NewID()
-	// Get the snapshot mounts.
-	mounts, err := opt.Snapshotter.View(ctx, containerKey, chainID.String())
-	if err != nil {
-		return fmt.Errorf("viewing snapshot for %s failed: %v", chainID.String(), err)
-	}
+	for _, di := range rootfs {
+		fmt.Printf("unpacking %v\n", di.String())
 
-	m, err := mounts.Mount()
-	if err != nil {
-		return err
-	}
+		// Read the blob from the content store.
+		layer, err := opt.ContentStore.ReaderAt(ctx, di)
+		if err != nil {
+			return fmt.Errorf("getting reader for digest %s failed: %v", di.String(), err)
+		}
 
-	// Make sure there is only one mount.
-	if len(m) > 1 {
-		return fmt.Errorf("expected 1 mount got: %d", len(m))
-	}
-
-	// Copy the snapshot to the destination directory.
-	if err := ioutils.Copy(m[0].Source, dest); err != nil {
-		return fmt.Errorf("copying %s to %s failed: %v", m[0].Source, dest, err)
+		// Unpack the tarfile to the rootfs path.
+		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
+		if err := archive.Untar(content.NewReader(layer), dest, &archive.TarOptions{
+			NoLchown: true,
+		}); err != nil {
+			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", di.String(), dest, err)
+		}
 	}
 
 	return nil
