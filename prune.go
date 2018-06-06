@@ -82,7 +82,7 @@ func (cmd *pruneCommand) Run(args []string) (err error) {
 	}
 
 	tw = tabwriter.NewWriter(os.Stdout, 1, 8, 1, '\t', 0)
-	fmt.Fprintf(tw, "Reclaimable:\t%s\n", units.BytesSize(float64(reclaimable)))
+	fmt.Fprintf(tw, "Reclaimed:\t%s\n", units.BytesSize(float64(reclaimable)))
 	fmt.Fprintf(tw, "Total:\t%s\n", units.BytesSize(float64(total)))
 	tw.Flush()
 

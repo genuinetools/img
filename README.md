@@ -442,7 +442,7 @@ sha256:f64a552a56ce93b6e389328602f2cd830280fd543ade026905e69895b5696b7a true    
 vghewl4h6hajocnm9czxep04f                                               true            52.4MiB mount /dest from exec copy /src-0/img usr/bin/img
 54clnaehxvw00h4vu3ksfcpx0                                               true            527.4MiBmount / from exec /bin/sh -c apk add --no-cache  b...
 joalalcyzfnyupfinf3rr7a3x                                               true            35.11MiBmount / from exec /bin/sh -c apk add --no-cache  b...
-Reclaimable:    4.148GiB
+Reclaimed:      4.148GiB
 Total:          4.148GiB
 ```
 
