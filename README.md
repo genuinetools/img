@@ -8,7 +8,7 @@ container image builder.
 `img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
 as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 
-The commands/UX are the same as `docker {build,push,pull,login}` so all you 
+The commands/UX are the same as `docker {build,tag,push,pull,login,save}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
 ## Goals
@@ -25,6 +25,8 @@ Currently this works out of the box on a Linux machine if you install via
 the directions covered in [installing from binaries](#binaries). This
 installation will ensure you have the correct version of `img` and also `runc`.
 
+**Upstream Patches**
+
 The ultimate goal is to also have this work inside a container. There are
 patches being made to container runtimes and Kubernetes to make this possible. 
 For the on-going work toward getting patches into container runtimes and
@@ -40,6 +42,12 @@ The upstream BuildKit can also run in rootless mode since `65b526438b86a17cf3504
 You might also be interested in reading: 
 * [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
 * [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
+
+**Benchmarks**
+
+If you are curious about benchmarks comparing various container builders, check
+out [@AkihiroSuda's buildbench](https://github.com/AkihiroSuda/buildbench) 
+[results](https://github.com/AkihiroSuda/buildbench/issues/1).
 
 
 **Table of Contents**
@@ -71,7 +79,6 @@ You might also be interested in reading:
     + [Snapshotter Backends](#snapshotter-backends)
 * [Contributing](#contributing)
 * [Acknowledgements](#acknowledgements)
-* [Prior Art](#prior-art)
 
 ## Installation
 
@@ -195,35 +202,46 @@ Flags:
 **Use just like you would `docker build`.**
 
 ```console
-$ img build -t jess/img .
-Building jess/img
+$ img build -t r.j3ss.co/img .
+Building r.j3ss.co/img:latest
 Setting up the rootfs... this may take a bit.
-RUN [/bin/sh -c apk add --no-cache      ca-certificates]
---->
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/main/x86_64/APKINDEX.tar.gz
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/community/x86_64/APKINDEX.tar.gz
-OK: 5 MiB in 12 packages
-<--- 5e433zdbh8eosea0u9b70axb3 0 <nil>
-RUN [copy /src-0 /dest/go/src/github.com/genuinetools/img]
---->
-<--- rqku3imaivvjpgl676se1gupc 0 <nil>
-RUN [/bin/sh -c set -x  && apk add --no-cache --virtual .build-deps             bash            git             gcc             libc-dev      libgcc           libseccomp-dev          linux-headers           make    && cd /go/src/github.com/genuinetools/img   && make static  && mv img /usr/bin/img         && mkdir -p /go/src/github.com/opencontainers   && git clone https://github.com/opencontainers/runc /go/src/github.com/opencontainers/runc     && cd /go/src/github.com/opencontainers/runc    && make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\""   && mv runc /usr/bin/runc        && apk del .build-deps  && rm -rf /go   && echo "Build complete."]
---->
-+ apk add --no-cache --virtual .build-deps bash git gcc libc-dev libgcc libseccomp-dev linux-headers make
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/main/x86_64/APKINDEX.tar.gz
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.7/community/x86_64/APKINDEX.tar.gz
-(1/28) Installing pkgconf (1.3.10-r0)
-(2/28) Installing ncurses-terminfo-base (6.0_p20171125-r0)
-(3/28) Installing ncurses-terminfo (6.0_p20171125-r0)
-(4/28) Installing ncurses-libs (6.0_p20171125-r0)
-(5/28) Installing readline (7.0.003-r0)
-(6/28) Installing bash (4.4.19-r1)
-....
-....
-RUN [copy /src-0/certs /dest/etc/ssl/certs]
---->
-<--- 6ljir2x800w6deqlradhw0dy2 0 <nil>
-Successfully built jess/img
+[+] Building 44.7s (16/16) FINISHED                                                        
+ => local://dockerfile (Dockerfile)                                                   0.0s
+ => => transferring dockerfile: 1.15kB                                                0.0s
+ => local://context (.dockerignore)                                                   0.0s
+ => => transferring context: 02B                                                      0.0s
+ => CACHED docker-image://docker.io/tonistiigi/copy:v0.1.1@sha256:854cee92ccab4c6d63  0.0s
+ => => resolve docker.io/tonistiigi/copy:v0.1.1@sha256:854cee92ccab4c6d63183d147389e  0.0s
+ => CACHED docker-image://docker.io/library/alpine@sha256:e1871801d30885a610511c867d  0.0s
+ => => resolve docker.io/library/alpine@sha256:e1871801d30885a610511c867de0d6baca7ed  0.0s
+ => docker-image://docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e58  5.5s
+ => => resolve docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e5896d1  0.0s
+ => => sha256:866414f805391b58973d4e3d76e5d32ae51baecb1c93762c9751b9d6c5 126B / 126B  0.0s
+ => => sha256:ae8dbf6f23bf1c326de78fc780c6a870bf11eb86b45a7dc567 308.02kB / 308.02kB  0.0s
+ => => sha256:44ccce322b34208317d748e998212cd677c16f1a58c2ff5e59578c 3.86kB / 3.86kB  0.0s
+ => => sha256:0d01df27c53e651ecfa5c689dafb8c63c759761a757cc37e30eccc5e3a 153B / 153B  0.0s
+ => => sha256:ff3a5c916c92643ff77519ffa742d3ec61b7f591b6b7504599d95a 2.07MB / 2.07MB  0.0s
+ => => sha256:4be696a8d726150ed9636ea7156edcaa9ba8293df1aae49f9e 113.26MB / 113.26MB  0.0s
+ => => sha256:98c1f3458b21f50ac2e5896d14a644eadb3adcae5afdceac0cc9c2 2.04kB / 2.04kB  0.0s
+ => => sha256:bb31085d5c5db578edf3d4e5541cfb949b713bb7018bbac4dfd407 1.36kB / 1.36kB  0.0s
+ => => unpacking docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e5896  5.4s
+ => local://context                                                                   0.8s
+ => => transferring context: 116.83MB                                                 0.8s
+ => /bin/sh -c apk add --no-cache  bash  build-base  gcc  git  libseccomp-dev  linux  3.8s
+ => copy /src-0 go/src/github.com/genuinetools/img/                                   1.5s
+ => /bin/sh -c go get -u github.com/jteeuwen/go-bindata/...                           7.3s
+ => /bin/sh -c make static && mv img /usr/bin/img                                    15.2s
+ => /bin/sh -c git clone https://github.com/opencontainers/runc.git "$GOPATH/src/git  7.6s
+ => /bin/sh -c apk add --no-cache  bash  git  shadow  shadow-uidmap  strace           2.3s
+ => copy /src-0/img usr/bin/img                                                       0.5s
+ => copy /src-0/runc usr/bin/runc                                                     0.4s
+ => /bin/sh -c useradd --create-home --home-dir $HOME user  && chown -R user:user $H  0.4s
+ => exporting to image                                                                1.5s
+ => => exporting layers                                                               1.4s
+ => => exporting manifest sha256:03e034afb839fe6399a271efc972da823b1b6297ea792ec94fa  0.0s
+ => => exporting config sha256:92d033f9575176046db41f4f1feacc0602c8f2811f59d59f8e7b6  0.0s
+ => => naming to r.j3ss.co/img:latest                                                 0.0s
+Successfully built r.j3ss.co/img:latest
 ```
 
 ### List Image Layers
