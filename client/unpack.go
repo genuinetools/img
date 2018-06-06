@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/sirupsen/logrus"
 )
 
 // Unpack exports an image to a rootfs destination directory.
@@ -47,21 +47,18 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 		return fmt.Errorf("getting image %s from image store failed: %v", image, err)
 	}
 
-	rootfs, err := img.RootFS(ctx, opt.ContentStore, platforms.Default())
+	manifest, err := images.Manifest(ctx, opt.ContentStore, img.Target, platforms.Default())
 	if err != nil {
-		return fmt.Errorf("getting image rootfs digest failed: %v", err)
+		return fmt.Errorf("getting image manifest failed: %v", err)
 	}
-	logrus.Infof("rootfs: %#v", rootfs)
 
 	// Make the destination directory.
 
-	for _, di := range rootfs {
-		fmt.Printf("unpacking %v\n", di.String())
-
+	for _, desc := range manifest.Layers {
 		// Read the blob from the content store.
-		layer, err := opt.ContentStore.ReaderAt(ctx, di)
+		layer, err := opt.ContentStore.ReaderAt(ctx, desc.Digest)
 		if err != nil {
-			return fmt.Errorf("getting reader for digest %s failed: %v", di.String(), err)
+			return fmt.Errorf("getting reader for digest %s failed: %v", desc.Digest.String(), err)
 		}
 
 		// Unpack the tarfile to the rootfs path.
@@ -69,7 +66,7 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 		if err := archive.Untar(content.NewReader(layer), dest, &archive.TarOptions{
 			NoLchown: true,
 		}); err != nil {
-			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", di.String(), dest, err)
+			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", desc.Digest.String(), dest, err)
 		}
 	}
 
