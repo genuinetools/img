@@ -163,11 +163,13 @@ Commands:
   du       Show image disk usage.
   ls       List images and digests.
   login    Log in to a Docker registry.
+  prune    Prune and clean up the build cache.
   pull     Pull an image or a repository from a registry.
   push     Push an image or a repository to a registry.
   rm       Remove one or more images.
   save     Save an image to a tar archive (streamed to STDOUT by default).
   tag      Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
+  unpack   Unpack an image to a rootfs directory.
   version  Show the version information.
 ```
 
