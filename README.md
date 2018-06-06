@@ -61,6 +61,7 @@ You might also be interested in reading:
     + [Unpack an Image to a rootfs](#unpack-an-image-to-a-rootfs)
     + [Remove an Image](#remove-an-image)
     + [Disk Usage](#disk-usage)
+    + [Prune and Cleanup the Build Cache](#prune-and-cleanup-the-build-cache)
     + [Login to a Registry](#login-to-a-registry)
     + [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 * [How it Works](#how-it-works)
@@ -406,6 +407,25 @@ sha256:db193011cbfc238d622d65c4099750758df83d74571e8d7498392b17df381207 true    
 wn4m5i5swdcjvt1ud5bvtr75h*                                              true            4.204KiB        local source for dockerfile
 Reclaimable:    1.08GiB
 Total:          1.08GiB
+```
+
+### Prune and Cleanup the Build Cache
+
+```console
+$ img prune -h
+Usage: img prune [OPTIONS]
+
+Prune and clean up the build cache.
+
+Flags:
+
+  -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
+  -d        enable debug logging (default: false)
+  -state    directory to hold the global state (default: /home/user/.local/share/img)
+```
+
+```console
+$ img prune 
 ```
 
 ### Login to a Registry
