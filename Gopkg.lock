@@ -191,10 +191,6 @@
     "api/types/swarm",
     "api/types/swarm/runtime",
     "api/types/versions",
-    "builder/dockerfile/command",
-    "builder/dockerfile/instructions",
-    "builder/dockerfile/parser",
-    "builder/dockerfile/shell",
     "builder/dockerignore",
     "errdefs",
     "pkg/archive",
@@ -380,7 +376,11 @@
     "frontend",
     "frontend/dockerfile",
     "frontend/dockerfile/builder",
+    "frontend/dockerfile/command",
     "frontend/dockerfile/dockerfile2llb",
+    "frontend/dockerfile/instructions",
+    "frontend/dockerfile/parser",
+    "frontend/dockerfile/shell",
     "frontend/gateway/client",
     "identity",
     "session",
@@ -422,7 +422,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "65b526438b86a17cf35042011051ce15c8bfb92a"
+  revision = "376093d234ca9446a3d4dc9956d2eb3afff54baf"
 
 [[projects]]
   branch = "master"
@@ -453,7 +453,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "all-rootless-patches"
+  branch = "master"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer",
@@ -475,8 +475,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "bc1d5ab2a5cff452977ca0da02027a1e70765391"
-  source = "github.com/jessfraz/runc"
+  revision = "dd56ece8236d6d9e5bed4ea0c31fe53c7b873ff4"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -715,6 +714,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "745b4059aaba3e5960ffbcad647c1a5264df71fecc1474b856e1b4e38f99a9fa"
+  inputs-digest = "922e476ab24ff5a44153a3ff462292bc067decf4ea158f9d127b6883aff48fe2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,9 +1,9 @@
-package shell // import "github.com/docker/docker/builder/dockerfile/shell"
+// +build !windows
 
-import "strings"
+package shell
 
 // EqualEnvKeys compare two strings and returns true if they are equal. On
 // Windows this comparison is case insensitive.
 func EqualEnvKeys(from, to string) bool {
-	return strings.ToUpper(from) == strings.ToUpper(to)
+	return from == to
 }
