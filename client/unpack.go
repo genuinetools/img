@@ -53,8 +53,6 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 		return fmt.Errorf("getting image manifest failed: %v", err)
 	}
 
-	// Make the destination directory.
-
 	for _, desc := range manifest.Layers {
 		logrus.Debugf("Unpacking layer %s", desc.Digest.String())
 
