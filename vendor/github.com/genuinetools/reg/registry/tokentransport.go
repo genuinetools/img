@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -123,7 +124,19 @@ func (r *Registry) Token(url string) (string, error) {
 		return "", err
 	}
 
-	resp, err := r.Client.Do(req)
+	client := http.DefaultClient
+	if r.Opt.Insecure {
+		client = &http.Client{
+			Timeout: r.Opt.Timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -143,7 +156,7 @@ func (r *Registry) Token(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp, err = r.Client.Do(authReq)
+	resp, err = http.DefaultClient.Do(authReq)
 	if err != nil {
 		return "", err
 	}

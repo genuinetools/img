@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema2"
@@ -22,6 +23,7 @@ type Registry struct {
 	Password string
 	Client   *http.Client
 	Logf     LogfCallback
+	Opt      Opt
 }
 
 var reProtocol = regexp.MustCompile("^https?://")
@@ -37,26 +39,30 @@ func Log(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
+// Opt holds the options for a new registry.
+type Opt struct {
+	Insecure bool
+	Debug    bool
+	SkipPing bool
+	Timeout  time.Duration
+}
+
 // New creates a new Registry struct with the given URL and credentials.
-func New(auth types.AuthConfig, debug bool) (*Registry, error) {
+func New(auth types.AuthConfig, opt Opt) (*Registry, error) {
 	transport := http.DefaultTransport
 
-	return newFromTransport(auth, transport, debug)
-}
-
-// NewInsecure creates a new Registry struct with the given URL and credentials,
-// using a http.Transport that will not verify an SSL certificate.
-func NewInsecure(auth types.AuthConfig, debug bool) (*Registry, error) {
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+	if opt.Insecure {
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
 	}
 
-	return newFromTransport(auth, transport, debug)
+	return newFromTransport(auth, transport, opt)
 }
 
-func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, debug bool) (*Registry, error) {
+func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, opt Opt) (*Registry, error) {
 	url := strings.TrimSuffix(auth.ServerAddress, "/")
 
 	if !reProtocol.MatchString(url) {
@@ -80,7 +86,7 @@ func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, debug 
 
 	// set the logging
 	logf := Quiet
-	if debug {
+	if opt.Debug {
 		logf = Log
 	}
 
@@ -88,15 +94,19 @@ func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, debug 
 		URL:    url,
 		Domain: reProtocol.ReplaceAllString(url, ""),
 		Client: &http.Client{
+			Timeout:   opt.Timeout,
 			Transport: errorTransport,
 		},
 		Username: auth.Username,
 		Password: auth.Password,
 		Logf:     logf,
+		Opt:      opt,
 	}
 
-	if err := registry.Ping(); err != nil {
-		return nil, err
+	if !opt.SkipPing {
+		if err := registry.Ping(); err != nil {
+			return nil, err
+		}
 	}
 
 	return registry, nil

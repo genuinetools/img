@@ -85,12 +85,23 @@ func TestCopySimple(t *testing.T) {
 
 	eg.Go(func() error {
 		defer s1.(*fakeConnProto).closeSend()
-		return Send(ctx, s1, d, nil, nil)
+		return Send(ctx, s1, d, &WalkOpt{
+			Map: func(s *Stat) bool {
+				s.Uid = 0
+				s.Gid = 0
+				return true
+			},
+		}, nil)
 	})
 	eg.Go(func() error {
 		return Receive(ctx, s2, dest, ReceiveOpt{
 			NotifyHashed:  chs.HandleChange,
 			ContentHasher: simpleSHA256Hasher,
+			Filter: func(s *Stat) bool {
+				s.Uid = uint32(os.Getuid())
+				s.Gid = uint32(os.Getgid())
+				return true
+			},
 		})
 	})
 
@@ -147,12 +158,23 @@ file zzz.aa
 
 	eg.Go(func() error {
 		defer s1.(*fakeConnProto).closeSend()
-		return Send(ctx, s1, d, nil, nil)
+		return Send(ctx, s1, d, &WalkOpt{
+			Map: func(s *Stat) bool {
+				s.Uid = 0
+				s.Gid = 0
+				return true
+			},
+		}, nil)
 	})
 	eg.Go(func() error {
 		return Receive(ctx, s2, dest, ReceiveOpt{
 			NotifyHashed:  chs.HandleChange,
 			ContentHasher: simpleSHA256Hasher,
+			Filter: func(s *Stat) bool {
+				s.Uid = uint32(os.Getuid())
+				s.Gid = uint32(os.Getgid())
+				return true
+			},
 		})
 	})
 
@@ -320,6 +342,11 @@ func simpleSHA256Hasher(s *Stat) (hash.Hash, error) {
 	h := sha256.New()
 	ss := *s
 	ss.ModTime = 0
+
+	if os.FileMode(ss.Mode)&os.ModeSymlink != 0 {
+		ss.Mode = ss.Mode | 0777
+	}
+
 	dt, err := ss.Marshal()
 	if err != nil {
 		return nil, err

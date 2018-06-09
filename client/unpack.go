@@ -57,7 +57,7 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 		logrus.Debugf("Unpacking layer %s", desc.Digest.String())
 
 		// Read the blob from the content store.
-		layer, err := opt.ContentStore.ReaderAt(ctx, desc.Digest)
+		layer, err := opt.ContentStore.ReaderAt(ctx, desc)
 		if err != nil {
 			return fmt.Errorf("getting reader for digest %s failed: %v", desc.Digest.String(), err)
 		}

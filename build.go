@@ -27,7 +27,6 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
 	"github.com/moby/buildkit/util/progress/progressui"
-	"github.com/opencontainers/go-digest"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -46,6 +45,7 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
+	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
 }
 
 type buildCommand struct {
@@ -55,6 +55,7 @@ type buildCommand struct {
 	tag            string
 
 	contextDir string
+	noConsole  bool
 }
 
 func (cmd *buildCommand) Run(args []string) (err error) {
@@ -165,7 +166,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		}, ch)
 	})
 	eg.Go(func() error {
-		return showProgress(ch)
+		return showProgress(ch, cmd.noConsole)
 	})
 	if err := eg.Wait(); err != nil {
 		return err
@@ -321,34 +322,7 @@ func (cmd *buildCommand) getLocalDirs() map[string]string {
 	}
 }
 
-func showProgress(ch chan *controlapi.StatusResponse) error {
-	c, err := console.ConsoleFromFile(os.Stderr)
-	if err != nil {
-		vtxNames := make(map[digest.Digest]string)
-		// FIXME: more beautiful logs for non-console session
-		for resp := range ch {
-			for _, v := range resp.Vertexes {
-				vtxNames[v.Digest] = v.Name
-			}
-			for _, v := range resp.Logs {
-				name := vtxNames[v.Vertex]
-				if name == "" {
-					name = "?"
-				}
-				log := fmt.Sprintf("[%s]: %s", name, string(v.Msg))
-				if !strings.HasSuffix(log, "\n") {
-					log += "\n"
-				}
-				if v.Stream == 1 {
-					os.Stdout.Write([]byte(log))
-				} else {
-					os.Stderr.Write([]byte(log))
-				}
-			}
-		}
-		return nil
-	}
-	// Use BuildKit progress UI if console is available
+func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 	displayCh := make(chan *bkclient.SolveStatus)
 	go func() {
 		for resp := range ch {
@@ -388,5 +362,11 @@ func showProgress(ch chan *controlapi.StatusResponse) error {
 		}
 		close(displayCh)
 	}()
-	return progressui.DisplaySolveStatus(context.TODO(), c, displayCh)
+	var c console.Console
+	if !noConsole {
+		if cf, err := console.ConsoleFromFile(os.Stderr); err == nil {
+			c = cf
+		}
+	}
+	return progressui.DisplaySolveStatus(context.TODO(), c, os.Stdout, displayCh)
 }

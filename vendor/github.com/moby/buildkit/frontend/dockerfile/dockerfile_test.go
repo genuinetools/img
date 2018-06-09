@@ -65,7 +65,46 @@ func TestIntegration(t *testing.T) {
 		testPullScratch,
 		testSymlinkDestination,
 		testHTTPDockerfile,
+		testCopySymlinks,
 	})
+}
+
+func testCopySymlinks(t *testing.T, sb integration.Sandbox) {
+	t.Parallel()
+
+	dockerfile := []byte(`
+FROM scratch
+COPY foo /
+COPY sub/l* alllinks/
+`)
+
+	dir, err := tmpdir(
+		fstest.CreateFile("Dockerfile", dockerfile, 0600),
+		fstest.CreateFile("bar", []byte(`bar-contents`), 0600),
+		fstest.Symlink("bar", "foo"),
+		fstest.CreateDir("sub", 0700),
+		fstest.CreateFile("sub/lfile", []byte(`baz-contents`), 0600),
+		fstest.Symlink("subfile", "sub/l0"),
+		fstest.CreateFile("sub/subfile", []byte(`subfile-contents`), 0600),
+		fstest.Symlink("second", "sub/l1"),
+		fstest.Symlink("baz", "sub/second"),
+		fstest.CreateFile("sub/baz", []byte(`baz-contents`), 0600),
+	)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	c, err := client.New(sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	_, err = c.Solve(context.TODO(), nil, client.SolveOpt{
+		Frontend: "dockerfile.v0",
+		LocalDirs: map[string]string{
+			builder.LocalNameDockerfile: dir,
+			builder.LocalNameContext:    dir,
+		},
+	}, nil)
+	require.NoError(t, err)
 }
 
 func testHTTPDockerfile(t *testing.T, sb integration.Sandbox) {
@@ -199,7 +238,7 @@ ENTRYPOINT my entrypoint
 	desc, err := img.Config(ctx, ctr.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -290,7 +329,7 @@ COPY foo .
 	desc, err := img.Config(ctx, ctr.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, ctr.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -789,7 +828,7 @@ ENV foo=bar
 	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -872,7 +911,7 @@ EXPOSE 5000
 	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -1052,7 +1091,7 @@ RUN ["ls"]
 	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -1157,7 +1196,7 @@ USER nobody
 	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err = content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	dt, err = content.ReadBlob(ctx, client.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
@@ -1730,7 +1769,7 @@ LABEL foo=bar
 	desc, err := img.Config(ctx, client.ContentStore(), platforms.Default())
 	require.NoError(t, err)
 
-	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc.Digest)
+	dt, err := content.ReadBlob(ctx, client.ContentStore(), desc)
 	require.NoError(t, err)
 
 	var ociimg ocispec.Image
