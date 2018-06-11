@@ -96,6 +96,36 @@ file bar/foo
 
 	assert.Equal(t, `file foo2
 `, string(b.Bytes()))
+
+	b.Reset()
+	err = Walk(context.Background(), d, &WalkOpt{
+		IncludePatterns: []string{"b*/f*"},
+	}, bufWalk(b))
+	assert.NoError(t, err)
+
+	assert.Equal(t, `dir bar
+file bar/foo
+`, string(b.Bytes()))
+
+	b.Reset()
+	err = Walk(context.Background(), d, &WalkOpt{
+		IncludePatterns: []string{"b*/foo"},
+	}, bufWalk(b))
+	assert.NoError(t, err)
+
+	assert.Equal(t, `dir bar
+file bar/foo
+`, string(b.Bytes()))
+
+	b.Reset()
+	err = Walk(context.Background(), d, &WalkOpt{
+		IncludePatterns: []string{"b*/"},
+	}, bufWalk(b))
+	assert.NoError(t, err)
+
+	assert.Equal(t, `dir bar
+file bar/foo
+`, string(b.Bytes()))
 }
 
 func TestWalkerExclude(t *testing.T) {
@@ -118,6 +148,61 @@ dir foo
 file foo/bar2
 `, string(b.Bytes()))
 
+}
+
+func TestWalkerFollowLinks(t *testing.T) {
+	d, err := tmpDir(changeStream([]string{
+		"ADD bar file",
+		"ADD foo dir",
+		"ADD foo/l1 symlink /baz/one",
+		"ADD foo/l2 symlink /baz/two",
+		"ADD baz dir",
+		"ADD baz/one file",
+		"ADD baz/two symlink ../bax",
+		"ADD bax file",
+		"ADD bay file", // not included
+	}))
+	assert.NoError(t, err)
+	defer os.RemoveAll(d)
+	b := &bytes.Buffer{}
+	err = Walk(context.Background(), d, &WalkOpt{
+		FollowPaths: []string{"foo/l*", "bar"},
+	}, bufWalk(b))
+	assert.NoError(t, err)
+
+	assert.Equal(t, `file bar
+file bax
+dir baz
+file baz/one
+symlink:../bax baz/two
+dir foo
+symlink:/baz/one foo/l1
+symlink:/baz/two foo/l2
+`, string(b.Bytes()))
+}
+
+func TestWalkerFollowLinksToRoot(t *testing.T) {
+	d, err := tmpDir(changeStream([]string{
+		"ADD foo symlink .",
+		"ADD bar file",
+		"ADD bax file",
+		"ADD bay dir",
+		"ADD bay/baz file",
+	}))
+	assert.NoError(t, err)
+	defer os.RemoveAll(d)
+	b := &bytes.Buffer{}
+	err = Walk(context.Background(), d, &WalkOpt{
+		FollowPaths: []string{"foo"},
+	}, bufWalk(b))
+	assert.NoError(t, err)
+
+	assert.Equal(t, `file bar
+file bax
+dir bay
+file bay/baz
+symlink:. foo
+`, string(b.Bytes()))
 }
 
 func TestWalkerMap(t *testing.T) {

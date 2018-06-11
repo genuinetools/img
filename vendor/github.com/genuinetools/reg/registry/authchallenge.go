@@ -25,14 +25,14 @@ func parseAuthHeader(header http.Header) (*authService, error) {
 
 func parseChallenge(challengeHeader string) (*authService, error) {
 	if basicRegex.MatchString(challengeHeader) {
-		return nil, nil
+		return nil, fmt.Errorf("basic auth required")
 	}
 
 	match := bearerRegex.FindAllStringSubmatch(challengeHeader, -1)
 	if d := len(match); d != 1 {
 		return nil, fmt.Errorf("malformed auth challenge header: '%s', %d", challengeHeader, d)
 	}
-	parts := strings.Split(strings.TrimSpace(match[0][1]), ",")
+	parts := strings.SplitN(strings.TrimSpace(match[0][1]), ",", 3)
 
 	var realm, service string
 	var scope []string

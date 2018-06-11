@@ -11,12 +11,6 @@
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/BurntSushi/locker"
-  packages = ["."]
-  revision = "a6e239ea1c69bff1cfdb20c4b73dadf52f784b6a"
-
-[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
@@ -51,7 +45,7 @@
   branch = "master"
   name = "github.com/containerd/console"
   packages = ["."]
-  revision = "cb7008ab3d8359b78c5f464cb7cf160107ad5925"
+  revision = "9290d21dc56074581f619579c43d970b4514bc08"
 
 [[projects]]
   branch = "master"
@@ -95,7 +89,7 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "e4ad710ce832df8cb7bf9dd54b5806cff9d90663"
+  revision = "35887db096d26e8c5fb40e600e5b64e024f10df0"
 
 [[projects]]
   branch = "master"
@@ -151,7 +145,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "31d99ba630571432e998391badaab16900b34223"
+  revision = "75c1bb1f33d7cedbaf48404597d5bf9818199480"
 
 [[projects]]
   branch = "master"
@@ -199,6 +193,7 @@
     "pkg/idtools",
     "pkg/ioutils",
     "pkg/jsonmessage",
+    "pkg/locker",
     "pkg/longpath",
     "pkg/mount",
     "pkg/pools",
@@ -211,7 +206,7 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"
+  revision = "f5e60bbf21ea014a2854349ebc1c4e7e04e30398"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -268,10 +263,10 @@
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
-  branch = "master"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
-  revision = "19f124dca53a83f3e5c91607a280ff42a03ede58"
+  revision = "fc4797acd474fe66e617f491ced48c83f7aa355e"
+  version = "v0.13.1"
 
 [[projects]]
   name = "github.com/godbus/dbus"
@@ -422,7 +417,7 @@
     "worker",
     "worker/base"
   ]
-  revision = "376093d234ca9446a3d4dc9956d2eb3afff54baf"
+  revision = "4b8dc5b08bdd1b9a29d0f767d94a1360e668da14"
 
 [[projects]]
   branch = "master"
@@ -527,7 +522,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "42bc0a18c2207d46ac4039bbb6b4cf1507872837"
+  revision = "faf4ec335fe01ae5a6a0eaa34a5a9333bfbd1a30"
 
 [[projects]]
   branch = "master"
@@ -554,7 +549,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "61aaa706c6d4fda9365b6273c96839eb7e27f6e4"
+  revision = "94663424ae5ae9856b40a9f170762b4197024661"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -578,7 +573,7 @@
   branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "ab2d22a018cf16a6e806d10bcad1c4c34cceded7"
+  revision = "c94d7a34379da5d1b7ac363527f049b586cd1916"
 
 [[projects]]
   branch = "master"
@@ -611,7 +606,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
+  revision = "8ac0e0d97ce45cd83d1d7243c060cb8461dda5e9"
 
 [[projects]]
   branch = "master"
@@ -643,7 +638,7 @@
     "unix",
     "windows"
   ]
-  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
+  revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -676,7 +671,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "4065a77fc542a455295382a23a996a08ed18813a"
+  revision = "32ee49c4dd805befd833990acba36cb75042378c"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -708,8 +703,8 @@
     "tap",
     "transport"
   ]
-  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
-  version = "v1.12.0"
+  revision = "7a6a684ca69eb4cae85ad0a484f2e531598c047b"
+  version = "v1.12.2"
 
 [solve-meta]
   analyzer-name = "dep"

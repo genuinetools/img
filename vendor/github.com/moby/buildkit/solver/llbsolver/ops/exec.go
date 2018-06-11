@@ -10,11 +10,14 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/boltdb/bolt"
+	"github.com/containerd/containerd/mount"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/executor"
+	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/solver/llbsolver"
 	"github.com/moby/buildkit/solver/pb"
@@ -163,15 +166,23 @@ func (e *execOp) getMountDeps() ([]dep, error) {
 }
 
 func (e *execOp) getRefCacheDir(ctx context.Context, ref cache.ImmutableRef, id string, m *pb.Mount) (cache.MutableRef, error) {
-	makeMutable := func(cache.ImmutableRef) (cache.MutableRef, error) {
-		desc := fmt.Sprintf("cached mount %s from exec %s", m.Dest, strings.Join(e.op.Meta.Args, " "))
-		return e.cm.New(ctx, ref, cache.WithDescription(desc), cache.CachePolicyRetain)
-	}
 
 	key := "cache-dir:" + id
 	if ref != nil {
 		key += ":" + ref.ID()
 	}
+
+	return sharedCacheRefs.get(key, func() (cache.MutableRef, error) {
+		return e.getRefCacheDirNoCache(ctx, key, ref, id, m)
+	})
+}
+
+func (e *execOp) getRefCacheDirNoCache(ctx context.Context, key string, ref cache.ImmutableRef, id string, m *pb.Mount) (cache.MutableRef, error) {
+	makeMutable := func(cache.ImmutableRef) (cache.MutableRef, error) {
+		desc := fmt.Sprintf("cached mount %s from exec %s", m.Dest, strings.Join(e.op.Meta.Args, " "))
+		return e.cm.New(ctx, ref, cache.WithDescription(desc), cache.CachePolicyRetain)
+	}
+
 	sis, err := e.md.Search(key)
 	if err != nil {
 		return nil, err
@@ -262,7 +273,16 @@ func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Res
 					outputs = append(outputs, active)
 					mountable = active
 				}
+			} else if ref == nil {
+				// this case is empty readonly scratch without output that is not really useful for anything but don't error
+				active, err := makeMutable(ref)
+				if err != nil {
+					return nil, err
+				}
+				defer active.Release(context.TODO())
+				mountable = active
 			}
+
 		case pb.MountType_CACHE:
 			if m.CacheOpt == nil {
 				return nil, errors.Errorf("missing cache mount options")
@@ -278,6 +298,10 @@ func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Res
 			if m.Output != pb.SkipOutput && ref != nil {
 				outputs = append(outputs, ref.Clone())
 			}
+
+		case pb.MountType_TMPFS:
+			mountable = newTmpfs()
+
 		default:
 			return nil, errors.Errorf("mount type %s not implemented", m.MountType)
 		}
@@ -362,4 +386,102 @@ func proxyEnvList(p *pb.ProxyEnv) []string {
 		out = append(out, "NO_PROXY="+v, "no_proxy="+v)
 	}
 	return out
+}
+
+func newTmpfs() cache.Mountable {
+	return &tmpfs{}
+}
+
+type tmpfs struct {
+}
+
+func (f *tmpfs) Mount(ctx context.Context, readonly bool) (snapshot.Mountable, error) {
+	return &tmpfsMount{readonly: readonly}, nil
+}
+
+type tmpfsMount struct {
+	readonly bool
+}
+
+func (m *tmpfsMount) Mount() ([]mount.Mount, error) {
+	opt := []string{"nosuid"}
+	if m.readonly {
+		opt = append(opt, "ro")
+	}
+	return []mount.Mount{{
+		Type:    "tmpfs",
+		Source:  "tmpfs",
+		Options: opt,
+	}}, nil
+}
+func (m *tmpfsMount) Release() error {
+	return nil
+}
+
+var sharedCacheRefs = &cacheRefs{}
+
+type cacheRefs struct {
+	mu     sync.Mutex
+	shares map[string]*cacheRefShare
+}
+
+func (r *cacheRefs) get(key string, fn func() (cache.MutableRef, error)) (cache.MutableRef, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.shares == nil {
+		r.shares = map[string]*cacheRefShare{}
+	}
+
+	share, ok := r.shares[key]
+	if ok {
+		return share.clone(), nil
+	}
+
+	mref, err := fn()
+	if err != nil {
+		return nil, err
+	}
+
+	share = &cacheRefShare{MutableRef: mref, main: r, key: key, refs: map[*cacheRef]struct{}{}}
+	r.shares[key] = share
+
+	return share.clone(), nil
+}
+
+type cacheRefShare struct {
+	cache.MutableRef
+	mu   sync.Mutex
+	refs map[*cacheRef]struct{}
+	main *cacheRefs
+	key  string
+}
+
+func (r *cacheRefShare) clone() cache.MutableRef {
+	cacheRef := &cacheRef{cacheRefShare: r}
+	r.mu.Lock()
+	r.refs[cacheRef] = struct{}{}
+	r.mu.Unlock()
+	return cacheRef
+}
+
+func (r *cacheRefShare) release(ctx context.Context) error {
+	r.main.mu.Lock()
+	defer r.main.mu.Unlock()
+	delete(r.main.shares, r.key)
+	return r.MutableRef.Release(ctx)
+}
+
+type cacheRef struct {
+	*cacheRefShare
+}
+
+func (r *cacheRef) Release(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.refs, r)
+	if len(r.refs) == 0 {
+		return r.release(ctx)
+	}
+	return nil
 }

@@ -88,6 +88,12 @@ func FromLLB(op *pb.Op_Source) (Identifier, error) {
 					return nil, err
 				}
 				id.ExcludePatterns = patterns
+			case pb.AttrFollowPaths:
+				var paths []string
+				if err := json.Unmarshal([]byte(v), &paths); err != nil {
+					return nil, err
+				}
+				id.FollowPaths = paths
 			case pb.AttrSharedKeyHint:
 				id.SharedKeyHint = v
 			}
@@ -153,6 +159,7 @@ type LocalIdentifier struct {
 	SessionID       string
 	IncludePatterns []string
 	ExcludePatterns []string
+	FollowPaths     []string
 	SharedKeyHint   string
 }
 

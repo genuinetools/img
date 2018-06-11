@@ -85,7 +85,7 @@ func (cmd *loginCommand) Run(args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	r, err := registryapi.New(authConfig, debug)
+	r, err := registryapi.New(authConfig, registryapi.Opt{Debug: debug})
 	if err != nil {
 		return fmt.Errorf("creating registry client failed: %v", err)
 	}

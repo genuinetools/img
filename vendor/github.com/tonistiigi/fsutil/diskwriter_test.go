@@ -17,8 +17,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// RequiresRoot skips tests that require root
-func RequiresRoot(t *testing.T) {
+// requiresRoot skips tests that require root
+func requiresRoot(t *testing.T) {
+	t.Helper()
 	if os.Getuid() != 0 {
 		t.Skip("skipping test that requires root")
 		return
@@ -26,7 +27,7 @@ func RequiresRoot(t *testing.T) {
 }
 
 func TestWriterSimple(t *testing.T) {
-	RequiresRoot(t)
+	requiresRoot(t)
 
 	changes := changeStream([]string{
 		"ADD bar dir",
@@ -164,7 +165,7 @@ func readAsAdd(f HandleChangeFn) filepath.WalkFunc {
 	}
 }
 
-func noOpWriteTo(context.Context, string, io.WriteCloser) error {
+func noOpWriteTo(_ context.Context, _ string, _ io.WriteCloser) error {
 	return nil
 }
 
@@ -211,7 +212,7 @@ func (nb *notificationBuffer) HandleChange(kind ChangeKind, p string, fi os.File
 	} else {
 		h, ok := fi.(hashed)
 		if !ok {
-			return errors.Errorf("invalid fileinfo: %p", p)
+			return errors.Errorf("invalid FileInfo: %p", p)
 		}
 		nb.items[p] = h.Digest()
 	}
@@ -223,12 +224,4 @@ func (nb *notificationBuffer) Hash(p string) (digest.Digest, bool) {
 	v, ok := nb.items[p]
 	nb.Unlock()
 	return v, ok
-}
-
-type fileInfo struct {
-	digest digest.Digest
-}
-
-func (fi *fileInfo) Digest() digest.Digest {
-	return fi.digest
 }

@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -22,9 +21,12 @@ func (asm authServiceMock) equalTo(v *authService) bool {
 	if asm.service != v.Service {
 		return false
 	}
-	if reflect.DeepEqual(asm.scope, v.Scope) {
-		return false
+	for i, v := range v.Scope {
+		if v != asm.scope[i] {
+			return false
+		}
 	}
+
 	if asm.realm != v.Realm.String() {
 		return false
 	}
@@ -40,8 +42,39 @@ func TestParseChallenge(t *testing.T) {
 				realm:   "https://foobar.com/api/v1/token",
 			},
 		},
+		{
+			header: `Bearer realm="https://r.j3ss.co/auth",service="Docker registry",scope="repository:chrome:pull"`,
+			value: authServiceMock{
+				service: "Docker registry",
+				realm:   "https://r.j3ss.co/auth",
+				scope:   []string{"repository:chrome:pull"},
+			},
+		},
 	}
 
+	for _, tc := range challengeHeaderCases {
+		val, err := parseChallenge(tc.header)
+		if err != nil && !strings.Contains(err.Error(), tc.errorString) {
+			t.Fatalf("expected error to contain %v,  got %s", tc.errorString, err)
+		}
+		if !tc.value.equalTo(val) {
+			t.Fatalf("got %v, expected %v", val, tc.value)
+		}
+
+	}
+}
+
+func TestParseChallengePush(t *testing.T) {
+	challengeHeaderCases := []challengeTestCase{
+		{
+			header: `Bearer realm="https://foo.com/v2/token",service="foo.com",scope="repository:pdr/tls:pull,push"`,
+			value: authServiceMock{
+				realm:   "https://foo.com/v2/token",
+				service: "foo.com",
+				scope:   []string{"repository:pdr/tls:pull,push"},
+			},
+		},
+	}
 	for _, tc := range challengeHeaderCases {
 		val, err := parseChallenge(tc.header)
 		if err != nil && !strings.Contains(err.Error(), tc.errorString) {
