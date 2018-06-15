@@ -349,7 +349,8 @@ Flags:
 
   -backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d        enable debug logging (default: false)
-  -o        Write to a file, instead of STDOUT (default: <none>)
+  -format   image output format (docker|oci) (default: docker)
+  -o        write to a file, instead of STDOUT (default: <none>)
   -state    directory to hold the global state (default: /home/user/.local/share/img)
 ```
 

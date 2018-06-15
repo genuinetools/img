@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/images/oci"
 	"github.com/docker/distribution/reference"
 	"github.com/moby/buildkit/util/dockerexporter"
 )
 
 // SaveImage exports an image as a tarball which can then be imported by docker.
-func (c *Client) SaveImage(ctx context.Context, image string, writer io.WriteCloser) error {
+func (c *Client) SaveImage(ctx context.Context, image, format string, writer io.WriteCloser) error {
 	// Parse the image name and tag.
 	named, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -36,9 +38,18 @@ func (c *Client) SaveImage(ctx context.Context, image string, writer io.WriteClo
 		return fmt.Errorf("getting image %s from image store failed: %v", image, err)
 	}
 
-	exporter := &dockerexporter.DockerExporter{
-		Name: img.Name,
+	var exporter images.Exporter
+	switch format {
+	case "docker":
+		exporter = &dockerexporter.DockerExporter{
+			Name: img.Name,
+		}
+	case "oci":
+		exporter = &oci.V1Exporter{}
+	default:
+		return fmt.Errorf("%q is not a valid format", format)
 	}
+
 	if err := exporter.Export(ctx, opt.ContentStore, img.Target, writer); err != nil {
 		return fmt.Errorf("exporting image %s failed: %v", image, err)
 	}
