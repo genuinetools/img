@@ -108,12 +108,6 @@ $ sudo chmod a+x /usr/local/bin/img
 $ echo "img installed!"
 ```
 
-#### Via Go
-
-```bash
-$ go get github.com/genuinetools/img
-```
-
 #### From Source
 
 ```bash
