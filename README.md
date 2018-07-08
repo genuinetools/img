@@ -54,7 +54,6 @@ out [@AkihiroSuda's buildbench](https://github.com/AkihiroSuda/buildbench)
 
 * [Installation](#installation)
     - [Binaries](#binaries)
-    - [Via Go](#via-go)
     - [From Source](#from-source)
     - [Arch Linux](#arch-linux)
     - [Gentoo](#gentoo)
