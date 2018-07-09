@@ -7,6 +7,7 @@ import (
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/dockerfile"
+	"github.com/moby/buildkit/frontend/gateway"
 	"github.com/moby/buildkit/solver/boltdbcachestorage"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
@@ -38,6 +39,7 @@ func (c *Client) createController() error {
 	// Add the frontends.
 	frontends := map[string]frontend.Frontend{}
 	frontends["dockerfile.v0"] = dockerfile.NewDockerfileFrontend()
+	frontends["gateway.v0"] = gateway.NewGatewayFrontend()
 
 	// Create the cache storage
 	cacheStorage, err := boltdbcachestorage.NewStore(filepath.Join(c.root, "cache.db"))

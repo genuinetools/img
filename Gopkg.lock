@@ -374,7 +374,9 @@
     "frontend/dockerfile/instructions",
     "frontend/dockerfile/parser",
     "frontend/dockerfile/shell",
+    "frontend/gateway",
     "frontend/gateway/client",
+    "frontend/gateway/pb",
     "identity",
     "session",
     "session/auth",
@@ -708,6 +710,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c89c313bcb366b828ac9438d7c065267bac422c63597b8f83f13dba6269b885f"
+  inputs-digest = "779af8d7655be8cc08d95272e1f088493f30cd5a393c391ebd2913c420d64834"
   solver-name = "gps-cdcl"
   solver-version = 1
