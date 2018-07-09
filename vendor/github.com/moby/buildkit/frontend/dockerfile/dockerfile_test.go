@@ -93,7 +93,7 @@ COPY sub/l* alllinks/
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -138,7 +138,7 @@ COPY --from=0 /foo /foo
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -182,7 +182,7 @@ CMD ["test"]
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -245,8 +245,8 @@ ENTRYPOINT my entrypoint
 	err = json.Unmarshal(dt, &ociimg)
 	require.NoError(t, err)
 
-	require.Equal(t, ociimg.Config.Cmd, []string(nil))
-	require.Equal(t, ociimg.Config.Entrypoint, []string{"ls", "my entrypoint"})
+	require.Equal(t, []string(nil), ociimg.Config.Cmd)
+	require.Equal(t, []string{"ls", "my entrypoint"}, ociimg.Config.Entrypoint)
 }
 
 func testPullScratch(t *testing.T, sb integration.Sandbox) {
@@ -272,7 +272,7 @@ LABEL foo=bar
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -340,10 +340,10 @@ COPY foo .
 	require.Equal(t, 1, len(ociimg.RootFS.DiffIDs))
 	v, ok := ociimg.Config.Labels["foo"]
 	require.True(t, ok)
-	require.Equal(t, v, "bar")
+	require.Equal(t, "bar", v)
 	v, ok = ociimg.Config.Labels["bar"]
 	require.True(t, ok)
-	require.Equal(t, v, "baz")
+	require.Equal(t, "baz", v)
 
 	echo := llb.Image("busybox").
 		Run(llb.Shlex(`sh -c "echo -n foo0 > /empty/foo"`)).
@@ -384,7 +384,7 @@ FROM busybox:${tag}
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -570,7 +570,7 @@ ADD %s /dest/
 
 	fi, err := os.Stat(destFile)
 	require.NoError(t, err)
-	require.Equal(t, fi.ModTime().Format(http.TimeFormat), modTime.Format(http.TimeFormat))
+	require.Equal(t, modTime.Format(http.TimeFormat), fi.ModTime().Format(http.TimeFormat))
 }
 
 func testDockerfileAddArchive(t *testing.T, sb integration.Sandbox) {
@@ -872,7 +872,7 @@ EXPOSE 5000
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -958,7 +958,7 @@ Dockerfile
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1017,12 +1017,13 @@ COPY . .
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	c, err := client.New(ctx, sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
 	_, err = c.Solve(ctx, nil, client.SolveOpt{
 		Frontend: "dockerfile.v0",
 		LocalDirs: map[string]string{
@@ -1114,12 +1115,65 @@ RUN ["ls"]
 }
 
 func testUser(t *testing.T, sb integration.Sandbox) {
+	if sb.Rootless() {
+		t.Skip("only for rootful worker, due to lack of support for additional gids (https://github.com/opencontainers/runc/issues/1835)")
+	}
+
 	t.Parallel()
 
 	dockerfile := []byte(`
 FROM busybox AS base
 RUN mkdir -m 0777 /out
 RUN id -un > /out/rootuser
+
+# Make sure our defaults work
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)" = '0:0/root:root' ]
+
+# TODO decide if "args.user = strconv.Itoa(syscall.Getuid())" is acceptable behavior for changeUser in sysvinit instead of "return nil" when "USER" isn't specified (so that we get the proper group list even if that is the empty list, even in the default case of not supplying an explicit USER to run as, which implies USER 0)
+USER root
+RUN [ "$(id -G):$(id -Gn)" = '0 10:root wheel' ]
+
+# Setup dockerio user and group
+RUN echo 'dockerio:x:1001:1001::/bin:/bin/false' >> /etc/passwd && \
+	echo 'dockerio:x:1001:' >> /etc/group
+
+# Make sure we can switch to our user and all the information is exactly as we expect it to be
+USER dockerio
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001:dockerio' ]
+
+# Switch back to root and double check that worked exactly as we might expect it to
+USER root
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '0:0/root:root/0 10:root wheel' ] && \
+        # Add a "supplementary" group for our dockerio user
+	echo 'supplementary:x:1002:dockerio' >> /etc/group
+
+# ... and then go verify that we get it like we expect
+USER dockerio
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001 1002:dockerio supplementary' ]
+USER 1001
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001 1002:dockerio supplementary' ]
+
+# super test the new "user:group" syntax
+USER dockerio:dockerio
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001:dockerio' ]
+USER 1001:dockerio
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001:dockerio' ]
+USER dockerio:1001
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001:dockerio' ]
+USER 1001:1001
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1001/dockerio:dockerio/1001:dockerio' ]
+USER dockerio:supplementary
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1002/dockerio:supplementary/1002:supplementary' ]
+USER dockerio:1002
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1002/dockerio:supplementary/1002:supplementary' ]
+USER 1001:supplementary
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1002/dockerio:supplementary/1002:supplementary' ]
+USER 1001:1002
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1001:1002/dockerio:supplementary/1002:supplementary' ]
+
+# make sure unknown uid/gid still works properly
+USER 1042:1043
+RUN [ "$(id -u):$(id -g)/$(id -un):$(id -gn)/$(id -G):$(id -Gn)" = '1042:1043/1042:1043/1043:1043' ]
 USER daemon
 RUN id -un > /out/daemonuser
 FROM scratch
@@ -1133,7 +1187,7 @@ USER nobody
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1154,11 +1208,11 @@ USER nobody
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "rootuser"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "root\n")
+	require.Equal(t, "root\n", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "daemonuser"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "daemon\n")
+	require.Equal(t, "daemon\n", string(dt))
 
 	// test user in exported
 	target := "example.com/moby/dockerfileuser:test"
@@ -1229,7 +1283,7 @@ COPY --from=base /out /
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1250,11 +1304,11 @@ COPY --from=base /out /
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "fooowner"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "daemon daemon\n")
+	require.Equal(t, "daemon daemon\n", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subowner"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "1000 nogroup\n")
+	require.Equal(t, "1000 nogroup\n", string(dt))
 }
 
 func testCopyOverrideFiles(t *testing.T, sb integration.Sandbox) {
@@ -1281,7 +1335,7 @@ COPY files dest
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1302,11 +1356,11 @@ COPY files dest
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "sub/dir1/dir2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "dest/foo.go"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo.go-contents")
+	require.Equal(t, "foo.go-contents", string(dt))
 }
 
 func testCopyVarSubstitution(t *testing.T, sb integration.Sandbox) {
@@ -1326,7 +1380,7 @@ COPY $FOO baz
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1347,7 +1401,7 @@ COPY $FOO baz
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "baz"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "bar-contents")
+	require.Equal(t, "bar-contents", string(dt))
 }
 
 func testCopyWildcards(t *testing.T, sb integration.Sandbox) {
@@ -1378,7 +1432,7 @@ COPY sub/dir1 subdest6
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1399,43 +1453,43 @@ COPY sub/dir1 subdest6
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "gofiles/foo.go"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "gofiles/bar.go"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "bar-contents")
+	require.Equal(t, "bar-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "foo2.go"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest/dir1/dir2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest3/bar"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "all/foo.go"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest4/dir2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest5/dir2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "subdest6/dir2/foo"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foo-contents")
+	require.Equal(t, "foo-contents", string(dt))
 }
 
 func testDockerfileFromGit(t *testing.T, sb integration.Sandbox) {
@@ -1486,7 +1540,7 @@ COPY --from=build foo bar2
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1572,7 +1626,7 @@ COPY foo bar
 	require.NoError(t, err)
 	defer os.RemoveAll(destDir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1606,7 +1660,7 @@ COPY --from=busybox /etc/passwd test
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1683,7 +1737,7 @@ COPY --from=stage1 baz bax
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1723,7 +1777,7 @@ LABEL foo=bar
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1778,11 +1832,11 @@ LABEL foo=bar
 
 	v, ok := ociimg.Config.Labels["foo"]
 	require.True(t, ok)
-	require.Equal(t, v, "bar")
+	require.Equal(t, "bar", v)
 
 	v, ok = ociimg.Config.Labels["bar"]
 	require.True(t, ok)
-	require.Equal(t, v, "baz")
+	require.Equal(t, "baz", v)
 }
 
 func testCacheImportExport(t *testing.T, sb integration.Sandbox) {
@@ -1811,7 +1865,7 @@ COPY --from=base unique /
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1835,7 +1889,7 @@ COPY --from=base unique /
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "const"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "foobar")
+	require.Equal(t, "foobar", string(dt))
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "unique"))
 	require.NoError(t, err)
@@ -1865,7 +1919,7 @@ COPY --from=base unique /
 
 	dt2, err := ioutil.ReadFile(filepath.Join(destDir, "const"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt2), "foobar")
+	require.Equal(t, "foobar", string(dt2))
 
 	dt2, err = ioutil.ReadFile(filepath.Join(destDir, "unique"))
 	require.NoError(t, err)
@@ -1892,7 +1946,7 @@ RUN echo bar > bar
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1978,7 +2032,7 @@ RUN echo bar > bar
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -2054,7 +2108,7 @@ COPY --from=s1 unique2 /
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -2140,7 +2194,7 @@ COPY --from=build /out /
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	c, err := client.New(sb.Address())
+	c, err := client.New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -2168,7 +2222,7 @@ COPY --from=build /out /
 
 	dt, err := ioutil.ReadFile(filepath.Join(destDir, "out"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "hpvalue::npvalue::foocontents::::bazcontent")
+	require.Equal(t, "hpvalue::npvalue::foocontents::::bazcontent", string(dt))
 
 	// repeat with changed default args should match the old cache
 	destDir, err = ioutil.TempDir("", "buildkit")
@@ -2194,7 +2248,7 @@ COPY --from=build /out /
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "out"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "hpvalue::npvalue::foocontents::::bazcontent")
+	require.Equal(t, "hpvalue::npvalue::foocontents::::bazcontent", string(dt))
 
 	// changing actual value invalidates cache
 	destDir, err = ioutil.TempDir("", "buildkit")
@@ -2220,7 +2274,7 @@ COPY --from=build /out /
 
 	dt, err = ioutil.ReadFile(filepath.Join(destDir, "out"))
 	require.NoError(t, err)
-	require.Equal(t, string(dt), "hpvalue2::::foocontents2::::bazcontent")
+	require.Equal(t, "hpvalue2::::foocontents2::::bazcontent", string(dt))
 }
 
 func tmpdir(appliers ...fstest.Applier) (string, error) {

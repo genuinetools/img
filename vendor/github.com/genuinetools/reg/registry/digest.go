@@ -5,20 +5,26 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/manifest/schema2"
+	digest "github.com/opencontainers/go-digest"
 )
 
-// Digest returns the digest for a repository and reference.
-func (r *Registry) Digest(repository, ref string) (string, error) {
-	url := r.url("/v2/%s/manifests/%s", repository, ref)
+// Digest returns the digest for an image.
+func (r *Registry) Digest(image Image) (digest.Digest, error) {
+	if len(image.Digest) > 1 {
+		// return early if we already have an image digest.
+		return image.Digest, nil
+	}
+
+	url := r.url("/v2/%s/manifests/%s", image.Path, image.Tag)
 	r.Logf("registry.manifests.get url=%s repository=%s ref=%s",
-		url, repository, ref)
+		url, image.Path, image.Tag)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Accept", schema2.MediaTypeManifest)
 
+	req.Header.Set("Accept", schema2.MediaTypeManifest)
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return "", err
@@ -29,6 +35,5 @@ func (r *Registry) Digest(repository, ref string) (string, error) {
 		return "", fmt.Errorf("Got status code: %d", resp.StatusCode)
 	}
 
-	digest := resp.Header.Get("Docker-Content-Digest")
-	return digest, nil
+	return digest.FromString(resp.Header.Get("Docker-Content-Digest")), nil
 }

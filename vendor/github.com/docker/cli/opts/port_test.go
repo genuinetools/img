@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/gotestyourself/gotestyourself/assert"
-	is "github.com/gotestyourself/gotestyourself/assert/cmp"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 func TestPortOptValidSimpleSyntax(t *testing.T) {
@@ -92,6 +92,40 @@ func TestPortOptValidSimpleSyntax(t *testing.T) {
 					Protocol:      "udp",
 					TargetPort:    8082,
 					PublishedPort: 82,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+				},
+			},
+		},
+		{
+			value: "80-82:8080/udp",
+			expected: []swarm.PortConfig{
+				{
+					Protocol:      "udp",
+					TargetPort:    8080,
+					PublishedPort: 80,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+				},
+				{
+					Protocol:      "udp",
+					TargetPort:    8080,
+					PublishedPort: 81,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+				},
+				{
+					Protocol:      "udp",
+					TargetPort:    8080,
+					PublishedPort: 82,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+				},
+			},
+		},
+		{
+			value: "80-80:8080/tcp",
+			expected: []swarm.PortConfig{
+				{
+					Protocol:      "tcp",
+					TargetPort:    8080,
+					PublishedPort: 80,
 					PublishMode:   swarm.PortConfigPublishModeIngress,
 				},
 			},

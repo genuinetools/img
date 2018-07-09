@@ -2,11 +2,13 @@ package registry
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // TokenTransport defines the data structure for authentication via tokens.
@@ -45,7 +47,11 @@ func (t *TokenTransport) authAndRetry(authService *authService, req *http.Reques
 		return authResp, err
 	}
 
-	return t.retry(req, token)
+	response, err := t.retry(req, token)
+	if response != nil {
+		response.Header.Set("request-token", token)
+	}
+	return response, err
 }
 
 func (t *TokenTransport) auth(authService *authService) (string, *http.Response, error) {
@@ -176,4 +182,31 @@ func (r *Registry) Token(url string) (string, error) {
 	}
 
 	return authToken.Token, nil
+}
+
+// Headers returns the authorization headers for a specific uri.
+func (r *Registry) Headers(uri string) (map[string]string, error) {
+	// Get the token.
+	token, err := r.Token(uri)
+	if err != nil {
+		// If we get an error here of type: malformed auth challenge header: 'Basic realm="Registry Realm"'
+		// We need to use basic auth for the registry.
+		if !strings.Contains(err.Error(), `malformed auth challenge header: 'Basic realm="Registry Realm"'`) && !strings.Contains(err.Error(), "basic auth required") {
+			return nil, err
+		}
+
+		// Return basic auth headers.
+		return map[string]string{
+			"Authorization": fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(r.Username+":"+r.Password))),
+		}, nil
+	}
+
+	if len(token) < 1 {
+		r.Logf("got empty token for %s", uri)
+		return map[string]string{}, nil
+	}
+
+	return map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", token),
+	}, nil
 }

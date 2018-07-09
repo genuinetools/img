@@ -5,24 +5,12 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/manifest/schema2"
-	ocd "github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
-// Delete removes a repository digest or reference from the registry.
+// Delete removes a repository digest from the registry.
 // https://docs.docker.com/registry/spec/api/#deleting-an-image
-func (r *Registry) Delete(repository, digest string) error {
-	// If digest is not valid try resolving it as a reference
-	if _, err := ocd.Parse(digest); err != nil {
-		digest, err = r.Digest(repository, digest)
-		if err != nil {
-			return err
-		}
-		if digest == "" {
-			return nil
-		}
-	}
-
-	// Delete the image.
+func (r *Registry) Delete(repository string, digest digest.Digest) (err error) {
 	url := r.url("/v2/%s/manifests/%s", repository, digest)
 	r.Logf("registry.manifests.delete url=%s repository=%s digest=%s",
 		url, repository, digest)

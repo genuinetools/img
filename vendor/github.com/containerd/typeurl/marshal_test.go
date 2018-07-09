@@ -1,13 +1,34 @@
-package typeurl_test
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package typeurl
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	eventsapi "github.com/containerd/containerd/api/services/events/v1"
-	"github.com/containerd/containerd/typeurl"
 )
+
+type TestType struct {
+	ID string
+}
+
+func init() {
+	Register(&TestType{}, "typeurl.Type")
+}
 
 func TestMarshalEvent(t *testing.T) {
 	for _, testcase := range []struct {
@@ -15,25 +36,20 @@ func TestMarshalEvent(t *testing.T) {
 		url   string
 	}{
 		{
-			event: &eventsapi.TaskStart{},
-			url:   "types.containerd.io/containerd.services.events.v1.TaskStart",
-		},
-
-		{
-			event: &eventsapi.NamespaceUpdate{},
-			url:   "types.containerd.io/containerd.services.events.v1.NamespaceUpdate",
+			event: &TestType{ID: "Test"},
+			url:   "typeurl.Type",
 		},
 	} {
 		t.Run(fmt.Sprintf("%T", testcase.event), func(t *testing.T) {
-			a, err := typeurl.MarshalAny(testcase.event)
+			a, err := MarshalAny(testcase.event)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if a.TypeUrl != testcase.url {
-				t.Fatalf("unexpected url: %v != %v", a.TypeUrl, testcase.url)
+				t.Fatalf("unexpected url: %q != %q", a.TypeUrl, testcase.url)
 			}
 
-			v, err := typeurl.UnmarshalAny(a)
+			v, err := UnmarshalAny(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -45,13 +61,13 @@ func TestMarshalEvent(t *testing.T) {
 }
 
 func BenchmarkMarshalEvent(b *testing.B) {
-	ev := &eventsapi.TaskStart{}
-	expected, err := typeurl.MarshalAny(ev)
+	ev := &TestType{}
+	expected, err := MarshalAny(ev)
 	if err != nil {
 		b.Fatal(err)
 	}
 	for i := 0; i < b.N; i++ {
-		a, err := typeurl.MarshalAny(ev)
+		a, err := MarshalAny(ev)
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -27,10 +27,7 @@ func (asm authServiceMock) equalTo(v *authService) bool {
 		}
 	}
 
-	if asm.realm != v.Realm.String() {
-		return false
-	}
-	return true
+	return asm.realm == v.Realm.String()
 }
 
 func TestParseChallenge(t *testing.T) {

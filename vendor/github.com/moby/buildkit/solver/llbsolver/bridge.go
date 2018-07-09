@@ -15,19 +15,25 @@ import (
 	"github.com/moby/buildkit/util/tracing"
 	"github.com/moby/buildkit/worker"
 	digest "github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
 type llbBridge struct {
-	builder       solver.Builder
-	frontends     map[string]frontend.Frontend
-	resolveWorker func() (worker.Worker, error)
-	ci            *remotecache.CacheImporter
-	cms           map[string]solver.CacheManager
-	cmsMu         sync.Mutex
+	builder              solver.Builder
+	frontends            map[string]frontend.Frontend
+	resolveWorker        func() (worker.Worker, error)
+	resolveCacheImporter remotecache.ResolveCacheImporterFunc
+	cms                  map[string]solver.CacheManager
+	cmsMu                sync.Mutex
+	platforms            []specs.Platform
 }
 
 func (b *llbBridge) Solve(ctx context.Context, req frontend.SolveRequest) (res solver.CachedResult, exp map[string][]byte, err error) {
+	w, err := b.resolveWorker()
+	if err != nil {
+		return nil, nil, err
+	}
 	var cms []solver.CacheManager
 	for _, ref := range req.ImportCacheRefs {
 		b.cmsMu.Lock()
@@ -42,7 +48,15 @@ func (b *llbBridge) Solve(ctx context.Context, req frontend.SolveRequest) (res s
 				cm = newLazyCacheManager(ref, func() (solver.CacheManager, error) {
 					var cmNew solver.CacheManager
 					if err := b.builder.Call(ctx, "importing cache manifest from "+ref, func(ctx context.Context) error {
-						cmNew, err = b.ci.Resolve(ctx, ref)
+						if b.resolveCacheImporter == nil {
+							return errors.New("no cache importer is available")
+						}
+						typ := "" // TODO: support non-registry type
+						ci, desc, err := b.resolveCacheImporter(ctx, typ, ref)
+						if err != nil {
+							return err
+						}
+						cmNew, err = ci.Resolve(ctx, desc, ref, w)
 						return err
 					}); err != nil {
 						return nil, err
@@ -59,7 +73,7 @@ func (b *llbBridge) Solve(ctx context.Context, req frontend.SolveRequest) (res s
 	}
 
 	if req.Definition != nil && req.Definition.Def != nil {
-		edge, err := Load(req.Definition, WithCacheSources(cms))
+		edge, err := Load(req.Definition, WithCacheSources(cms), RuntimePlatforms(b.platforms))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -108,12 +122,12 @@ func (s *llbBridge) Exec(ctx context.Context, meta executor.Meta, root cache.Imm
 	return err
 }
 
-func (s *llbBridge) ResolveImageConfig(ctx context.Context, ref string) (digest.Digest, []byte, error) {
+func (s *llbBridge) ResolveImageConfig(ctx context.Context, ref string, platform *specs.Platform) (digest.Digest, []byte, error) {
 	w, err := s.resolveWorker()
 	if err != nil {
 		return "", nil, err
 	}
-	return w.ResolveImageConfig(ctx, ref)
+	return w.ResolveImageConfig(ctx, ref, platform)
 }
 
 type lazyCacheManager struct {

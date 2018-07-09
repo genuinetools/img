@@ -13,12 +13,13 @@ import (
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/util/progress"
 	"github.com/moby/buildkit/worker"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
 type ExporterRequest struct {
 	Exporter        exporter.ExporterInstance
-	CacheExporter   *remotecache.RegistryCacheExporter
+	CacheExporter   remotecache.Exporter
 	CacheExportMode solver.CacheExportMode
 }
 
@@ -26,28 +27,36 @@ type ExporterRequest struct {
 type ResolveWorkerFunc func() (worker.Worker, error)
 
 type Solver struct {
-	solver        *solver.Solver
-	resolveWorker ResolveWorkerFunc
-	frontends     map[string]frontend.Frontend
-	ci            *remotecache.CacheImporter
+	solver               *solver.Solver
+	resolveWorker        ResolveWorkerFunc
+	frontends            map[string]frontend.Frontend
+	resolveCacheImporter remotecache.ResolveCacheImporterFunc
+	platforms            []specs.Platform
 }
 
-func New(wc *worker.Controller, f map[string]frontend.Frontend, cacheStore solver.CacheKeyStorage, ci *remotecache.CacheImporter) *Solver {
+func New(wc *worker.Controller, f map[string]frontend.Frontend, cacheStore solver.CacheKeyStorage, resolveCI remotecache.ResolveCacheImporterFunc) (*Solver, error) {
 	s := &Solver{
-		resolveWorker: defaultResolver(wc),
-		frontends:     f,
-		ci:            ci,
+		resolveWorker:        defaultResolver(wc),
+		frontends:            f,
+		resolveCacheImporter: resolveCI,
 	}
 
 	results := newCacheResultStorage(wc)
 
 	cache := solver.NewCacheManager("local", cacheStore, results)
 
+	// executing is currently only allowed on default worker
+	w, err := wc.GetDefault()
+	if err != nil {
+		return nil, err
+	}
+	s.platforms = w.Platforms()
+
 	s.solver = solver.NewSolver(solver.SolverOpt{
 		ResolveOpFunc: s.resolver(),
 		DefaultCache:  cache,
 	})
-	return s
+	return s, nil
 }
 
 func (s *Solver) resolver() solver.ResolveOpFunc {
@@ -62,11 +71,12 @@ func (s *Solver) resolver() solver.ResolveOpFunc {
 
 func (s *Solver) Bridge(b solver.Builder) frontend.FrontendLLBBridge {
 	return &llbBridge{
-		builder:       b,
-		frontends:     s.frontends,
-		resolveWorker: s.resolveWorker,
-		ci:            s.ci,
-		cms:           map[string]solver.CacheManager{},
+		builder:              b,
+		frontends:            s.frontends,
+		resolveWorker:        s.resolveWorker,
+		resolveCacheImporter: s.resolveCacheImporter,
+		cms:                  map[string]solver.CacheManager{},
+		platforms:            s.platforms,
 	}
 }
 

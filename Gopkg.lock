@@ -13,8 +13,8 @@
 [[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
-  revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
-  version = "v0.4.7"
+  revision = "67921128fb397dd80339870d2193d6b1e6856fd4"
+  version = "v0.4.8"
 
 [[projects]]
   name = "github.com/Microsoft/hcsshim"
@@ -45,7 +45,7 @@
   branch = "master"
   name = "github.com/containerd/console"
   packages = ["."]
-  revision = "9290d21dc56074581f619579c43d970b4514bc08"
+  revision = "4d8a41f4ce5b9bae77c41786ea2458330f43f081"
 
 [[projects]]
   branch = "master"
@@ -89,10 +89,9 @@
     "snapshots/storage",
     "sys"
   ]
-  revision = "35887db096d26e8c5fb40e600e5b64e024f10df0"
+  revision = "b41633746ed4833f52c3c071e8edcfa2713e5677"
 
 [[projects]]
-  branch = "master"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
@@ -106,13 +105,13 @@
   branch = "master"
   name = "github.com/containerd/go-runc"
   packages = ["."]
-  revision = "301f7c1fbbc328a0b5b08c4e9942de2f0a147f96"
+  revision = "14606eb66abd9e834e3bd22a4f5f46a3aad54c54"
 
 [[projects]]
   branch = "master"
   name = "github.com/containerd/typeurl"
   packages = ["."]
-  revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
+  revision = "a93fcdb778cd272c6e9b3028b2f42d813e785d40"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -145,7 +144,7 @@
     "cli/config/credentials",
     "opts"
   ]
-  revision = "75c1bb1f33d7cedbaf48404597d5bf9818199480"
+  revision = "2b221d8f1cd6420122634a4922fef30313659d78"
 
 [[projects]]
   branch = "master"
@@ -168,7 +167,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "f0cc927784781fa395c06317c58dea2841ece3a9"
+  revision = "749f6afb4572201e3c37325d0ffedb6f32be8950"
 
 [[projects]]
   branch = "master"
@@ -206,18 +205,17 @@
     "registry",
     "registry/resumable"
   ]
-  revision = "f5e60bbf21ea014a2854349ebc1c4e7e04e30398"
+  revision = "c8bda42d1632163c62f6a3d32969af2ba5463ab3"
   source = "github.com/moby/moby"
 
 [[projects]]
   name = "github.com/docker/docker-credential-helpers"
   packages = [
     "client",
-    "credentials",
-    "pass"
+    "credentials"
   ]
-  revision = "d68f9aeca33f5fd3f08eeae5e9d175edf4e731d1"
-  version = "v0.6.0"
+  revision = "5241b46610f2491efdf9d1c85f1ddf5b02f6d962"
+  version = "v0.6.1"
 
 [[projects]]
   name = "github.com/docker/go-connections"
@@ -263,10 +261,10 @@
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
+  branch = "master"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
-  revision = "fc4797acd474fe66e617f491ced48c83f7aa355e"
-  version = "v0.13.1"
+  revision = "74603b6d47a08e9f347442a7f787acbb70bf4883"
 
 [[projects]]
   name = "github.com/godbus/dbus"
@@ -376,7 +374,9 @@
     "frontend/dockerfile/instructions",
     "frontend/dockerfile/parser",
     "frontend/dockerfile/shell",
+    "frontend/gateway",
     "frontend/gateway/client",
+    "frontend/gateway/pb",
     "identity",
     "session",
     "session/auth",
@@ -405,19 +405,19 @@
     "util/dockerexporter",
     "util/flightcontrol",
     "util/imageutil",
-    "util/libcontainer_specconv",
     "util/progress",
     "util/progress/logs",
     "util/progress/progressui",
     "util/pull",
     "util/push",
+    "util/rootless/specconv",
     "util/system",
     "util/throttle",
     "util/tracing",
     "worker",
     "worker/base"
   ]
-  revision = "4b8dc5b08bdd1b9a29d0f767d94a1360e668da14"
+  revision = "4e6f27047212e5129b62f082455a6bd81b361811"
 
 [[projects]]
   branch = "master"
@@ -470,7 +470,7 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "dd56ece8236d6d9e5bed4ea0c31fe53c7b873ff4"
+  revision = "45e08f6ceb995a30a0b8ce042e451a1254d4c888"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -491,7 +491,7 @@
   branch = "master"
   name = "github.com/opentracing-contrib/go-stdlib"
   packages = ["nethttp"]
-  revision = "36723135187404d2f4002f4f189938565e64cc5c"
+  revision = "07a764486eb10927e8cf38337918a40d430524ee"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -522,7 +522,7 @@
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "faf4ec335fe01ae5a6a0eaa34a5a9333bfbd1a30"
+  revision = "d6a9817c4afc94d51115e4a30d449056a3fbf547"
 
 [[projects]]
   branch = "master"
@@ -549,7 +549,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "94663424ae5ae9856b40a9f170762b4197024661"
+  revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
 
 [[projects]]
   name = "github.com/seccomp/libseccomp-golang"
@@ -573,7 +573,7 @@
   branch = "master"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  revision = "c94d7a34379da5d1b7ac363527f049b586cd1916"
+  revision = "8abad97ee3969cdf5e9c367f46adba2c212b3ddb"
 
 [[projects]]
   branch = "master"
@@ -606,7 +606,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "8ac0e0d97ce45cd83d1d7243c060cb8461dda5e9"
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
@@ -623,7 +623,7 @@
     "proxy",
     "trace"
   ]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "6f138e0f60713a248abf7046f1014a3ba90f5341"
 
 [[projects]]
   branch = "master"
@@ -638,7 +638,7 @@
     "unix",
     "windows"
   ]
-  revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -671,7 +671,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "32ee49c4dd805befd833990acba36cb75042378c"
+  revision = "8b2cc369ab52e0003a878865c9372afdd6ca5c5a"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -680,17 +680,18 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
-    "channelz",
     "codes",
     "connectivity",
     "credentials",
     "encoding",
     "encoding/proto",
-    "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "health",
     "health/grpc_health_v1",
     "internal",
+    "internal/backoff",
+    "internal/channelz",
+    "internal/grpcrand",
     "keepalive",
     "metadata",
     "naming",
@@ -703,12 +704,12 @@
     "tap",
     "transport"
   ]
-  revision = "7a6a684ca69eb4cae85ad0a484f2e531598c047b"
-  version = "v1.12.2"
+  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
+  version = "v1.13.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "922e476ab24ff5a44153a3ff462292bc067decf4ea158f9d127b6883aff48fe2"
+  inputs-digest = "779af8d7655be8cc08d95272e1f088493f30cd5a393c391ebd2913c420d64834"
   solver-name = "gps-cdcl"
   solver-version = 1

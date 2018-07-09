@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"fmt"
 	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
@@ -24,7 +25,7 @@ func (r *Registry) DownloadLayer(repository string, digest digest.Digest) (io.Re
 
 // UploadLayer uploads a specific layer by digest for a repository.
 func (r *Registry) UploadLayer(repository string, digest reference.Reference, content io.Reader) error {
-	uploadURL, err := r.initiateUpload(repository)
+	uploadURL, token, err := r.initiateUpload(repository)
 	if err != nil {
 		return err
 	}
@@ -39,6 +40,7 @@ func (r *Registry) UploadLayer(repository string, digest reference.Reference, co
 		return err
 	}
 	upload.Header.Set("Content-Type", "application/octet-stream")
+	upload.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	_, err = r.Client.Do(upload)
 	return err
@@ -70,20 +72,21 @@ func (r *Registry) HasLayer(repository string, digest digest.Digest) (bool, erro
 	return false, err
 }
 
-func (r *Registry) initiateUpload(repository string) (*url.URL, error) {
+func (r *Registry) initiateUpload(repository string) (*url.URL, string, error) {
 	initiateURL := r.url("/v2/%s/blobs/uploads/", repository)
 	r.Logf("registry.layer.initiate-upload url=%s repository=%s", initiateURL, repository)
 
 	resp, err := r.Client.Post(initiateURL, "application/octet-stream", nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+	token := resp.Header.Get("Request-Token")
 	defer resp.Body.Close()
 
 	location := resp.Header.Get("Location")
 	locationURL, err := url.Parse(location)
 	if err != nil {
-		return nil, err
+		return nil, token, err
 	}
-	return locationURL, nil
+	return locationURL, token, nil
 }
