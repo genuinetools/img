@@ -67,7 +67,7 @@
 
 [[override]]
   name = "github.com/containerd/continuity"
-  branch = "master"
+  revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
 
 [[override]]
   name = "github.com/docker/libnetwork"

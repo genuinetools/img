@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
@@ -83,4 +85,27 @@ func (r *Registry) ManifestV1(repository, ref string) (schema1.SignedManifest, e
 	}
 
 	return m, nil
+}
+
+// PutManifest calls a PUT for the specific manifest for an image.
+func (r *Registry) PutManifest(repository, ref string, manifest distribution.Manifest) error {
+	url := r.url("/v2/%s/manifests/%s", repository, ref)
+	r.Logf("registry.manifest.put url=%s repository=%s reference=%s", url, repository, ref)
+
+	b, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", schema2.MediaTypeManifest)
+	resp, err := r.Client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	return err
 }

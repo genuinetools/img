@@ -5,13 +5,13 @@ package dockerfile2llb
 import (
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 )
 
-func detectRunMount(cmd *command, dispatchStatesByName map[string]*dispatchState, allDispatchStates []*dispatchState) bool {
+func detectRunMount(cmd *command, allDispatchStates *dispatchStates) bool {
 	if c, ok := cmd.Command.(*instructions.RunCommand); ok {
 		mounts := instructions.GetMounts(c)
 		sources := make([]*dispatchState, len(mounts))
@@ -23,7 +23,7 @@ func detectRunMount(cmd *command, dispatchStatesByName map[string]*dispatchState
 			if from == "" || mount.Type == instructions.MountTypeTmpfs {
 				continue
 			}
-			stn, ok := dispatchStatesByName[strings.ToLower(from)]
+			stn, ok := allDispatchStates.findStateByName(from)
 			if !ok {
 				stn = &dispatchState{
 					stage:        instructions.Stage{BaseName: from},
@@ -40,7 +40,7 @@ func detectRunMount(cmd *command, dispatchStatesByName map[string]*dispatchState
 	return false
 }
 
-func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*dispatchState, opt dispatchOpt) []llb.RunOption {
+func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*dispatchState, opt dispatchOpt) ([]llb.RunOption, error) {
 	var out []llb.RunOption
 	mounts := instructions.GetMounts(c)
 
@@ -61,14 +61,25 @@ func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*
 			mountOpts = append(mountOpts, llb.Readonly)
 		}
 		if mount.Type == instructions.MountTypeCache {
-			mountOpts = append(mountOpts, llb.AsPersistentCacheDir(opt.cacheIDNamespace+"/"+mount.CacheID))
+			sharing := llb.CacheMountShared
+			if mount.CacheSharing == instructions.MountSharingPrivate {
+				sharing = llb.CacheMountPrivate
+			}
+			if mount.CacheSharing == instructions.MountSharingLocked {
+				sharing = llb.CacheMountLocked
+			}
+			mountOpts = append(mountOpts, llb.AsPersistentCacheDir(opt.cacheIDNamespace+"/"+mount.CacheID, sharing))
+		}
+		target := path.Join("/", mount.Target)
+		if target == "/" {
+			return nil, errors.Errorf("invalid mount target %q", mount.Target)
 		}
 		if src := path.Join("/", mount.Source); src != "/" {
 			mountOpts = append(mountOpts, llb.SourcePath(src))
 		}
-		out = append(out, llb.AddMount(path.Join("/", mount.Target), st, mountOpts...))
+		out = append(out, llb.AddMount(target, st, mountOpts...))
 
 		d.ctxPaths[path.Join("/", filepath.ToSlash(mount.Source))] = struct{}{}
 	}
-	return out
+	return out, nil
 }

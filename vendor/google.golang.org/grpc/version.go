@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 gRPC authors.
+ * Copyright 2018 gRPC authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,5 @@
 
 package grpc
 
-import "testing"
-
-func TestBackoffConfigDefaults(t *testing.T) {
-	b := BackoffConfig{}
-	setDefaults(&b)
-	if b != DefaultBackoffConfig {
-		t.Fatalf("expected BackoffConfig to pickup default parameters: %v != %v", b, DefaultBackoffConfig)
-	}
-}
+// Version is the current grpc version.
+const Version = "1.13.0"

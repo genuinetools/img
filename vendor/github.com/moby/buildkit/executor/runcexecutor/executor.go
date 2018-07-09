@@ -21,7 +21,7 @@ import (
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/executor/oci"
 	"github.com/moby/buildkit/identity"
-	"github.com/moby/buildkit/util/libcontainer_specconv"
+	rootlessspecconv "github.com/moby/buildkit/util/rootless/specconv"
 	"github.com/moby/buildkit/util/system"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
@@ -84,6 +84,8 @@ func New(opt Opt) (executor.Executor, error) {
 		LogFormat:    runc.JSON,
 		PdeathSignal: syscall.SIGKILL,
 		Setpgid:      true,
+		// we don't execute runc with --rootless=(true|false) explicitly,
+		// so as to support non-runc runtimes
 	}
 
 	w := &runcExecutor{
@@ -133,7 +135,7 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 	}
 	defer mount.Unmount(rootFSPath, 0)
 
-	uid, gid, err := oci.GetUser(ctx, rootFSPath, meta.User)
+	uid, gid, sgids, err := oci.GetUser(ctx, rootFSPath, meta.User)
 	if err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		return err
 	}
 	defer f.Close()
-	opts := []containerdoci.SpecOpts{containerdoci.WithUIDGID(uid, gid)}
+	opts := []containerdoci.SpecOpts{oci.WithUIDGID(uid, gid, sgids)}
 	if system.SeccompSupported() {
 		opts = append(opts, seccomp.WithDefaultProfile())
 	}
@@ -169,15 +171,11 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		return errors.Wrapf(err, "failed to create working directory %s", newp)
 	}
 
+	if err := setOOMScoreAdj(spec); err != nil {
+		return err
+	}
 	if w.rootless {
-		specconv.ToRootless(spec, &specconv.RootlessOpts{
-			MapSubUIDGID: true,
-		})
-		// TODO(AkihiroSuda): keep Cgroups enabled if /sys/fs/cgroup/cpuset/buildkit exists and writable
-		spec.Linux.CgroupsPath = ""
-		// TODO(AkihiroSuda): ToRootless removes netns, but we should readd netns here
-		// if either SUID or userspace NAT is configured on the host.
-		if err := setOOMScoreAdj(spec); err != nil {
+		if err := rootlessspecconv.ToRootless(spec); err != nil {
 			return err
 		}
 	}

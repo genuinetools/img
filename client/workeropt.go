@@ -11,6 +11,7 @@ import (
 	"github.com/containerd/containerd/diff/apply"
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
+	"github.com/containerd/containerd/platforms"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
@@ -20,6 +21,7 @@ import (
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/throttle"
 	"github.com/moby/buildkit/worker/base"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 )
@@ -121,6 +123,7 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		Applier:        apply.NewFileSystemApplier(contentStore),
 		Differ:         walking.NewWalkingDiff(contentStore),
 		ImageStore:     imageStore,
+		Platforms:      []specs.Platform{platforms.Normalize(platforms.DefaultSpec())},
 	}
 
 	return opt, err

@@ -13,20 +13,24 @@ import (
 	"github.com/moby/buildkit/session/grpchijack"
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/solver/llbsolver"
+	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/worker"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
+type ResolveCacheExporterFunc func(ctx context.Context, typ, target string) (remotecache.Exporter, error)
+
 type Opt struct {
-	SessionManager   *session.Manager
-	WorkerController *worker.Controller
-	Frontends        map[string]frontend.Frontend
-	CacheKeyStorage  solver.CacheKeyStorage
-	CacheExporter    *remotecache.CacheExporter
-	CacheImporter    *remotecache.CacheImporter
+	SessionManager           *session.Manager
+	WorkerController         *worker.Controller
+	Frontends                map[string]frontend.Frontend
+	CacheKeyStorage          solver.CacheKeyStorage
+	ResolveCacheExporterFunc remotecache.ResolveCacheExporterFunc
+	ResolveCacheImporterFunc remotecache.ResolveCacheImporterFunc
 }
 
 type Controller struct { // TODO: ControlService
@@ -35,7 +39,10 @@ type Controller struct { // TODO: ControlService
 }
 
 func NewController(opt Opt) (*Controller, error) {
-	solver := llbsolver.New(opt.WorkerController, opt.Frontends, opt.CacheKeyStorage, opt.CacheImporter)
+	solver, err := llbsolver.New(opt.WorkerController, opt.Frontends, opt.CacheKeyStorage, opt.ResolveCacheImporterFunc)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create solver")
+	}
 
 	c := &Controller{
 		opt:    opt,
@@ -149,14 +156,18 @@ func (c *Controller) Solve(ctx context.Context, req *controlapi.SolveRequest) (*
 		}
 	}
 
-	var cacheExporter *remotecache.RegistryCacheExporter
-	if ref := req.Cache.ExportRef; ref != "" {
+	var cacheExporter remotecache.Exporter
+	if ref := req.Cache.ExportRef; ref != "" && c.opt.ResolveCacheExporterFunc != nil {
 		parsed, err := reference.ParseNormalizedNamed(ref)
 		if err != nil {
 			return nil, err
 		}
 		exportCacheRef := reference.TagNameOnly(parsed).String()
-		cacheExporter = c.opt.CacheExporter.ExporterForTarget(exportCacheRef)
+		typ := "" // unimplemented yet (typically registry)
+		cacheExporter, err = c.opt.ResolveCacheExporterFunc(ctx, typ, exportCacheRef)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var importCacheRefs []string
@@ -265,8 +276,9 @@ func (c *Controller) ListWorkers(ctx context.Context, r *controlapi.ListWorkersR
 	}
 	for _, w := range workers {
 		resp.Record = append(resp.Record, &controlapi.WorkerRecord{
-			ID:     w.ID(),
-			Labels: w.Labels(),
+			ID:        w.ID(),
+			Labels:    w.Labels(),
+			Platforms: toPBPlatforms(w.Platforms()),
 		})
 	}
 	return resp, nil
@@ -289,4 +301,18 @@ func parseCacheExporterOpt(opt map[string]string) solver.CacheExportMode {
 		}
 	}
 	return solver.CacheExportModeMin
+}
+
+func toPBPlatforms(p []specs.Platform) []pb.Platform {
+	out := make([]pb.Platform, 0, len(p))
+	for _, pp := range p {
+		out = append(out, pb.Platform{
+			OS:           pp.OS,
+			Architecture: pp.Architecture,
+			Variant:      pp.Variant,
+			OSVersion:    pp.OSVersion,
+			OSFeatures:   pp.OSFeatures,
+		})
+	}
+	return out
 }

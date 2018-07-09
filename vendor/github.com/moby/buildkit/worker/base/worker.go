@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/containerd/containerd/content"
@@ -15,7 +14,6 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/rootfs"
 	cdsnapshot "github.com/containerd/containerd/snapshots"
-	"github.com/docker/distribution/manifest/schema2"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/cache/metadata"
@@ -43,6 +41,7 @@ import (
 	digest "github.com/opencontainers/go-digest"
 	ociidentity "github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
@@ -56,6 +55,7 @@ const labelCreatedAt = "buildkit/createdat"
 type WorkerOpt struct {
 	ID             string
 	Labels         map[string]string
+	Platforms      []specs.Platform
 	SessionManager *session.Manager
 	MetadataStore  *metadata.Store
 	Executor       executor.Executor
@@ -201,34 +201,39 @@ func (w *Worker) Labels() map[string]string {
 	return w.WorkerOpt.Labels
 }
 
+func (w *Worker) Platforms() []specs.Platform {
+	return w.WorkerOpt.Platforms
+}
+
 func (w *Worker) LoadRef(id string) (cache.ImmutableRef, error) {
 	return w.CacheManager.Get(context.TODO(), id)
 }
 
 func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge) (solver.Op, error) {
-	switch op := v.Sys().(type) {
-	case *pb.Op_Source:
-		return ops.NewSourceOp(v, op, w.SourceManager, w)
-	case *pb.Op_Exec:
-		return ops.NewExecOp(v, op, w.CacheManager, w.MetadataStore, w.Executor, w)
-	case *pb.Op_Build:
-		return ops.NewBuildOp(v, op, s, w)
-	default:
-		return nil, errors.Errorf("could not resolve %v", v)
+	if baseOp, ok := v.Sys().(*pb.Op); ok {
+		switch op := baseOp.Op.(type) {
+		case *pb.Op_Source:
+			return ops.NewSourceOp(v, op, baseOp.Platform, w.SourceManager, w)
+		case *pb.Op_Exec:
+			return ops.NewExecOp(v, op, w.CacheManager, w.MetadataStore, w.Executor, w)
+		case *pb.Op_Build:
+			return ops.NewBuildOp(v, op, s, w)
+		}
 	}
+	return nil, errors.Errorf("could not resolve %v", v)
 }
 
-func (w *Worker) ResolveImageConfig(ctx context.Context, ref string) (digest.Digest, []byte, error) {
+func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, platform *specs.Platform) (digest.Digest, []byte, error) {
 	// ImageSource is typically source/containerimage
 	resolveImageConfig, ok := w.ImageSource.(resolveImageConfig)
 	if !ok {
 		return "", nil, errors.Errorf("worker %q does not implement ResolveImageConfig", w.ID())
 	}
-	return resolveImageConfig.ResolveImageConfig(ctx, ref)
+	return resolveImageConfig.ResolveImageConfig(ctx, ref, platform)
 }
 
 type resolveImageConfig interface {
-	ResolveImageConfig(ctx context.Context, ref string) (digest.Digest, []byte, error)
+	ResolveImageConfig(ctx context.Context, ref string, platform *specs.Platform) (digest.Digest, []byte, error)
 }
 
 func (w *Worker) Exec(ctx context.Context, meta executor.Meta, rootFS cache.ImmutableRef, stdin io.ReadCloser, stdout, stderr io.WriteCloser) error {
@@ -286,7 +291,7 @@ func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIf
 		descs[i] = ocispec.Descriptor{
 			Digest:    dp.Blobsum,
 			Size:      info.Size,
-			MediaType: schema2.MediaTypeLayer,
+			MediaType: images.MediaTypeDockerSchema2LayerGzip,
 			Annotations: map[string]string{
 				"containerd.io/uncompressed": dp.DiffID.String(),
 				labelCreatedAt:               string(tm),
@@ -383,6 +388,7 @@ func (w *Worker) unpack(ctx context.Context, descs []ocispec.Descriptor, s cdsna
 	return ids, nil
 }
 
+// Labels returns default labels
 // utility function. could be moved to the constructor logic?
 func Labels(executor, snapshotter string) map[string]string {
 	hostname, err := os.Hostname()
@@ -390,8 +396,6 @@ func Labels(executor, snapshotter string) map[string]string {
 		hostname = "unknown"
 	}
 	labels := map[string]string{
-		worker.LabelOS:          runtime.GOOS,
-		worker.LabelArch:        runtime.GOARCH,
 		worker.LabelExecutor:    executor,
 		worker.LabelSnapshotter: snapshotter,
 		worker.LabelHostname:    hostname,

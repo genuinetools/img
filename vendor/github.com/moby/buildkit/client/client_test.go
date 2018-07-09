@@ -22,7 +22,6 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/containerd/continuity/fs/fstest"
-	"github.com/docker/distribution/manifest/schema2"
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/util/testutil/httpserver"
@@ -53,13 +52,16 @@ func TestClientIntegration(t *testing.T) {
 		testProxyEnv,
 		testLocalSymlinkEscape,
 		testTmpfsMounts,
+		testSharedCacheMounts,
+		testLockedCacheMounts,
+		testDuplicateCacheMount,
 	})
 }
 
 func testTmpfsMounts(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 	requiresLinux(t)
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -76,15 +78,16 @@ func testTmpfsMounts(t *testing.T, sb integration.Sandbox) {
 func testLocalSymlinkEscape(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 	requiresLinux(t)
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
-	test := []byte(`set -x
+	test := []byte(`set -ex
 [[ -L /mount/foo ]]
 [[ -L /mount/sub/bar ]]
 [[ -L /mount/bax ]]
 [[ -f /mount/bay ]]
+[[ -f /mount/sub/sub2/file ]]
 [[ ! -f /mount/baz ]]
 [[ ! -f /mount/etc/passwd ]]
 [[ ! -f /mount/etc/group ]]
@@ -102,6 +105,9 @@ func testLocalSymlinkEscape(t *testing.T, sb integration.Sandbox) {
 		fstest.Symlink("bay", "bax"),
 		// target for symlink (not requested)
 		fstest.CreateFile("bay", []byte{}, 0600),
+		// file with many subdirs
+		fstest.CreateDir("sub/sub2", 0700),
+		fstest.CreateFile("sub/sub2/file", []byte{}, 0600),
 		// unused file that shouldn't be included
 		fstest.CreateFile("baz", []byte{}, 0600),
 		fstest.CreateFile("test.sh", test, 0700),
@@ -110,7 +116,7 @@ func testLocalSymlinkEscape(t *testing.T, sb integration.Sandbox) {
 	defer os.RemoveAll(dir)
 
 	local := llb.Local("mylocal", llb.FollowPaths([]string{
-		"test.sh", "foo", "sub/bar", "bax",
+		"test.sh", "foo", "sub/bar", "bax", "sub/sub2/file",
 	}))
 
 	st := llb.Image("busybox:latest").
@@ -130,7 +136,7 @@ func testLocalSymlinkEscape(t *testing.T, sb integration.Sandbox) {
 func testRelativeWorkDir(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 	requiresLinux(t)
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -160,7 +166,7 @@ func testRelativeWorkDir(t *testing.T, sb integration.Sandbox) {
 
 func testCallDiskUsage(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 	_, err = c.DiskUsage(context.TODO())
@@ -170,7 +176,7 @@ func testCallDiskUsage(t *testing.T, sb integration.Sandbox) {
 func testBuildMultiMount(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 	requiresLinux(t)
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -192,7 +198,7 @@ func testBuildMultiMount(t *testing.T, sb integration.Sandbox) {
 func testBuildHTTPSource(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -280,7 +286,7 @@ func testBuildHTTPSource(t *testing.T, sb integration.Sandbox) {
 func testResolveAndHosts(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -320,7 +326,7 @@ func testResolveAndHosts(t *testing.T, sb integration.Sandbox) {
 func testUser(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -373,7 +379,7 @@ func testUser(t *testing.T, sb integration.Sandbox) {
 func testOCIExporter(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -472,7 +478,7 @@ func testOCIExporter(t *testing.T, sb integration.Sandbox) {
 func testBuildPushAndValidate(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -483,7 +489,7 @@ func testBuildPushAndValidate(t *testing.T, sb integration.Sandbox) {
 		st = busybox.Run(llb.Shlex(cmd), llb.Dir("/wd")).AddMount("/wd", st)
 	}
 
-	run(`sh -c "mkdir -p foo/sub; echo -n first > foo/sub/bar; chmod 0741 foo;"`)
+	run(`sh -e -c "mkdir -p foo/sub; echo -n first > foo/sub/bar; chmod 0741 foo;"`)
 	run(`true`) // this doesn't create a layer
 	run(`sh -c "echo -n second > foo/sub/baz"`)
 
@@ -605,11 +611,15 @@ func testBuildPushAndValidate(t *testing.T, sb integration.Sandbox) {
 	dt, err = content.ReadBlob(ctx, img.ContentStore(), img.Target())
 	require.NoError(t, err)
 
-	var mfst schema2.Manifest
+	var mfst = struct {
+		MediaType string `json:"mediaType,omitempty"`
+		ocispec.Manifest
+	}{}
+
 	err = json.Unmarshal(dt, &mfst)
 	require.NoError(t, err)
 
-	require.Equal(t, schema2.MediaTypeManifest, mfst.MediaType)
+	require.Equal(t, images.MediaTypeDockerSchema2Manifest, mfst.MediaType)
 	require.Equal(t, 2, len(mfst.Layers))
 
 	dt, err = content.ReadBlob(ctx, img.ContentStore(), ocispec.Descriptor{Digest: mfst.Layers[0].Digest})
@@ -669,7 +679,7 @@ func testBasicCacheImportExport(t *testing.T, sb integration.Sandbox) {
 	}
 	require.NoError(t, err)
 
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -734,7 +744,7 @@ func testBasicCacheImportExport(t *testing.T, sb integration.Sandbox) {
 func testCachedMounts(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -744,10 +754,10 @@ func testCachedMounts(t *testing.T, sb integration.Sandbox) {
 	base := st.AddMount("/wd", llb.Scratch())
 
 	st = busybox.Run(llb.Shlex(`sh -c "echo -n first > foo"`), llb.Dir("/wd"))
-	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1"))
+	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountShared))
 	st = st.Run(llb.Shlex(`sh -c "cat foo && echo -n second > /wd2/bar"`), llb.Dir("/wd"))
-	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1"))
-	st.AddMount("/wd2", base, llb.AsPersistentCacheDir("mycache2"))
+	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountShared))
+	st.AddMount("/wd2", base, llb.AsPersistentCacheDir("mycache2", llb.CacheMountShared))
 
 	def, err := st.Marshal()
 	require.NoError(t, err)
@@ -762,8 +772,8 @@ func testCachedMounts(t *testing.T, sb integration.Sandbox) {
 	// second build using cache directories
 	st = busybox.Run(llb.Shlex(`sh -c "cp /src0/foo . && cp /src1/bar . && cp /src1/baz ."`), llb.Dir("/wd"))
 	out := st.AddMount("/wd", llb.Scratch())
-	st.AddMount("/src0", llb.Scratch(), llb.AsPersistentCacheDir("mycache1"))
-	st.AddMount("/src1", base, llb.AsPersistentCacheDir("mycache2"))
+	st.AddMount("/src0", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountShared))
+	st.AddMount("/src1", base, llb.AsPersistentCacheDir("mycache2", llb.CacheMountShared))
 
 	destDir, err := ioutil.TempDir("", "buildkit")
 	require.NoError(t, err)
@@ -793,11 +803,81 @@ func testCachedMounts(t *testing.T, sb integration.Sandbox) {
 	checkAllReleasable(t, c, sb, true)
 }
 
+func testSharedCacheMounts(t *testing.T, sb integration.Sandbox) {
+	requiresLinux(t)
+	t.Parallel()
+	c, err := New(context.TODO(), sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	busybox := llb.Image("busybox:latest")
+	st := busybox.Run(llb.Shlex(`sh -e -c "touch one; while [[ ! -f two ]]; do ls -l; usleep 500000; done"`), llb.Dir("/wd"))
+	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountShared))
+
+	st2 := busybox.Run(llb.Shlex(`sh -e -c "touch two; while [[ ! -f one ]]; do ls -l; usleep 500000; done"`), llb.Dir("/wd"))
+	st2.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountShared))
+
+	out := busybox.Run(llb.Shlex("true"))
+	out.AddMount("/m1", st.Root())
+	out.AddMount("/m2", st2.Root())
+
+	def, err := out.Marshal()
+	require.NoError(t, err)
+
+	_, err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.NoError(t, err)
+}
+
+func testLockedCacheMounts(t *testing.T, sb integration.Sandbox) {
+	requiresLinux(t)
+	t.Parallel()
+	c, err := New(context.TODO(), sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	busybox := llb.Image("busybox:latest")
+	st := busybox.Run(llb.Shlex(`sh -e -c "touch one; if [[ -f two ]]; then exit 0; fi; for i in $(seq 10); do if [[ -f two ]]; then exit 1; fi; usleep 200000; done"`), llb.Dir("/wd"))
+	st.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountLocked))
+
+	st2 := busybox.Run(llb.Shlex(`sh -e -c "touch two; if [[ -f one ]]; then exit 0; fi; for i in $(seq 10); do if [[ -f one ]]; then exit 1; fi; usleep 200000; done"`), llb.Dir("/wd"))
+	st2.AddMount("/wd", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountLocked))
+
+	out := busybox.Run(llb.Shlex("true"))
+	out.AddMount("/m1", st.Root())
+	out.AddMount("/m2", st2.Root())
+
+	def, err := out.Marshal()
+	require.NoError(t, err)
+
+	_, err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.NoError(t, err)
+}
+
+func testDuplicateCacheMount(t *testing.T, sb integration.Sandbox) {
+	requiresLinux(t)
+	t.Parallel()
+	c, err := New(context.TODO(), sb.Address())
+	require.NoError(t, err)
+	defer c.Close()
+
+	busybox := llb.Image("busybox:latest")
+
+	out := busybox.Run(llb.Shlex(`sh -e -c "[[ ! -f /m2/foo ]]; touch /m1/foo; [[ -f /m2/foo ]];"`))
+	out.AddMount("/m1", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountLocked))
+	out.AddMount("/m2", llb.Scratch(), llb.AsPersistentCacheDir("mycache1", llb.CacheMountLocked))
+
+	def, err := out.Marshal()
+	require.NoError(t, err)
+
+	_, err = c.Solve(context.TODO(), def, SolveOpt{}, nil)
+	require.NoError(t, err)
+}
+
 // containerd/containerd#2119
 func testDuplicateWhiteouts(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -808,7 +888,7 @@ func testDuplicateWhiteouts(t *testing.T, sb integration.Sandbox) {
 		st = busybox.Run(llb.Shlex(cmd), llb.Dir("/wd")).AddMount("/wd", st)
 	}
 
-	run(`sh -c "mkdir -p d0 d1; echo -n first > d1/bar;"`)
+	run(`sh -e -c "mkdir -p d0 d1; echo -n first > d1/bar;"`)
 	run(`sh -c "rm -rf d0 d1"`)
 
 	def, err := st.Marshal()
@@ -865,7 +945,7 @@ func testDuplicateWhiteouts(t *testing.T, sb integration.Sandbox) {
 func testWhiteoutParentDir(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -927,7 +1007,7 @@ func testWhiteoutParentDir(t *testing.T, sb integration.Sandbox) {
 // #296
 func testSchema1Image(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -945,7 +1025,7 @@ func testSchema1Image(t *testing.T, sb integration.Sandbox) {
 // #319
 func testMountWithNoSource(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -975,7 +1055,7 @@ func testMountWithNoSource(t *testing.T, sb integration.Sandbox) {
 // #324
 func testReadonlyRootFS(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1004,7 +1084,7 @@ func testReadonlyRootFS(t *testing.T, sb integration.Sandbox) {
 func testProxyEnv(t *testing.T, sb integration.Sandbox) {
 	t.Parallel()
 
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -1204,7 +1284,7 @@ loop0:
 func testInvalidExporter(t *testing.T, sb integration.Sandbox) {
 	requiresLinux(t)
 	t.Parallel()
-	c, err := New(sb.Address())
+	c, err := New(context.TODO(), sb.Address())
 	require.NoError(t, err)
 	defer c.Close()
 
