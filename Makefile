@@ -46,7 +46,7 @@ static: runc ## Builds a static executable
 all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install
 
 .PHONY: fmt
-fmt: ## Verifies all files have men `gofmt`ed
+fmt: ## Verifies all files have been `gofmt`ed
 	@echo "+ $@"
 	@gofmt -s -l . | grep -v '.pb.go:' | grep -v vendor | grep -v cross | tee /dev/stderr
 
