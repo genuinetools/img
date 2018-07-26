@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +13,9 @@ var (
 	bearerRegex = regexp.MustCompile(
 		`^\s*Bearer\s+(.*)$`)
 	basicRegex = regexp.MustCompile(`^\s*Basic\s+.*$`)
+
+	// ErrBasicAuth indicates that the repository requires basic rather than token authentication.
+	ErrBasicAuth = errors.New("basic auth required")
 )
 
 func parseAuthHeader(header http.Header) (*authService, error) {
@@ -25,7 +29,7 @@ func parseAuthHeader(header http.Header) (*authService, error) {
 
 func parseChallenge(challengeHeader string) (*authService, error) {
 	if basicRegex.MatchString(challengeHeader) {
-		return nil, fmt.Errorf("basic auth required")
+		return nil, ErrBasicAuth
 	}
 
 	match := bearerRegex.FindAllStringSubmatch(challengeHeader, -1)
