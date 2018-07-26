@@ -99,7 +99,7 @@ The below instructions mirror that of the [v0.4.8 release page](https://github.c
 
 ```console
 # Export the sha256sum for verification.
-$ export IMG_SHA256="dad4cec955803d3e8f42b9348c3ae25ee5fca73369364cd4419f77ec1e713040"
+$ export IMG_SHA256="d8495994d46ee40180fbd3d3f13f12c81352b08af32cd2a3361db3f1d5503fa2"
 
 # Download and check the sha256sum.
 $ curl -fSL "https://github.com/genuinetools/img/releases/download/v0.4.8/img-linux-amd64" -o "/usr/local/bin/img" \
