@@ -95,14 +95,14 @@ NOTE: These steps work only for Linux. Compile and run in a container
 
 #### Binaries
 
-The below instructions mirror that of the [v0.4.7 release page](https://github.com/genuinetools/img/releases/tag/v0.4.7).
+The below instructions mirror that of the [v0.4.8 release page](https://github.com/genuinetools/img/releases/tag/v0.4.8).
 
 ```console
 # Export the sha256sum for verification.
 $ export IMG_SHA256="dad4cec955803d3e8f42b9348c3ae25ee5fca73369364cd4419f77ec1e713040"
 
 # Download and check the sha256sum.
-$ curl -fSL "https://github.com/genuinetools/img/releases/download/v0.4.7/img-linux-amd64" -o "/usr/local/bin/img" \
+$ curl -fSL "https://github.com/genuinetools/img/releases/download/v0.4.8/img-linux-amd64" -o "/usr/local/bin/img" \
 	&& echo "${IMG_SHA256}  /usr/local/bin/img" | sha256sum -c - \
 	&& chmod a+x "/usr/local/bin/img"
 
