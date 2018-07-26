@@ -47,6 +47,14 @@ func TestParseChallenge(t *testing.T) {
 				scope:   []string{"repository:chrome:pull"},
 			},
 		},
+		{
+			header:      `Basic realm="https://r.j3ss.co/auth",service="Docker registry"`,
+			errorString: "basic auth required",
+		},
+		{
+			header:      `Basic realm="Registry Realm",service="Docker registry"`,
+			errorString: "basic auth required",
+		},
 	}
 
 	for _, tc := range challengeHeaderCases {
@@ -54,7 +62,7 @@ func TestParseChallenge(t *testing.T) {
 		if err != nil && !strings.Contains(err.Error(), tc.errorString) {
 			t.Fatalf("expected error to contain %v,  got %s", tc.errorString, err)
 		}
-		if !tc.value.equalTo(val) {
+		if err == nil && !tc.value.equalTo(val) {
 			t.Fatalf("got %v, expected %v", val, tc.value)
 		}
 

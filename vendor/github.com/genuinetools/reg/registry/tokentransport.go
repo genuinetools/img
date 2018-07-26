@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 // TokenTransport defines the data structure for authentication via tokens.
@@ -121,7 +120,8 @@ func isTokenDemand(resp *http.Response) (*authService, error) {
 	return parseAuthHeader(resp.Header)
 }
 
-// Token returns the required token for the specific resource url.
+// Token returns the required token for the specific resource url. If the registry requires basic authentication, this
+// function returns ErrBasicAuth.
 func (r *Registry) Token(url string) (string, error) {
 	r.Logf("registry.token url=%s", url)
 
@@ -189,16 +189,12 @@ func (r *Registry) Headers(uri string) (map[string]string, error) {
 	// Get the token.
 	token, err := r.Token(uri)
 	if err != nil {
-		// If we get an error here of type: malformed auth challenge header: 'Basic realm="Registry Realm"'
-		// We need to use basic auth for the registry.
-		if !strings.Contains(err.Error(), `malformed auth challenge header: 'Basic realm="Registry Realm"'`) && !strings.Contains(err.Error(), "basic auth required") {
-			return nil, err
+		if err == ErrBasicAuth {
+			// If we couldn't get a token because the server requires basic auth, just return basic auth headers.
+			return map[string]string{
+				"Authorization": fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(r.Username+":"+r.Password))),
+			}, nil
 		}
-
-		// Return basic auth headers.
-		return map[string]string{
-			"Authorization": fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(r.Username+":"+r.Password))),
-		}, nil
 	}
 
 	if len(token) < 1 {

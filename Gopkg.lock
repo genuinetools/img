@@ -264,7 +264,7 @@
   branch = "master"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
-  revision = "74603b6d47a08e9f347442a7f787acbb70bf4883"
+  revision = "65b2c0329da5b239a259f309a7ed8506be1508f6"
 
 [[projects]]
   name = "github.com/godbus/dbus"

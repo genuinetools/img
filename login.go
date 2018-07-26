@@ -90,7 +90,7 @@ func (cmd *loginCommand) Run(args []string) error {
 		return fmt.Errorf("creating registry client failed: %v", err)
 	}
 	token, err := r.Token(r.URL)
-	if err != nil {
+	if err != nil && err != registryapi.ErrBasicAuth {
 		return fmt.Errorf("getting registry token failed: %v", err)
 	}
 
