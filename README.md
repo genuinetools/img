@@ -130,7 +130,13 @@ $ make BUILDTAGS="seccomp noembed"
 There is an [AUR build](https://aur.archlinux.org/packages/img/).
 
 ```console
-$ sudo pacman -S img
+# Use whichever AUR helper you prefer
+$ yay -S img
+
+# Or build from the source PKGBUILD
+$ git clone https://aur.archlinux.org/packages/img.git
+$ cd img
+$ makepkg -si
 ```
 
 #### Gentoo
