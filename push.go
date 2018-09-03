@@ -19,7 +19,7 @@ func (cmd *pushCommand) ShortHelp() string  { return pushHelp }
 func (cmd *pushCommand) LongHelp() string   { return pushHelp }
 func (cmd *pushCommand) Hidden() bool       { return false }
 func (cmd *pushCommand) DoReexec() bool     { return true }
-func (cmd *pushCommand) RequiresRunc() bool { return false }
+func (cmd *pushCommand) RequiresRunc() bool { return true }
 
 func (cmd *pushCommand) Register(fs *flag.FlagSet) {
 	fs.BoolVar(&cmd.insecure, "insecure-registry", false, "Push to insecure registry")
