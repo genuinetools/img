@@ -15,7 +15,7 @@ func (c *Client) Prune(ctx context.Context) ([]*controlapi.UsageRecord, error) {
 	ch := make(chan client.UsageInfo)
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(false)
 	if err != nil {
 		return nil, fmt.Errorf("creating worker opt failed: %v", err)
 	}

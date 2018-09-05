@@ -30,7 +30,7 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 	}
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(false)
 	if err != nil {
 		return nil, fmt.Errorf("creating worker opt failed: %v", err)
 	}

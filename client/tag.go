@@ -32,7 +32,7 @@ func (c *Client) TagImage(ctx context.Context, src, dest string) error {
 	dest = named.String()
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(false)
 	if err != nil {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}

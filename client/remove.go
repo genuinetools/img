@@ -19,7 +19,7 @@ func (c *Client) RemoveImage(ctx context.Context, image string) error {
 	image = named.String()
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(false)
 	if err != nil {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}

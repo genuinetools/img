@@ -34,7 +34,7 @@ func (c *Client) Unpack(ctx context.Context, image, dest string) error {
 	image = named.String()
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(true)
 	if err != nil {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}

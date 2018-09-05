@@ -17,6 +17,7 @@ import (
 	"github.com/containerd/containerd/snapshots/overlay"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
+	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/throttle"
@@ -27,7 +28,7 @@ import (
 )
 
 // createWorkerOpt creates a base.WorkerOpt to be used for a new worker.
-func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
+func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err error) {
 	sm, err := c.getSessionManager()
 	if err != nil {
 		return opt, err
@@ -59,13 +60,16 @@ func (c *Client) createWorkerOpt() (opt base.WorkerOpt, err error) {
 		return opt, fmt.Errorf("creating %s snapshotter failed: %v", c.backend, err)
 	}
 
-	exeOpt := runcexecutor.Opt{
-		Root:     filepath.Join(c.root, "executor"),
-		Rootless: unprivileged,
-	}
-	exe, err := runcexecutor.New(exeOpt)
-	if err != nil {
-		return opt, err
+	var exe executor.Executor
+	if withExecutor {
+		exeOpt := runcexecutor.Opt{
+			Root:     filepath.Join(c.root, "executor"),
+			Rootless: unprivileged,
+		}
+		exe, err = runcexecutor.New(exeOpt)
+		if err != nil {
+			return opt, err
+		}
 	}
 
 	// Create the content store locally.

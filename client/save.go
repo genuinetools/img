@@ -24,7 +24,7 @@ func (c *Client) SaveImage(ctx context.Context, image, format string, writer io.
 	image = named.String()
 
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(false)
 	if err != nil {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}

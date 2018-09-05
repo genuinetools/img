@@ -19,7 +19,7 @@ func (c *Client) createController() error {
 		return fmt.Errorf("creating session manager failed: %v", err)
 	}
 	// Create the worker opts.
-	opt, err := c.createWorkerOpt()
+	opt, err := c.createWorkerOpt(true)
 	if err != nil {
 		return fmt.Errorf("creating worker opt failed: %v", err)
 	}
