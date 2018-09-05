@@ -164,6 +164,10 @@ $ docker run --rm -it \
 
 ## Usage
 
+Make sure you have user namespace support enabled. On some distros (Debian and
+Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
+
+
 ```console
 $ img -h
 Usage: img <command>
