@@ -32,9 +32,10 @@ patches being made to container runtimes and Kubernetes to make this possible.
 For the on-going work toward getting patches into container runtimes and
 Kubernetes, see:
 
-- [moby/moby#36644](https://github.com/moby/moby/pull/36644)
-- [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934)
-- [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283)
+- [moby/moby#36644](https://github.com/moby/moby/pull/36644) **merged**
+- [docker/cli#1347](https://github.com/docker/cli/pull/1347)
+- [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934) **merged**
+- [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283) **merged** 
 
 The patches for runc has been merged into the upstream since `ecd55a4135e0a26de884ce436442914f945b1e76` (May 30, 2018).
 The upstream BuildKit can also run in rootless mode since `65b526438b86a17cf35042011051ce15c8bfb92a` (June 1, 2018).
@@ -148,6 +149,8 @@ $ sudo emerge -a app-emulation/img
 ```
 
 #### Running with Docker
+
+This currently **does not work**, to track the progress of making this work in a container see [upstream patches](#upstream-patches).
 
 ```console
 $ docker run --rm -it \
