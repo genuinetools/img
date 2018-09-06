@@ -25,7 +25,7 @@ Currently this works out of the box on a Linux machine if you install via
 the directions covered in [installing from binaries](#binaries). This
 installation will ensure you have the correct version of `img` and also `runc`.
 
-**Upstream Patches**
+##### Upstream Patches
 
 The ultimate goal is to also have this work inside a container. There are
 patches being made to container runtimes and Kubernetes to make this possible. 
@@ -44,14 +44,14 @@ You might also be interested in reading:
 * [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
 * [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
 
-**Benchmarks**
+##### Benchmarks
 
 If you are curious about benchmarks comparing various container builders, check
 out [@AkihiroSuda's buildbench](https://github.com/AkihiroSuda/buildbench) 
 [results](https://github.com/AkihiroSuda/buildbench/issues/1).
 
 
-**Table of Contents**
+##### Table of Contents
 
 * [Installation](#installation)
     - [Binaries](#binaries)
