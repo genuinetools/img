@@ -82,12 +82,12 @@ out [@AkihiroSuda's buildbench](https://github.com/AkihiroSuda/buildbench)
 
 ## Installation
 
-You need to have `newuidmap` installed.
-On Ubuntu, `newuidmap` is provided by the `uidmap` package.
-`runc` will be installed on start from an embedded binary if it is not already
-available locally.
+You need to have `newuidmap` installed. On Ubuntu, `newuidmap` is provided by the `uidmap` package.
 
-If you would like to disable the embedded runc you can use `BUILDTAGS="seccomp
+You also need to have `seccomp` installed. On Ubuntu, `seccomp` is provided by the `libseccomp-dev` package.
+
+`runc` will be installed on start from an embedded binary if it is not already
+available locally. If you would like to disable the embedded runc you can use `BUILDTAGS="seccomp
 noembed"` while building from source with `make`. Or the environment variable
 `IMG_DISABLE_EMBEDDED_RUNC=1` on execution of the `img` binary.
 
