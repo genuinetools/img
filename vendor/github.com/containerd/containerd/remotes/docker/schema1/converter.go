@@ -18,7 +18,6 @@ package schema1
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -31,6 +30,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/containerd/containerd/archive/compression"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
@@ -255,8 +255,9 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 	log.G(ctx).Debug("fetch blob")
 
 	var (
-		ref  = remotes.MakeRefKey(ctx, desc)
-		calc = newBlobStateCalculator()
+		ref            = remotes.MakeRefKey(ctx, desc)
+		calc           = newBlobStateCalculator()
+		compressMethod = compression.Gzip
 	)
 
 	// size may be unknown, set to zero for content ingest
@@ -271,8 +272,14 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 			return err
 		}
 
-		// TODO: Check if blob -> diff id mapping already exists
-		// TODO: Check if blob empty label exists
+		reuse, err := c.reuseLabelBlobState(ctx, desc)
+		if err != nil {
+			return err
+		}
+
+		if reuse {
+			return nil
+		}
 
 		ra, err := c.contentStore.ReaderAt(ctx, desc)
 		if err != nil {
@@ -280,13 +287,14 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 		}
 		defer ra.Close()
 
-		gr, err := gzip.NewReader(content.NewReader(ra))
+		r, err := compression.DecompressStream(content.NewReader(ra))
 		if err != nil {
 			return err
 		}
-		defer gr.Close()
 
-		_, err = io.Copy(calc, gr)
+		compressMethod = r.GetCompression()
+		_, err = io.Copy(calc, r)
+		r.Close()
 		if err != nil {
 			return err
 		}
@@ -303,13 +311,14 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 		pr, pw := io.Pipe()
 
 		eg.Go(func() error {
-			gr, err := gzip.NewReader(pr)
+			r, err := compression.DecompressStream(pr)
 			if err != nil {
 				return err
 			}
-			defer gr.Close()
 
-			_, err = io.Copy(calc, gr)
+			compressMethod = r.GetCompression()
+			_, err = io.Copy(calc, r)
+			r.Close()
 			pr.CloseWithError(err)
 			return err
 		})
@@ -333,7 +342,23 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 		desc.Size = info.Size
 	}
 
+	if compressMethod == compression.Uncompressed {
+		log.G(ctx).WithField("id", desc.Digest).Debugf("changed media type for uncompressed schema1 layer blob")
+		desc.MediaType = images.MediaTypeDockerSchema2Layer
+	}
+
 	state := calc.State()
+
+	cinfo := content.Info{
+		Digest: desc.Digest,
+		Labels: map[string]string{
+			"containerd.io/uncompressed": state.diffID.String(),
+		},
+	}
+
+	if _, err := c.contentStore.Update(ctx, cinfo, "labels.containerd.io/uncompressed"); err != nil {
+		return errors.Wrap(err, "failed to update uncompressed label")
+	}
 
 	c.mu.Lock()
 	c.blobMap[desc.Digest] = state
@@ -342,6 +367,41 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 
 	return nil
 }
+
+func (c *Converter) reuseLabelBlobState(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
+	cinfo, err := c.contentStore.Info(ctx, desc.Digest)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get blob info")
+	}
+	desc.Size = cinfo.Size
+
+	diffID, ok := cinfo.Labels["containerd.io/uncompressed"]
+	if !ok {
+		return false, nil
+	}
+
+	bState := blobState{empty: false}
+
+	if bState.diffID, err = digest.Parse(diffID); err != nil {
+		log.G(ctx).WithField("id", desc.Digest).Warnf("failed to parse digest from label containerd.io/uncompressed: %v", diffID)
+		return false, nil
+	}
+
+	// NOTE: there is no need to read header to get compression method
+	// because there are only two kinds of methods.
+	if bState.diffID == desc.Digest {
+		desc.MediaType = images.MediaTypeDockerSchema2Layer
+	} else {
+		desc.MediaType = images.MediaTypeDockerSchema2LayerGzip
+	}
+
+	c.mu.Lock()
+	c.blobMap[desc.Digest] = bState
+	c.layerBlobs[bState.diffID] = desc
+	c.mu.Unlock()
+	return true, nil
+}
+
 func (c *Converter) schema1ManifestHistory() ([]ocispec.History, []digest.Digest, error) {
 	if c.pulledManifest == nil {
 		return nil, nil, errors.New("missing schema 1 manifest for conversion")

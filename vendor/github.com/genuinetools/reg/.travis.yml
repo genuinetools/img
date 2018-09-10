@@ -1,0 +1,56 @@
+language: go
+sudo: true
+services:
+  - docker
+go:
+  - 1.10.x
+before_install:
+  - go get github.com/golang/lint/golint
+  - go get honnef.co/go/tools/cmd/staticcheck
+jobs:
+  include:
+    - script:
+        - make fmt lint staticcheck vet install
+        - DOCKER_API_VERSION=1.37 make dind dtest
+    - stage: Build Release
+      script:
+        - make release
+        - echo "Deploying to GitHub releases ..."
+      deploy:
+        provider: releases
+        file:
+          - cross/reg-darwin-amd64
+          - cross/reg-darwin-amd64.md5
+          - cross/reg-darwin-amd64.sha256
+          - cross/reg-darwin-386
+          - cross/reg-darwin-386.md5
+          - cross/reg-darwin-386.sha256
+          - cross/reg-freebsd-amd64
+          - cross/reg-freebsd-amd64.md5
+          - cross/reg-freebsd-amd64.sha256
+          - cross/reg-freebsd-386
+          - cross/reg-freebsd-386.md5
+          - cross/reg-freebsd-386.sha256
+          - cross/reg-linux-arm
+          - cross/reg-linux-arm.md5
+          - cross/reg-linux-arm.sha256
+          - cross/reg-linux-arm64
+          - cross/reg-linux-arm64.md5
+          - cross/reg-linux-arm64.sha256
+          - cross/reg-linux-amd64
+          - cross/reg-linux-amd64.md5
+          - cross/reg-linux-amd64.sha256
+          - cross/reg-linux-386
+          - cross/reg-linux-386.md5
+          - cross/reg-linux-386.sha256
+          - cross/reg-windows-amd64
+          - cross/reg-windows-amd64.md5
+          - cross/reg-windows-amd64.sha256
+          - cross/reg-windows-386
+          - cross/reg-windows-386.md5
+          - cross/reg-windows-386.sha256
+        skip_cleanup: true
+        on:
+          tags: true
+        api_key:
+          secure: "AULDRJQ8olD4R3v35sCnSZx136DnJnqMkX3ANNC/gosQhI+sFViW7BT0kaQBcIqBjF3jrik4Zm4BAW0VSZruwahD+pxjf/uroYAraMaFohw5SCL+CIY4qgNM/kkkZXTAP5DvPIOKEmXY8FfL1ZD0C6B8OKabRjh2rxuoh+enjflrA/B6B98yqo/NufCgfqfhwSK7xnh7kY4DCwfpQ80fQFzwj1BQQ5bBpP7tTVpZVqnbfSTSUoV8pX+2Ef/+t3KgYWx11+zkML9GbLevf7SbaMP9qceLvSW2npjzK1vCdQEtKp5OEuvaqsHXpdV58EdQx01zt5RSKSj/EcVaASwt2dbR10kTV7hBTvNqmvStjjKavCKzyohHG5s8VOrTXnIezuxXe1l9P9teIktY+uFClsC9t8jkQZZlVYn8brWMp+oU1VtVgYQRiF4p08IxUUS5DtZ1ZML9Yqh0am1lo2EFRydOBiIVoG2cSO8IbvDYYhIUrfc+pZ01vBV+sp+5EGmNp/7wgLwNSzoAgjh6BRLZO7irICcd579L4ZLWYX8k7/oXFDb8ABjzl0/Fk4K6EL1TTQzJaabxVAT1SI7b2PnqhJx7f5xPbNdNIQAQ/+I0sN7hpIJ0o/VaqObGKIdJeZSWISQ5TTlK+TtbucAtNaSgw0rhNYrIslK2bfgODa6MfJc="

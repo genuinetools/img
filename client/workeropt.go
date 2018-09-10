@@ -20,6 +20,8 @@ import (
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
+	"github.com/moby/buildkit/util/network"
+	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/util/throttle"
 	"github.com/moby/buildkit/worker/base"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -66,7 +68,7 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 			Root:     filepath.Join(c.root, "executor"),
 			Rootless: unprivileged,
 		}
-		exe, err = runcexecutor.New(exeOpt)
+		exe, err = runcexecutor.New(exeOpt, network.Default())
 		if err != nil {
 			return opt, err
 		}
@@ -117,17 +119,18 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	xlabels := base.Labels("oci", c.backend)
 
 	opt = base.WorkerOpt{
-		ID:             id,
-		Labels:         xlabels,
-		SessionManager: sm,
-		MetadataStore:  md,
-		Executor:       exe,
-		Snapshotter:    containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
-		ContentStore:   contentStore,
-		Applier:        apply.NewFileSystemApplier(contentStore),
-		Differ:         walking.NewWalkingDiff(contentStore),
-		ImageStore:     imageStore,
-		Platforms:      []specs.Platform{platforms.Normalize(platforms.DefaultSpec())},
+		ID:                 id,
+		Labels:             xlabels,
+		SessionManager:     sm,
+		MetadataStore:      md,
+		Executor:           exe,
+		Snapshotter:        containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
+		ContentStore:       contentStore,
+		Applier:            apply.NewFileSystemApplier(contentStore),
+		Differ:             walking.NewWalkingDiff(contentStore),
+		ImageStore:         imageStore,
+		Platforms:          []specs.Platform{platforms.Normalize(platforms.DefaultSpec())},
+		ResolveOptionsFunc: resolver.NewResolveOptionsFunc(nil),
 	}
 
 	return opt, err

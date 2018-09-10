@@ -14,6 +14,13 @@ const (
 	MaxValueSize = (1 << 31) - 2
 )
 
+const (
+	maxUint = ^uint(0)
+	minUint = 0
+	maxInt  = int(^uint(0) >> 1)
+	minInt  = -maxInt - 1
+)
+
 const bucketHeaderSize = int(unsafe.Sizeof(bucket{}))
 
 const (
@@ -316,12 +323,7 @@ func (b *Bucket) Delete(key []byte) error {
 
 	// Move cursor to correct position.
 	c := b.Cursor()
-	k, _, flags := c.seek(key)
-
-	// Return nil if the key doesn't exist.
-	if !bytes.Equal(key, k) {
-		return nil
-	}
+	_, _, flags := c.seek(key)
 
 	// Return an error if there is already existing bucket value.
 	if (flags & bucketLeafFlag) != 0 {

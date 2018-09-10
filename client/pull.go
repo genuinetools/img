@@ -7,6 +7,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/distribution/reference"
 	"github.com/moby/buildkit/cache"
+	"github.com/moby/buildkit/exporter"
 	imageexporter "github.com/moby/buildkit/exporter/containerimage"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/source/containerimage"
@@ -87,7 +88,7 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := e.Export(ctx, ref, nil); err != nil {
+	if _, err := e.Export(ctx, exporter.Source{Ref: ref}); err != nil {
 		return nil, err
 	}
 

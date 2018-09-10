@@ -28,6 +28,7 @@ import (
 	"github.com/containerd/containerd/plugin"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/storage"
+
 	"github.com/containerd/continuity/fs"
 	"github.com/pkg/errors"
 )
@@ -120,7 +121,7 @@ func (o *snapshotter) Usage(ctx context.Context, key string) (snapshots.Usage, e
 	}
 
 	if info.Kind == snapshots.KindActive {
-		du, err := fs.DiskUsage(o.getSnapshotDir(id))
+		du, err := fs.DiskUsage(ctx, o.getSnapshotDir(id))
 		if err != nil {
 			return snapshots.Usage{}, err
 		}
@@ -166,7 +167,7 @@ func (o *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
 		return err
 	}
 
-	usage, err := fs.DiskUsage(o.getSnapshotDir(id))
+	usage, err := fs.DiskUsage(ctx, o.getSnapshotDir(id))
 	if err != nil {
 		return err
 	}
@@ -250,6 +251,9 @@ func (o *snapshotter) createSnapshot(ctx context.Context, kind snapshots.Kind, k
 		td, err = ioutil.TempDir(filepath.Join(o.root, "snapshots"), "new-")
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create temp dir")
+		}
+		if err := os.Chmod(td, 0755); err != nil {
+			return nil, errors.Wrapf(err, "failed to chmod %s to 0755", td)
 		}
 		defer func() {
 			if err != nil {

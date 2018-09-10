@@ -15,25 +15,28 @@ import (
 	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/session/grpchijack"
 	"github.com/moby/buildkit/solver/pb"
+	"github.com/moby/buildkit/util/entitlements"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/tonistiigi/fsutil"
 	"golang.org/x/sync/errgroup"
 )
 
 type SolveOpt struct {
-	Exporter          string
-	ExporterAttrs     map[string]string
-	ExporterOutput    io.WriteCloser // for ExporterOCI and ExporterDocker
-	ExporterOutputDir string         // for ExporterLocal
-	LocalDirs         map[string]string
-	SharedKey         string
-	Frontend          string
-	FrontendAttrs     map[string]string
-	ExportCache       string
-	ExportCacheAttrs  map[string]string
-	ImportCache       []string
-	Session           []session.Attachable
+	Exporter            string
+	ExporterAttrs       map[string]string
+	ExporterOutput      io.WriteCloser // for ExporterOCI and ExporterDocker
+	ExporterOutputDir   string         // for ExporterLocal
+	LocalDirs           map[string]string
+	SharedKey           string
+	Frontend            string
+	FrontendAttrs       map[string]string
+	ExportCache         string
+	ExportCacheAttrs    map[string]string
+	ImportCache         []string
+	Session             []session.Attachable
+	AllowedEntitlements []entitlements.Entitlement
 }
 
 // Solve calls Solve on the controller.
@@ -50,6 +53,16 @@ func (c *Client) Solve(ctx context.Context, def *llb.Definition, opt SolveOpt, s
 	}
 	if opt.Frontend != "" && def != nil {
 		return nil, errors.Errorf("invalid definition for frontend %s", opt.Frontend)
+	}
+
+	return c.solve(ctx, def, nil, opt, statusChan)
+}
+
+type runGatewayCB func(ref string, s *session.Session) error
+
+func (c *Client) solve(ctx context.Context, def *llb.Definition, runGateway runGatewayCB, opt SolveOpt, statusChan chan *SolveStatus) (*SolveResponse, error) {
+	if def != nil && runGateway != nil {
+		return nil, errors.New("invalid with def and cb")
 	}
 
 	syncedDirs, err := prepareSyncedDirs(def, opt.LocalDirs)
@@ -110,8 +123,12 @@ func (c *Client) Solve(ctx context.Context, def *llb.Definition, opt SolveOpt, s
 		return s.Run(statusContext, grpchijack.Dialer(c.controlClient()))
 	})
 
+	solveCtx, cancelSolve := context.WithCancel(ctx)
 	var res *SolveResponse
 	eg.Go(func() error {
+		ctx := solveCtx
+		defer cancelSolve()
+
 		defer func() { // make sure the Status ends cleanly on build errors
 			go func() {
 				<-time.After(3 * time.Second)
@@ -137,6 +154,7 @@ func (c *Client) Solve(ctx context.Context, def *llb.Definition, opt SolveOpt, s
 				ImportRefs:  opt.ImportCache,
 				ExportAttrs: opt.ExportCacheAttrs,
 			},
+			Entitlements: opt.AllowedEntitlements,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to solve")
@@ -146,6 +164,28 @@ func (c *Client) Solve(ctx context.Context, def *llb.Definition, opt SolveOpt, s
 		}
 		return nil
 	})
+
+	if runGateway != nil {
+		eg.Go(func() error {
+			err := runGateway(ref, s)
+			if err == nil {
+				return nil
+			}
+
+			// If the callback failed then the main
+			// `Solve` (called above) should error as
+			// well. However as a fallback we wait up to
+			// 5s for that to happen before failing this
+			// goroutine.
+			select {
+			case <-solveCtx.Done():
+			case <-time.After(5 * time.Second):
+				cancelSolve()
+			}
+
+			return err
+		})
+	}
 
 	eg.Go(func() error {
 		stream, err := c.controlClient().Status(statusContext, &controlapi.StatusRequest{
@@ -216,10 +256,16 @@ func prepareSyncedDirs(def *llb.Definition, localDirs map[string]string) ([]file
 			return nil, errors.Errorf("%s not a directory", d)
 		}
 	}
+	resetUIDAndGID := func(st *fsutil.Stat) bool {
+		st.Uid = 0
+		st.Gid = 0
+		return true
+	}
+
 	dirs := make([]filesync.SyncedDir, 0, len(localDirs))
 	if def == nil {
 		for name, d := range localDirs {
-			dirs = append(dirs, filesync.SyncedDir{Name: name, Dir: d})
+			dirs = append(dirs, filesync.SyncedDir{Name: name, Dir: d, Map: resetUIDAndGID})
 		}
 	} else {
 		for _, dt := range def.Def {
@@ -234,7 +280,7 @@ func prepareSyncedDirs(def *llb.Definition, localDirs map[string]string) ([]file
 					if !ok {
 						return nil, errors.Errorf("local directory %s not enabled", name)
 					}
-					dirs = append(dirs, filesync.SyncedDir{Name: name, Dir: d}) // TODO: excludes
+					dirs = append(dirs, filesync.SyncedDir{Name: name, Dir: d, Map: resetUIDAndGID}) // TODO: excludes
 				}
 			}
 		}

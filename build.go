@@ -368,5 +368,5 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 			c = cf
 		}
 	}
-	return progressui.DisplaySolveStatus(context.TODO(), c, os.Stdout, displayCh)
+	return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, displayCh)
 }

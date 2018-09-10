@@ -68,7 +68,7 @@
 
 [[override]]
   name = "github.com/containerd/continuity"
-  revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
+  revision = "f44b615e492bdfb371aae2f76ec694d9da1db537"
 
 [[override]]
   name = "github.com/docker/libnetwork"
@@ -84,7 +84,7 @@
 
 [[override]]
   name = "github.com/boltdb/bolt"
-  source = "github.com/coreos/bbolt"
+#source = "github.com/coreos/bbolt"
   branch = "master"
 
 [[constraint]]

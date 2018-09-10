@@ -37,7 +37,7 @@ const quantileLabel = "quantile"
 // A typical use-case is the observation of request latencies. By default, a
 // Summary provides the median, the 90th and the 99th percentile of the latency
 // as rank estimations. However, the default behavior will change in the
-// upcoming v0.10 of the library. There will be no rank estiamtions at all by
+// upcoming v0.10 of the library. There will be no rank estimations at all by
 // default. For a sane transition, it is recommended to set the desired rank
 // estimations explicitly.
 //
@@ -104,6 +104,11 @@ type SummaryOpts struct {
 	// ConstLabels are used to attach fixed labels to this metric. Metrics
 	// with the same fully-qualified name must have the same label names in
 	// their ConstLabels.
+	//
+	// Due to the way a Summary is represented in the Prometheus text format
+	// and how it is handled by the Prometheus server internally, “quantile”
+	// is an illegal label name. Construction of a Summary or SummaryVec
+	// will panic if this label name is used in ConstLabels.
 	//
 	// ConstLabels are only used rarely. In particular, do not use them to
 	// attach the same labels to all your metrics. Those use cases are
@@ -402,7 +407,16 @@ type SummaryVec struct {
 
 // NewSummaryVec creates a new SummaryVec based on the provided SummaryOpts and
 // partitioned by the given label names.
+//
+// Due to the way a Summary is represented in the Prometheus text format and how
+// it is handled by the Prometheus server internally, “quantile” is an illegal
+// label name. NewSummaryVec will panic if this label name is used.
 func NewSummaryVec(opts SummaryOpts, labelNames []string) *SummaryVec {
+	for _, ln := range labelNames {
+		if ln == quantileLabel {
+			panic(errQuantileLabelNotAllowed)
+		}
+	}
 	desc := NewDesc(
 		BuildFQName(opts.Namespace, opts.Subsystem, opts.Name),
 		opts.Help,

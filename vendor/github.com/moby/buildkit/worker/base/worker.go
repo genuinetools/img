@@ -24,9 +24,11 @@ import (
 	localexporter "github.com/moby/buildkit/exporter/local"
 	ociexporter "github.com/moby/buildkit/exporter/oci"
 	"github.com/moby/buildkit/frontend"
+	gw "github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
+	"github.com/moby/buildkit/snapshot/imagerefchecker"
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/solver/llbsolver/ops"
 	"github.com/moby/buildkit/solver/pb"
@@ -37,6 +39,7 @@ import (
 	"github.com/moby/buildkit/source/local"
 	"github.com/moby/buildkit/util/contentutil"
 	"github.com/moby/buildkit/util/progress"
+	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/worker"
 	digest "github.com/opencontainers/go-digest"
 	ociidentity "github.com/opencontainers/image-spec/identity"
@@ -53,17 +56,19 @@ const labelCreatedAt = "buildkit/createdat"
 // WorkerOpt is specific to a worker.
 // See also CommonOpt.
 type WorkerOpt struct {
-	ID             string
-	Labels         map[string]string
-	Platforms      []specs.Platform
-	SessionManager *session.Manager
-	MetadataStore  *metadata.Store
-	Executor       executor.Executor
-	Snapshotter    snapshot.Snapshotter
-	ContentStore   content.Store
-	Applier        diff.Applier
-	Differ         diff.Comparer
-	ImageStore     images.Store // optional
+	ID                 string
+	Labels             map[string]string
+	Platforms          []specs.Platform
+	GCPolicy           []client.PruneInfo
+	SessionManager     *session.Manager
+	MetadataStore      *metadata.Store
+	Executor           executor.Executor
+	Snapshotter        snapshot.Snapshotter
+	ContentStore       content.Store
+	Applier            diff.Applier
+	Differ             diff.Comparer
+	ImageStore         images.Store // optional
+	ResolveOptionsFunc resolver.ResolveOptionsFunc
 }
 
 // Worker is a local worker instance with dedicated snapshotter, cache, and so on.
@@ -78,9 +83,16 @@ type Worker struct {
 
 // NewWorker instantiates a local worker
 func NewWorker(opt WorkerOpt) (*Worker, error) {
+	imageRefChecker := imagerefchecker.New(imagerefchecker.Opt{
+		ImageStore:   opt.ImageStore,
+		Snapshotter:  opt.Snapshotter,
+		ContentStore: opt.ContentStore,
+	})
+
 	cm, err := cache.NewManager(cache.ManagerOpt{
-		Snapshotter:   opt.Snapshotter,
-		MetadataStore: opt.MetadataStore,
+		Snapshotter:     opt.Snapshotter,
+		MetadataStore:   opt.MetadataStore,
+		PruneRefChecker: imageRefChecker,
 	})
 	if err != nil {
 		return nil, err
@@ -98,6 +110,7 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		Applier:        opt.Applier,
 		ImageStore:     opt.ImageStore,
 		CacheAccessor:  cm,
+		ResolverOpt:    opt.ResolveOptionsFunc,
 	})
 	if err != nil {
 		return nil, err
@@ -150,6 +163,7 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		Images:         opt.ImageStore,
 		SessionManager: opt.SessionManager,
 		ImageWriter:    iw,
+		ResolverOpt:    opt.ResolveOptionsFunc,
 	})
 	if err != nil {
 		return nil, err
@@ -205,6 +219,10 @@ func (w *Worker) Platforms() []specs.Platform {
 	return w.WorkerOpt.Platforms
 }
 
+func (w *Worker) GCPolicy() []client.PruneInfo {
+	return w.WorkerOpt.GCPolicy
+}
+
 func (w *Worker) LoadRef(id string) (cache.ImmutableRef, error) {
 	return w.CacheManager.Get(context.TODO(), id)
 }
@@ -215,7 +233,7 @@ func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge) (solve
 		case *pb.Op_Source:
 			return ops.NewSourceOp(v, op, baseOp.Platform, w.SourceManager, w)
 		case *pb.Op_Exec:
-			return ops.NewExecOp(v, op, w.CacheManager, w.MetadataStore, w.Executor, w)
+			return ops.NewExecOp(v, op, w.CacheManager, w.SessionManager, w.MetadataStore, w.Executor, w)
 		case *pb.Op_Build:
 			return ops.NewBuildOp(v, op, s, w)
 		}
@@ -223,17 +241,17 @@ func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge) (solve
 	return nil, errors.Errorf("could not resolve %v", v)
 }
 
-func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, platform *specs.Platform) (digest.Digest, []byte, error) {
+func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt) (digest.Digest, []byte, error) {
 	// ImageSource is typically source/containerimage
 	resolveImageConfig, ok := w.ImageSource.(resolveImageConfig)
 	if !ok {
 		return "", nil, errors.Errorf("worker %q does not implement ResolveImageConfig", w.ID())
 	}
-	return resolveImageConfig.ResolveImageConfig(ctx, ref, platform)
+	return resolveImageConfig.ResolveImageConfig(ctx, ref, opt)
 }
 
 type resolveImageConfig interface {
-	ResolveImageConfig(ctx context.Context, ref string, platform *specs.Platform) (digest.Digest, []byte, error)
+	ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt) (digest.Digest, []byte, error)
 }
 
 func (w *Worker) Exec(ctx context.Context, meta executor.Meta, rootFS cache.ImmutableRef, stdin io.ReadCloser, stdout, stderr io.WriteCloser) error {
@@ -249,8 +267,8 @@ func (w *Worker) DiskUsage(ctx context.Context, opt client.DiskUsageInfo) ([]*cl
 	return w.CacheManager.DiskUsage(ctx, opt)
 }
 
-func (w *Worker) Prune(ctx context.Context, ch chan client.UsageInfo) error {
-	return w.CacheManager.Prune(ctx, ch)
+func (w *Worker) Prune(ctx context.Context, ch chan client.UsageInfo, opt ...client.PruneInfo) error {
+	return w.CacheManager.Prune(ctx, ch, opt...)
 }
 
 func (w *Worker) Exporter(name string) (exporter.Exporter, error) {

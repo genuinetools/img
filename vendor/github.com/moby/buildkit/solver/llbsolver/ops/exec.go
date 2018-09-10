@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -18,7 +21,11 @@ import (
 	"github.com/docker/docker/pkg/locker"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/metadata"
+	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/executor"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/session/secrets"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/solver/llbsolver"
@@ -26,6 +33,7 @@ import (
 	"github.com/moby/buildkit/util/progress/logs"
 	"github.com/moby/buildkit/worker"
 	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -35,6 +43,7 @@ const execCacheType = "buildkit.exec.v0"
 type execOp struct {
 	op        *pb.ExecOp
 	cm        cache.Manager
+	sm        *session.Manager
 	md        *metadata.Store
 	exec      executor.Executor
 	w         worker.Worker
@@ -43,10 +52,11 @@ type execOp struct {
 	cacheMounts map[string]*cacheRefShare
 }
 
-func NewExecOp(v solver.Vertex, op *pb.Op_Exec, cm cache.Manager, md *metadata.Store, exec executor.Executor, w worker.Worker) (solver.Op, error) {
+func NewExecOp(v solver.Vertex, op *pb.Op_Exec, cm cache.Manager, sm *session.Manager, md *metadata.Store, exec executor.Executor, w worker.Worker) (solver.Op, error) {
 	return &execOp{
 		op:          op.Exec,
 		cm:          cm,
+		sm:          sm,
 		md:          md,
 		exec:        exec,
 		numInputs:   len(v.Inputs()),
@@ -58,6 +68,11 @@ func NewExecOp(v solver.Vertex, op *pb.Op_Exec, cm cache.Manager, md *metadata.S
 func cloneExecOp(old *pb.ExecOp) pb.ExecOp {
 	n := *old
 	meta := *n.Meta
+	meta.ExtraHosts = nil
+	for i := range n.Meta.ExtraHosts {
+		h := *n.Meta.ExtraHosts[i]
+		meta.ExtraHosts = append(meta.ExtraHosts, &h)
+	}
 	n.Meta = &meta
 	n.Mounts = nil
 	for i := range n.Mounts {
@@ -69,6 +84,11 @@ func cloneExecOp(old *pb.ExecOp) pb.ExecOp {
 
 func (e *execOp) CacheMap(ctx context.Context, index int) (*solver.CacheMap, bool, error) {
 	op := cloneExecOp(e.op)
+	for i := range op.Meta.ExtraHosts {
+		h := op.Meta.ExtraHosts[i]
+		h.IP = ""
+		op.Meta.ExtraHosts[i] = h
+	}
 	for i := range op.Mounts {
 		op.Mounts[i].Selector = ""
 	}
@@ -206,7 +226,7 @@ func (e *execOp) getRefCacheDir(ctx context.Context, ref cache.ImmutableRef, id 
 func (e *execOp) getRefCacheDirNoCache(ctx context.Context, key string, ref cache.ImmutableRef, id string, m *pb.Mount, block bool) (cache.MutableRef, error) {
 	makeMutable := func(cache.ImmutableRef) (cache.MutableRef, error) {
 		desc := fmt.Sprintf("cached mount %s from exec %s", m.Dest, strings.Join(e.op.Meta.Args, " "))
-		return e.cm.New(ctx, ref, cache.WithDescription(desc), cache.CachePolicyRetain)
+		return e.cm.New(ctx, ref, cache.WithRecordType(client.UsageRecordTypeCacheMount), cache.WithDescription(desc), cache.CachePolicyRetain)
 	}
 
 	cacheRefsLocker.Lock(key)
@@ -257,6 +277,112 @@ func (e *execOp) getRefCacheDirNoCache(ctx context.Context, key string, ref cach
 		return nil, err
 	}
 	return mRef, nil
+}
+
+func (e *execOp) getSecretMountable(ctx context.Context, m *pb.Mount) (cache.Mountable, error) {
+	if m.SecretOpt == nil {
+		return nil, errors.Errorf("invalid sercet mount options")
+	}
+	sopt := *m.SecretOpt
+
+	id := sopt.ID
+	if id == "" {
+		return nil, errors.Errorf("secret ID missing from mount options")
+	}
+
+	sessionID := session.FromContext(ctx)
+	if sessionID == "" {
+		return nil, errors.New("could not access local files without session")
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	caller, err := e.sm.Get(timeoutCtx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	dt, err := secrets.GetSecret(ctx, caller, id)
+	if err != nil {
+		if errors.Cause(err) == secrets.ErrNotFound && m.SecretOpt.Optional {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &secretMount{mount: m, data: dt}, nil
+}
+
+type secretMount struct {
+	mount *pb.Mount
+	data  []byte
+}
+
+func (sm *secretMount) Mount(ctx context.Context, readonly bool) (snapshot.Mountable, error) {
+	return &secretMountInstance{sm: sm}, nil
+}
+
+type secretMountInstance struct {
+	sm   *secretMount
+	root string
+}
+
+func (sm *secretMountInstance) Mount() ([]mount.Mount, error) {
+	dir, err := ioutil.TempDir("", "buildkit-secrets")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create temp dir")
+	}
+
+	if err := os.Chmod(dir, 0711); err != nil {
+		return nil, err
+	}
+
+	tmpMount := mount.Mount{
+		Type:    "tmpfs",
+		Source:  "tmpfs",
+		Options: []string{"nodev", "nosuid", "noexec", fmt.Sprintf("uid=%d,gid=%d", os.Geteuid(), os.Getegid())},
+	}
+
+	if system.RunningInUserNS() {
+		tmpMount.Options = nil
+	}
+
+	if err := mount.All([]mount.Mount{tmpMount}, dir); err != nil {
+		return nil, errors.Wrap(err, "unable to setup secret mount")
+	}
+	sm.root = dir
+
+	randID := identity.NewID()
+	fp := filepath.Join(dir, randID)
+	if err := ioutil.WriteFile(fp, sm.sm.data, 0600); err != nil {
+		sm.Release()
+		return nil, err
+	}
+
+	if err := os.Chown(fp, int(sm.sm.mount.SecretOpt.Uid), int(sm.sm.mount.SecretOpt.Gid)); err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(fp, os.FileMode(sm.sm.mount.SecretOpt.Mode)); err != nil {
+		return nil, err
+	}
+
+	return []mount.Mount{{
+		Type:    "bind",
+		Source:  fp,
+		Options: []string{"ro", "rbind"},
+	}}, nil
+}
+
+func (sm *secretMountInstance) Release() error {
+	if sm.root != "" {
+		if err := mount.Unmount(sm.root, 0); err != nil {
+			return err
+		}
+		return os.RemoveAll(sm.root)
+	}
+	return nil
 }
 
 func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Result, error) {
@@ -347,6 +473,15 @@ func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Res
 		case pb.MountType_TMPFS:
 			mountable = newTmpfs()
 
+		case pb.MountType_SECRET:
+			secretMount, err := e.getSecretMountable(ctx, m)
+			if err != nil {
+				return nil, err
+			}
+			if secretMount == nil {
+				continue
+			}
+			mountable = secretMount
 		default:
 			return nil, errors.Errorf("mount type %s not implemented", m.MountType)
 		}
@@ -380,12 +515,19 @@ func (e *execOp) Exec(ctx context.Context, inputs []solver.Result) ([]solver.Res
 		return mounts[i].Dest < mounts[j].Dest
 	})
 
+	extraHosts, err := parseExtraHosts(e.op.Meta.ExtraHosts)
+	if err != nil {
+		return nil, err
+	}
+
 	meta := executor.Meta{
 		Args:           e.op.Meta.Args,
 		Env:            e.op.Meta.Env,
 		Cwd:            e.op.Meta.Cwd,
 		User:           e.op.Meta.User,
 		ReadonlyRootFS: readonlyRootFS,
+		ExtraHosts:     extraHosts,
+		NetMode:        e.op.Network,
 	}
 
 	if e.op.Meta.ProxyEnv != nil {
@@ -532,4 +674,19 @@ func (r *cacheRef) Release(ctx context.Context) error {
 		return r.release(ctx)
 	}
 	return nil
+}
+
+func parseExtraHosts(ips []*pb.HostIP) ([]executor.HostIP, error) {
+	out := make([]executor.HostIP, len(ips))
+	for i, hip := range ips {
+		ip := net.ParseIP(hip.IP)
+		if ip == nil {
+			return nil, errors.Errorf("failed to parse IP %s", hip.IP)
+		}
+		out[i] = executor.HostIP{
+			IP:   ip,
+			Host: hip.Host,
+		}
+	}
+	return out, nil
 }

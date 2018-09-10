@@ -29,11 +29,11 @@ func (cmd *diskUsageCommand) DoReexec() bool     { return true }
 func (cmd *diskUsageCommand) RequiresRunc() bool { return false }
 
 func (cmd *diskUsageCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.filter, "f", "", "Filter output based on conditions provided (snapshot ID supported)")
+	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
 }
 
 type diskUsageCommand struct {
-	filter string
+	filters stringSlice
 }
 
 func (cmd *diskUsageCommand) Run(args []string) (err error) {
@@ -50,7 +50,7 @@ func (cmd *diskUsageCommand) Run(args []string) (err error) {
 	}
 	defer c.Close()
 
-	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filter})
+	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filters})
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (cmd *diskUsageCommand) Run(args []string) (err error) {
 		tw.Flush()
 	}
 
-	if cmd.filter == "" {
+	if len(cmd.filters) < 1 {
 		total := int64(0)
 		reclaimable := int64(0)
 

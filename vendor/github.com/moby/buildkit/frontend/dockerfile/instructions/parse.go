@@ -139,7 +139,8 @@ func (e *parseError) Error() string {
 	return fmt.Sprintf("Dockerfile parse error line %d: %v", e.node.StartLine, e.inner.Error())
 }
 
-// Parse a docker file into a collection of buildable stages
+// Parse a Dockerfile into a collection of buildable stages.
+// metaArgs is a collection of ARG instructions that occur before the first FROM.
 func Parse(ast *parser.Node) (stages []Stage, metaArgs []ArgCommand, err error) {
 	for _, n := range ast.Children {
 		cmd, err := ParseInstruction(n)
@@ -580,10 +581,7 @@ func parseArg(req parseRequest) (*ArgCommand, error) {
 		return nil, errExactlyOneArgument("ARG")
 	}
 
-	var (
-		name     string
-		newValue *string
-	)
+	kvpo := KeyValuePairOptional{}
 
 	arg := req.args[0]
 	// 'arg' can just be a name or name-value pair. Note that this is different
@@ -597,16 +595,15 @@ func parseArg(req parseRequest) (*ArgCommand, error) {
 			return nil, errBlankCommandNames("ARG")
 		}
 
-		name = parts[0]
-		newValue = &parts[1]
+		kvpo.Key = parts[0]
+		kvpo.Value = &parts[1]
 	} else {
-		name = arg
+		kvpo.Key = arg
 	}
 
 	return &ArgCommand{
-		Key:             name,
-		Value:           newValue,
-		withNameAndCode: newWithNameAndCode(req),
+		KeyValuePairOptional: kvpo,
+		withNameAndCode:      newWithNameAndCode(req),
 	}, nil
 }
 

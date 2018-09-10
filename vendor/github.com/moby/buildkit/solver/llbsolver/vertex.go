@@ -7,6 +7,7 @@ import (
 	"github.com/moby/buildkit/solver"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/source"
+	"github.com/moby/buildkit/util/entitlements"
 	digest "github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -37,10 +38,27 @@ func (v *vertex) Inputs() []solver.Edge {
 }
 
 func (v *vertex) Name() string {
+	if name, ok := v.options.Description["llb.customname"]; ok {
+		return name
+	}
 	return v.name
 }
 
 type LoadOpt func(*pb.Op, *pb.OpMetadata, *solver.VertexOptions) error
+
+func WithValidateCaps() LoadOpt {
+	cs := pb.Caps.CapSet(pb.Caps.All())
+	return func(_ *pb.Op, md *pb.OpMetadata, opt *solver.VertexOptions) error {
+		if md != nil {
+			for c := range md.Caps {
+				if err := cs.Supports(c); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+}
 
 func WithCacheSources(cms []solver.CacheManager) LoadOpt {
 	return func(_ *pb.Op, _ *pb.OpMetadata, opt *solver.VertexOptions) error {
@@ -51,8 +69,9 @@ func WithCacheSources(cms []solver.CacheManager) LoadOpt {
 
 func RuntimePlatforms(p []specs.Platform) LoadOpt {
 	var defaultPlatform *pb.Platform
+	pp := make([]specs.Platform, len(p))
 	for i := range p {
-		p[i] = platforms.Normalize(p[i])
+		pp[i] = platforms.Normalize(p[i])
 	}
 	return func(op *pb.Op, _ *pb.OpMetadata, opt *solver.VertexOptions) error {
 		if op.Platform == nil {
@@ -67,7 +86,7 @@ func RuntimePlatforms(p []specs.Platform) LoadOpt {
 		}
 		if _, ok := op.Op.(*pb.Op_Exec); ok {
 			var found bool
-			for _, pp := range p {
+			for _, pp := range pp {
 				if pp.OS == op.Platform.OS && pp.Architecture == op.Platform.Architecture && pp.Variant == op.Platform.Variant {
 					found = true
 					break
@@ -75,6 +94,25 @@ func RuntimePlatforms(p []specs.Platform) LoadOpt {
 			}
 			if !found {
 				return errors.Errorf("runtime execution on platform %s not supported", platforms.Format(specs.Platform{OS: op.Platform.OS, Architecture: op.Platform.Architecture, Variant: op.Platform.Variant}))
+			}
+		}
+		return nil
+	}
+}
+
+func ValidateEntitlements(ent entitlements.Set) LoadOpt {
+	return func(op *pb.Op, _ *pb.OpMetadata, opt *solver.VertexOptions) error {
+		switch op := op.Op.(type) {
+		case *pb.Op_Exec:
+			if op.Exec.Network == pb.NetMode_HOST {
+				if !ent.Allowed(entitlements.EntitlementNetworkHost) {
+					return errors.Errorf("%s is not allowed", entitlements.EntitlementNetworkHost)
+				}
+			}
+			if op.Exec.Network == pb.NetMode_NONE {
+				if !ent.Allowed(entitlements.EntitlementNetworkNone) {
+					return errors.Errorf("%s is not allowed", entitlements.EntitlementNetworkNone)
+				}
 			}
 		}
 		return nil

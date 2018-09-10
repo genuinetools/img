@@ -2,10 +2,11 @@ package cache
 
 import (
 	"context"
-	"strings"
+	"sort"
 	"sync"
 	"time"
 
+	"github.com/containerd/containerd/filters"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/client"
@@ -23,9 +24,10 @@ var (
 )
 
 type ManagerOpt struct {
-	Snapshotter   snapshot.SnapshotterBase
-	GCPolicy      GCPolicy
-	MetadataStore *metadata.Store
+	Snapshotter     snapshot.SnapshotterBase
+	GCPolicy        GCPolicy
+	MetadataStore   *metadata.Store
+	PruneRefChecker ExternalRefCheckerFunc
 }
 
 type Accessor interface {
@@ -37,7 +39,7 @@ type Accessor interface {
 
 type Controller interface {
 	DiskUsage(ctx context.Context, info client.DiskUsageInfo) ([]*client.UsageInfo, error)
-	Prune(ctx context.Context, ch chan client.UsageInfo) error
+	Prune(ctx context.Context, ch chan client.UsageInfo, info ...client.PruneInfo) error
 	GC(ctx context.Context) error
 }
 
@@ -45,6 +47,12 @@ type Manager interface {
 	Accessor
 	Controller
 	Close() error
+}
+
+type ExternalRefCheckerFunc func() (ExternalRefChecker, error)
+
+type ExternalRefChecker interface {
+	Exists(key string) bool
 }
 
 type cacheManager struct {
@@ -225,7 +233,7 @@ func (cm *cacheManager) New(ctx context.Context, s ImmutableRef, opts ...RefOpti
 		if err != nil {
 			return nil, err
 		}
-		if err := parent.Finalize(ctx); err != nil {
+		if err := parent.Finalize(ctx, true); err != nil {
 			return nil, err
 		}
 		parentID = parent.ID()
@@ -296,17 +304,77 @@ func (cm *cacheManager) GetMutable(ctx context.Context, id string) (MutableRef, 
 	return rec.mref(), nil
 }
 
-func (cm *cacheManager) Prune(ctx context.Context, ch chan client.UsageInfo) error {
+func (cm *cacheManager) Prune(ctx context.Context, ch chan client.UsageInfo, opts ...client.PruneInfo) error {
 	cm.muPrune.Lock()
 	defer cm.muPrune.Unlock()
-	return cm.prune(ctx, ch)
+
+	for _, opt := range opts {
+		if err := cm.pruneOnce(ctx, ch, opt); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo) error {
-	var toDelete []*cacheRecord
+func (cm *cacheManager) pruneOnce(ctx context.Context, ch chan client.UsageInfo, opt client.PruneInfo) error {
+	filter, err := filters.ParseAll(opt.Filter...)
+	if err != nil {
+		return err
+	}
+
+	var check ExternalRefChecker
+	if f := cm.PruneRefChecker; f != nil && (!opt.All || len(opt.Filter) > 0) {
+		c, err := f()
+		if err != nil {
+			return err
+		}
+		check = c
+	}
+
+	totalSize := int64(0)
+	if opt.KeepBytes != 0 {
+		du, err := cm.DiskUsage(ctx, client.DiskUsageInfo{})
+		if err != nil {
+			return err
+		}
+		for _, ui := range du {
+			if check != nil {
+				if check.Exists(ui.ID) {
+					continue
+				}
+			}
+			totalSize += ui.Size
+		}
+	}
+
+	return cm.prune(ctx, ch, pruneOpt{
+		filter:       filter,
+		all:          opt.All,
+		checkShared:  check,
+		keepDuration: opt.KeepDuration,
+		keepBytes:    opt.KeepBytes,
+		totalSize:    totalSize,
+	})
+}
+
+func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo, opt pruneOpt) error {
+	var toDelete []*deleteRecord
+
+	if opt.keepBytes != 0 && opt.totalSize < opt.keepBytes {
+		return nil
+	}
+
 	cm.mu.Lock()
 
+	gcMode := opt.keepBytes != 0
+	cutOff := time.Now().Add(-opt.keepDuration)
+
+	locked := map[*sync.Mutex]struct{}{}
+
 	for _, cr := range cm.records {
+		if _, ok := locked[cr.mu]; ok {
+			continue
+		}
 		cr.mu.Lock()
 
 		// ignore duplicates that share data
@@ -321,17 +389,80 @@ func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo) err
 		}
 
 		if len(cr.refs) == 0 {
-			cr.dead = true
-			toDelete = append(toDelete, cr)
-		}
+			recordType := GetRecordType(cr)
+			if recordType == "" {
+				recordType = client.UsageRecordTypeRegular
+			}
 
-		// mark metadata as deleted in case we crash before cleanup finished
-		if err := setDeleted(cr.md); err != nil {
-			cr.mu.Unlock()
-			cm.mu.Unlock()
-			return err
+			shared := false
+			if opt.checkShared != nil {
+				shared = opt.checkShared.Exists(cr.ID())
+			}
+
+			if !opt.all {
+				if recordType == client.UsageRecordTypeInternal || recordType == client.UsageRecordTypeFrontend || shared {
+					cr.mu.Unlock()
+					continue
+				}
+			}
+
+			c := &client.UsageInfo{
+				ID:         cr.ID(),
+				Mutable:    cr.mutable,
+				RecordType: recordType,
+				Shared:     shared,
+			}
+
+			usageCount, lastUsedAt := getLastUsed(cr.md)
+			c.LastUsedAt = lastUsedAt
+			c.UsageCount = usageCount
+
+			if opt.keepDuration != 0 {
+				if lastUsedAt != nil && lastUsedAt.After(cutOff) {
+					cr.mu.Unlock()
+					continue
+				}
+			}
+
+			if opt.filter.Match(adaptUsageInfo(c)) {
+				toDelete = append(toDelete, &deleteRecord{
+					cacheRecord: cr,
+					lastUsedAt:  c.LastUsedAt,
+					usageCount:  c.UsageCount,
+				})
+				if !gcMode {
+					cr.dead = true
+
+					// mark metadata as deleted in case we crash before cleanup finished
+					if err := setDeleted(cr.md); err != nil {
+						cr.mu.Unlock()
+						cm.mu.Unlock()
+						return err
+					}
+				} else {
+					locked[cr.mu] = struct{}{}
+					continue // leave the record locked
+				}
+			}
 		}
 		cr.mu.Unlock()
+	}
+
+	if gcMode && len(toDelete) > 0 {
+		sortDeleteRecords(toDelete)
+		var err error
+		for i, cr := range toDelete {
+			// only remove single record at a time
+			if i == 0 {
+				cr.dead = true
+				err = setDeleted(cr.md)
+			}
+			cr.mu.Unlock()
+		}
+		if err != nil {
+			return err
+		}
+		toDelete = toDelete[:1]
 	}
 
 	cm.mu.Unlock()
@@ -360,7 +491,9 @@ func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo) err
 		if cr.parent != nil {
 			c.Parent = cr.parent.ID()
 		}
-
+		if c.Size == sizeUnknown && cr.equalImmutable != nil {
+			c.Size = getSize(cr.equalImmutable.md) // benefit from DiskUsage calc
+		}
 		if c.Size == sizeUnknown {
 			cr.mu.Unlock() // all the non-prune modifications already protected by cr.dead
 			s, err := cr.Size(ctx)
@@ -370,6 +503,8 @@ func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo) err
 			c.Size = s
 			cr.mu.Lock()
 		}
+
+		opt.totalSize -= c.Size
 
 		if cr.equalImmutable != nil {
 			if err1 := cr.equalImmutable.remove(ctx, false); err == nil {
@@ -393,24 +528,61 @@ func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo) err
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		return cm.prune(ctx, ch)
+		return cm.prune(ctx, ch, opt)
 	}
 }
 
-func (cm *cacheManager) DiskUsage(ctx context.Context, opt client.DiskUsageInfo) ([]*client.UsageInfo, error) {
-	cm.mu.Lock()
-
-	type cacheUsageInfo struct {
-		refs        int
-		parent      string
-		size        int64
-		mutable     bool
-		createdAt   time.Time
-		usageCount  int
-		lastUsedAt  *time.Time
-		description string
-		doubleRef   bool
+func (cm *cacheManager) markShared(m map[string]*cacheUsageInfo) error {
+	if cm.PruneRefChecker == nil {
+		return nil
 	}
+	c, err := cm.PruneRefChecker()
+	if err != nil {
+		return err
+	}
+
+	var markAllParentsShared func(string)
+	markAllParentsShared = func(id string) {
+		if v, ok := m[id]; ok {
+			v.shared = true
+			if v.parent != "" {
+				markAllParentsShared(v.parent)
+			}
+		}
+	}
+
+	for id := range m {
+		if m[id].shared {
+			continue
+		}
+		if b := c.Exists(id); b {
+			markAllParentsShared(id)
+		}
+	}
+	return nil
+}
+
+type cacheUsageInfo struct {
+	refs        int
+	parent      string
+	size        int64
+	mutable     bool
+	createdAt   time.Time
+	usageCount  int
+	lastUsedAt  *time.Time
+	description string
+	doubleRef   bool
+	recordType  client.UsageRecordType
+	shared      bool
+}
+
+func (cm *cacheManager) DiskUsage(ctx context.Context, opt client.DiskUsageInfo) ([]*client.UsageInfo, error) {
+	filter, err := filters.ParseAll(opt.Filter...)
+	if err != nil {
+		return nil, err
+	}
+
+	cm.mu.Lock()
 
 	m := make(map[string]*cacheUsageInfo, len(cm.records))
 	rescan := make(map[string]struct{}, len(cm.records))
@@ -433,6 +605,10 @@ func (cm *cacheManager) DiskUsage(ctx context.Context, opt client.DiskUsageInfo)
 			lastUsedAt:  lastUsedAt,
 			description: GetDescription(cr.md),
 			doubleRef:   cr.equalImmutable != nil,
+			recordType:  GetRecordType(cr),
+		}
+		if c.recordType == "" {
+			c.recordType = client.UsageRecordTypeRegular
 		}
 		if cr.parent != nil {
 			c.parent = cr.parent.ID()
@@ -463,12 +639,12 @@ func (cm *cacheManager) DiskUsage(ctx context.Context, opt client.DiskUsageInfo)
 		}
 	}
 
+	if err := cm.markShared(m); err != nil {
+		return nil, err
+	}
+
 	var du []*client.UsageInfo
 	for id, cr := range m {
-		if opt.Filter != "" && !strings.HasPrefix(id, opt.Filter) {
-			continue
-		}
-
 		c := &client.UsageInfo{
 			ID:          id,
 			Mutable:     cr.mutable,
@@ -479,8 +655,12 @@ func (cm *cacheManager) DiskUsage(ctx context.Context, opt client.DiskUsageInfo)
 			Description: cr.description,
 			LastUsedAt:  cr.lastUsedAt,
 			UsageCount:  cr.usageCount,
+			RecordType:  cr.recordType,
+			Shared:      cr.shared,
 		}
-		du = append(du, c)
+		if filter.Match(adaptUsageInfo(c)) {
+			du = append(du, c)
+		}
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -547,6 +727,12 @@ func WithDescription(descr string) RefOption {
 	}
 }
 
+func WithRecordType(t client.UsageRecordType) RefOption {
+	return func(m withMetadata) error {
+		return queueRecordType(m.Metadata(), t)
+	}
+}
+
 func WithCreationTime(tm time.Time) RefOption {
 	return func(m withMetadata) error {
 		return queueCreatedAt(m.Metadata(), tm)
@@ -570,4 +756,97 @@ func initializeMetadata(m withMetadata, opts ...RefOption) error {
 	}
 
 	return md.Commit()
+}
+
+func adaptUsageInfo(info *client.UsageInfo) filters.Adaptor {
+	return filters.AdapterFunc(func(fieldpath []string) (string, bool) {
+		if len(fieldpath) == 0 {
+			return "", false
+		}
+
+		switch fieldpath[0] {
+		case "id":
+			return info.ID, info.ID != ""
+		case "parent":
+			return info.Parent, info.Parent != ""
+		case "description":
+			return info.Description, info.Description != ""
+		case "inuse":
+			return "", info.InUse
+		case "mutable":
+			return "", info.Mutable
+		case "immutable":
+			return "", !info.Mutable
+		case "type":
+			return string(info.RecordType), info.RecordType != ""
+		case "shared":
+			return "", info.Shared
+		case "private":
+			return "", !info.Shared
+		}
+
+		// TODO: add int/datetime/bytes support for more fields
+
+		return "", false
+	})
+}
+
+type pruneOpt struct {
+	filter       filters.Filter
+	all          bool
+	checkShared  ExternalRefChecker
+	keepDuration time.Duration
+	keepBytes    int64
+	totalSize    int64
+}
+
+type deleteRecord struct {
+	*cacheRecord
+	lastUsedAt      *time.Time
+	usageCount      int
+	lastUsedAtIndex int
+	usageCountIndex int
+}
+
+func sortDeleteRecords(toDelete []*deleteRecord) {
+	sort.Slice(toDelete, func(i, j int) bool {
+		if toDelete[i].lastUsedAt == nil {
+			return true
+		}
+		if toDelete[j].lastUsedAt == nil {
+			return false
+		}
+		return toDelete[i].lastUsedAt.Before(*toDelete[j].lastUsedAt)
+	})
+
+	maxLastUsedIndex := 0
+	var val time.Time
+	for _, v := range toDelete {
+		if v.lastUsedAt != nil && v.lastUsedAt.After(val) {
+			val = *v.lastUsedAt
+			maxLastUsedIndex++
+		}
+		v.lastUsedAtIndex = maxLastUsedIndex
+	}
+
+	sort.Slice(toDelete, func(i, j int) bool {
+		return toDelete[i].usageCount < toDelete[j].usageCount
+	})
+
+	maxUsageCountIndex := 0
+	var count int
+	for _, v := range toDelete {
+		if v.usageCount != count {
+			count = v.usageCount
+			maxUsageCountIndex++
+		}
+		v.usageCountIndex = maxUsageCountIndex
+	}
+
+	sort.Slice(toDelete, func(i, j int) bool {
+		return float64(toDelete[i].lastUsedAtIndex)/float64(maxLastUsedIndex)+
+			float64(toDelete[i].usageCountIndex)/float64(maxUsageCountIndex) <
+			float64(toDelete[j].lastUsedAtIndex)/float64(maxLastUsedIndex)+
+				float64(toDelete[j].usageCountIndex)/float64(maxUsageCountIndex)
+	})
 }

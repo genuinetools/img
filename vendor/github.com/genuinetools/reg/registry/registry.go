@@ -130,8 +130,7 @@ func (r *Registry) getJSON(url string, response interface{}, addV2Header bool) (
 		return nil, err
 	}
 	if addV2Header {
-		req.Header.Add("Accept", schema2.MediaTypeManifest)
-		req.Header.Add("Accept", manifestlist.MediaTypeManifestList)
+		req.Header.Add("Accept", fmt.Sprintf("%s,%s;q=0.9", schema2.MediaTypeManifest, manifestlist.MediaTypeManifestList))
 	}
 	resp, err := r.Client.Do(req)
 	if err != nil {

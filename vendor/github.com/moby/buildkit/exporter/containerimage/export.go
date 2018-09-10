@@ -3,30 +3,30 @@ package containerimage
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
-	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/push"
+	"github.com/moby/buildkit/util/resolver"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	keyImageName        = "name"
-	keyPush             = "push"
-	keyInsecure         = "registry.insecure"
-	exporterImageConfig = "containerimage.config"
-	ociTypes            = "oci-mediatypes"
+	keyImageName = "name"
+	keyPush      = "push"
+	keyInsecure  = "registry.insecure"
+	ociTypes     = "oci-mediatypes"
 )
 
 type Opt struct {
 	SessionManager *session.Manager
 	ImageWriter    *ImageWriter
 	Images         images.Store
+	ResolverOpt    resolver.ResolveOptionsFunc
 }
 
 type imageExporter struct {
@@ -68,8 +68,6 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
 			}
 			i.insecure = b
-		case exporterImageConfig:
-			i.config = []byte(v)
 		case ociTypes:
 			if v == "" {
 				i.ociTypes = true
@@ -81,7 +79,10 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 			}
 			i.ociTypes = b
 		default:
-			logrus.Warnf("image exporter: unknown option %s", k)
+			if i.meta == nil {
+				i.meta = make(map[string][]byte)
+			}
+			i.meta[k] = []byte(v)
 		}
 	}
 	return i, nil
@@ -93,18 +94,21 @@ type imageExporterInstance struct {
 	push       bool
 	insecure   bool
 	ociTypes   bool
-	config     []byte
+	meta       map[string][]byte
 }
 
 func (e *imageExporterInstance) Name() string {
 	return "exporting to image"
 }
 
-func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) (map[string]string, error) {
-	if config, ok := opt[exporterImageConfig]; ok {
-		e.config = config
+func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source) (map[string]string, error) {
+	if src.Metadata == nil {
+		src.Metadata = make(map[string][]byte)
 	}
-	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config, e.ociTypes)
+	for k, v := range e.meta {
+		src.Metadata[k] = v
+	}
+	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -113,34 +117,43 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 		e.opt.ImageWriter.ContentStore().Delete(context.TODO(), desc.Digest)
 	}()
 
-	if e.targetName != "" {
-		if e.opt.Images != nil {
-			tagDone := oneOffProgress(ctx, "naming to "+e.targetName)
-			img := images.Image{
-				Name:      e.targetName,
-				Target:    *desc,
-				CreatedAt: time.Now(),
-			}
+	resp := make(map[string]string)
 
-			if _, err := e.opt.Images.Update(ctx, img); err != nil {
-				if !errdefs.IsNotFound(err) {
-					return nil, tagDone(err)
-				}
-
-				if _, err := e.opt.Images.Create(ctx, img); err != nil {
-					return nil, tagDone(err)
-				}
-			}
-			tagDone(nil)
-		}
-		if e.push {
-			if err := push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, e.targetName, e.insecure); err != nil {
-				return nil, err
-			}
-		}
+	if n, ok := src.Metadata["image.name"]; e.targetName == "*" && ok {
+		e.targetName = string(n)
 	}
 
-	return map[string]string{
-		"containerimage.digest": desc.Digest.String(),
-	}, nil
+	if e.targetName != "" {
+		targetNames := strings.Split(e.targetName, ",")
+		for _, targetName := range targetNames {
+			if e.opt.Images != nil {
+				tagDone := oneOffProgress(ctx, "naming to "+targetName)
+				img := images.Image{
+					Name:      targetName,
+					Target:    *desc,
+					CreatedAt: time.Now(),
+				}
+
+				if _, err := e.opt.Images.Update(ctx, img); err != nil {
+					if !errdefs.IsNotFound(err) {
+						return nil, tagDone(err)
+					}
+
+					if _, err := e.opt.Images.Create(ctx, img); err != nil {
+						return nil, tagDone(err)
+					}
+				}
+				tagDone(nil)
+			}
+			if e.push {
+				if err := push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, targetName, e.insecure, e.opt.ResolverOpt); err != nil {
+					return nil, err
+				}
+			}
+		}
+		resp["image.name"] = e.targetName
+	}
+
+	resp["containerimage.digest"] = desc.Digest.String()
+	return resp, nil
 }

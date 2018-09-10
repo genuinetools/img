@@ -33,6 +33,8 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/filters"
 	"github.com/containerd/containerd/log"
+
+	"github.com/containerd/continuity"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -320,6 +322,40 @@ func (s *store) ListStatuses(ctx context.Context, fs ...string) ([]content.Statu
 	}
 
 	return active, nil
+}
+
+// WalkStatusRefs is used to walk all status references
+// Failed status reads will be logged and ignored, if
+// this function is called while references are being altered,
+// these error messages may be produced.
+func (s *store) WalkStatusRefs(ctx context.Context, fn func(string) error) error {
+	fp, err := os.Open(filepath.Join(s.root, "ingest"))
+	if err != nil {
+		return err
+	}
+
+	defer fp.Close()
+
+	fis, err := fp.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range fis {
+		rf := filepath.Join(s.root, "ingest", fi.Name(), "ref")
+
+		ref, err := readFileString(rf)
+		if err != nil {
+			log.G(ctx).WithError(err).WithField("path", rf).Error("failed to read ingest ref")
+			continue
+		}
+
+		if err := fn(ref); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // status works like stat above except uses the path to the ingest.
@@ -617,5 +653,5 @@ func writeTimestampFile(p string, t time.Time) error {
 		return err
 	}
 
-	return ioutil.WriteFile(p, b, 0666)
+	return continuity.AtomicWriteFile(p, b, 0666)
 }

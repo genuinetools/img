@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/moby/buildkit/client"
-	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/flightcontrol"
 	"github.com/moby/buildkit/util/progress"
@@ -21,7 +20,8 @@ type ResolveOpFunc func(Vertex, Builder) (Op, error)
 
 type Builder interface {
 	Build(ctx context.Context, e Edge) (CachedResult, error)
-	Call(ctx context.Context, name string, fn func(ctx context.Context) error) error
+	Context(ctx context.Context) context.Context
+	EachValue(ctx context.Context, key string, fn func(interface{}) error) error
 }
 
 // Solver provides a shared graph of all the vertexes currently being
@@ -161,20 +161,31 @@ func (sb *subBuilder) Build(ctx context.Context, e Edge) (CachedResult, error) {
 		return nil, err
 	}
 	sb.mu.Lock()
-	sb.exporters = append(sb.exporters, res.CacheKey())
+	sb.exporters = append(sb.exporters, res.CacheKeys()[0]) // all keys already have full export chain
 	sb.mu.Unlock()
 	return res, nil
 }
 
-func (sb *subBuilder) Call(ctx context.Context, name string, fn func(ctx context.Context) error) error {
-	ctx = progress.WithProgress(ctx, sb.mpw)
-	return inVertexContext(ctx, name, fn)
+func (sb *subBuilder) Context(ctx context.Context) context.Context {
+	return progress.WithProgress(ctx, sb.mpw)
+}
+
+func (sb *subBuilder) EachValue(ctx context.Context, key string, fn func(interface{}) error) error {
+	sb.mu.Lock()
+	defer sb.mu.Lock()
+	for j := range sb.jobs {
+		if err := j.EachValue(ctx, key, fn); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type Job struct {
-	list *Solver
-	pr   *progress.MultiReader
-	pw   progress.Writer
+	list   *Solver
+	pr     *progress.MultiReader
+	pw     progress.Writer
+	values sync.Map
 
 	progressCloser func()
 	SessionID      string
@@ -433,6 +444,7 @@ func (j *Job) Discard() error {
 	j.pw.Close()
 
 	for k, st := range j.list.actives {
+		st.mu.Lock()
 		if _, ok := st.jobs[j]; ok {
 			delete(st.jobs, j)
 			j.list.deleteIfUnreferenced(k, st)
@@ -440,13 +452,25 @@ func (j *Job) Discard() error {
 		if _, ok := st.allPw[j.pw]; ok {
 			delete(st.allPw, j.pw)
 		}
+		st.mu.Unlock()
 	}
 	return nil
 }
 
-func (j *Job) Call(ctx context.Context, name string, fn func(ctx context.Context) error) error {
-	ctx = progress.WithProgress(ctx, j.pw)
-	return inVertexContext(ctx, name, fn)
+func (j *Job) Context(ctx context.Context) context.Context {
+	return progress.WithProgress(ctx, j.pw)
+}
+
+func (j *Job) SetValue(key string, v interface{}) {
+	j.values.Store(key, v)
+}
+
+func (j *Job) EachValue(ctx context.Context, key string, fn func(interface{}) error) error {
+	v, ok := j.values.Load(key)
+	if ok {
+		return fn(v)
+	}
+	return nil
 }
 
 type cacheMapResp struct {
@@ -557,6 +581,9 @@ func (s *sharedOp) CalcSlowCache(ctx context.Context, index Index, f ResultBased
 		return key, err
 	})
 	if err != nil {
+		ctx = progress.WithProgress(ctx, s.st.mpw)
+		notifyStarted(ctx, &s.st.clientVertex, false)
+		notifyCompleted(ctx, &s.st.clientVertex, err, false)
 		return "", err
 	}
 	return key.(digest.Digest), nil
@@ -758,17 +785,4 @@ func notifyCompleted(ctx context.Context, v *client.Vertex, err error, cached bo
 		v.Error = err.Error()
 	}
 	pw.Write(v.Digest.String(), *v)
-}
-
-func inVertexContext(ctx context.Context, name string, f func(ctx context.Context) error) error {
-	v := client.Vertex{
-		Digest: digest.FromBytes([]byte(identity.NewID())),
-		Name:   name,
-	}
-	pw, _, ctx := progress.FromContext(ctx, progress.WithMetadata("vertex", v.Digest))
-	notifyStarted(ctx, &v, false)
-	defer pw.Close()
-	err := f(ctx)
-	notifyCompleted(ctx, &v, err, false)
-	return err
 }

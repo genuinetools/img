@@ -2,6 +2,7 @@ package pull
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/containerd/containerd/images"
@@ -9,21 +10,28 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
+	"github.com/moby/buildkit/source"
+	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/util/tracing"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func NewResolver(ctx context.Context, sm *session.Manager, imageStore images.Store) remotes.Resolver {
-	r := docker.NewResolver(docker.ResolverOptions{
-		Client:      tracing.DefaultClient,
-		Credentials: getCredentialsFromSession(ctx, sm),
-	})
+func NewResolver(ctx context.Context, rfn resolver.ResolveOptionsFunc, sm *session.Manager, imageStore images.Store, mode source.ResolveMode, ref string) remotes.Resolver {
+	opt := docker.ResolverOptions{
+		Client: http.DefaultClient,
+	}
+	if rfn != nil {
+		opt = rfn(ref)
+	}
+	opt.Credentials = getCredentialsFromSession(ctx, sm)
 
-	if imageStore == nil {
+	r := docker.NewResolver(opt)
+
+	if imageStore == nil || mode == source.ResolveModeForcePull {
 		return r
 	}
 
-	return localFallbackResolver{r, imageStore}
+	return withLocalResolver{r, imageStore, mode}
 }
 
 func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(string) (string, string, error) {
@@ -56,20 +64,29 @@ func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(st
 //   request.
 // - Pusher wouldn't make sense to push locally, so just forward.
 
-type localFallbackResolver struct {
+type withLocalResolver struct {
 	remotes.Resolver
-	is images.Store
+	is   images.Store
+	mode source.ResolveMode
 }
 
-func (r localFallbackResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
+func (r withLocalResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
+	if r.mode == source.ResolveModePreferLocal {
+		if img, err := r.is.Get(ctx, ref); err == nil {
+			return ref, img.Target, nil
+		}
+	}
+
 	n, desc, err := r.Resolver.Resolve(ctx, ref)
 	if err == nil {
 		return n, desc, err
 	}
 
-	img, err2 := r.is.Get(ctx, ref)
-	if err2 != nil {
-		return "", ocispec.Descriptor{}, err
+	if r.mode == source.ResolveModeDefault {
+		if img, err := r.is.Get(ctx, ref); err == nil {
+			return ref, img.Target, nil
+		}
 	}
-	return ref, img.Target, nil
+
+	return "", ocispec.Descriptor{}, err
 }

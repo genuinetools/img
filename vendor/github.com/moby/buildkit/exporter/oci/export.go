@@ -8,7 +8,6 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/images/oci"
 	"github.com/docker/distribution/reference"
-	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/exporter/containerimage"
 	"github.com/moby/buildkit/session"
@@ -17,17 +16,15 @@ import (
 	"github.com/moby/buildkit/util/progress"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type ExporterVariant string
 
 const (
-	exporterImageConfig = "containerimage.config"
-	keyImageName        = "name"
-	VariantOCI          = "oci"
-	VariantDocker       = "docker"
-	ociTypes            = "oci-mediatypes"
+	keyImageName  = "name"
+	VariantOCI    = "oci"
+	VariantDocker = "docker"
+	ociTypes      = "oci-mediatypes"
 )
 
 type Opt struct {
@@ -43,6 +40,17 @@ type imageExporter struct {
 func New(opt Opt) (exporter.Exporter, error) {
 	im := &imageExporter{opt: opt}
 	return im, nil
+}
+
+func normalize(name string) (string, error) {
+	if name == "" {
+		return "", nil
+	}
+	parsed, err := reference.ParseNormalizedNamed(name)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to parse %s", name)
+	}
+	return reference.TagNameOnly(parsed).String(), nil
 }
 
 func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exporter.ExporterInstance, error) {
@@ -63,14 +71,14 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 	i := &imageExporterInstance{imageExporter: e, caller: caller}
 	for k, v := range opt {
 		switch k {
-		case exporterImageConfig:
-			i.config = []byte(v)
 		case keyImageName:
-			parsed, err := reference.ParseNormalizedNamed(v)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse %s", v)
+			i.name = v
+			if i.name != "*" {
+				i.name, err = normalize(i.name)
+				if err != nil {
+					return nil, err
+				}
 			}
-			i.name = reference.TagNameOnly(parsed).String()
 		case ociTypes:
 			ot = new(bool)
 			if v == "" {
@@ -83,7 +91,10 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 			}
 			*ot = b
 		default:
-			logrus.Warnf("oci exporter: unknown option %s", k)
+			if i.meta == nil {
+				i.meta = make(map[string][]byte)
+			}
+			i.meta[k] = []byte(v)
 		}
 	}
 	if ot == nil {
@@ -96,7 +107,7 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 
 type imageExporterInstance struct {
 	*imageExporter
-	config   []byte
+	meta     map[string][]byte
 	caller   session.Caller
 	name     string
 	ociTypes bool
@@ -106,11 +117,19 @@ func (e *imageExporterInstance) Name() string {
 	return "exporting to oci image format"
 }
 
-func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) (map[string]string, error) {
-	if config, ok := opt[exporterImageConfig]; ok {
-		e.config = config
+func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source) (map[string]string, error) {
+	if e.opt.Variant == VariantDocker && len(src.Refs) > 0 {
+		return nil, errors.Errorf("docker exporter does not currently support exporting manifest lists")
 	}
-	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config, e.ociTypes)
+
+	if src.Metadata == nil {
+		src.Metadata = make(map[string][]byte)
+	}
+	for k, v := range e.meta {
+		src.Metadata[k] = v
+	}
+
+	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +140,18 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 		desc.Annotations = map[string]string{}
 	}
 	desc.Annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+
+	resp := make(map[string]string)
+
+	if n, ok := src.Metadata["image.name"]; e.name == "*" && ok {
+		if e.name, err = normalize(string(n)); err != nil {
+			return nil, err
+		}
+	}
+
+	if e.name != "" {
+		resp["image.name"] = e.name
+	}
 
 	exp, err := getExporter(e.opt.Variant, e.name)
 	if err != nil {
@@ -136,7 +167,7 @@ func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableR
 		w.Close()
 		return nil, report(err)
 	}
-	return nil, report(w.Close())
+	return resp, report(w.Close())
 }
 
 func oneOffProgress(ctx context.Context, id string) func(err error) error {
@@ -159,6 +190,9 @@ func oneOffProgress(ctx context.Context, id string) func(err error) error {
 func getExporter(variant ExporterVariant, name string) (images.Exporter, error) {
 	switch variant {
 	case VariantOCI:
+		if name != "" {
+			return nil, errors.New("oci exporter cannot export named image")
+		}
 		return &oci.V1Exporter{}, nil
 	case VariantDocker:
 		return &dockerexporter.DockerExporter{Name: name}, nil

@@ -2,8 +2,10 @@ package client
 
 import (
 	"context"
+	"time"
 
 	controlapi "github.com/moby/buildkit/api/services/control"
+	apitypes "github.com/moby/buildkit/api/types"
 	"github.com/moby/buildkit/solver/pb"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -13,12 +15,13 @@ type WorkerInfo struct {
 	ID        string
 	Labels    map[string]string
 	Platforms []specs.Platform
+	GCPolicy  []PruneInfo
 }
 
 func (c *Client) ListWorkers(ctx context.Context, opts ...ListWorkersOption) ([]*WorkerInfo, error) {
 	info := &ListWorkersInfo{}
 	for _, o := range opts {
-		o(info)
+		o.SetListWorkersOption(info)
 	}
 
 	req := &controlapi.ListWorkersRequest{Filter: info.Filter}
@@ -33,34 +36,30 @@ func (c *Client) ListWorkers(ctx context.Context, opts ...ListWorkersOption) ([]
 		wi = append(wi, &WorkerInfo{
 			ID:        w.ID,
 			Labels:    w.Labels,
-			Platforms: toClientPlatforms(w.Platforms),
+			Platforms: pb.ToSpecPlatforms(w.Platforms),
+			GCPolicy:  fromAPIGCPolicy(w.GCPolicy),
 		})
 	}
 
 	return wi, nil
 }
 
-type ListWorkersOption func(*ListWorkersInfo)
+type ListWorkersOption interface {
+	SetListWorkersOption(*ListWorkersInfo)
+}
 
 type ListWorkersInfo struct {
 	Filter []string
 }
 
-func WithWorkerFilter(f []string) ListWorkersOption {
-	return func(wi *ListWorkersInfo) {
-		wi.Filter = f
-	}
-}
-
-func toClientPlatforms(p []pb.Platform) []specs.Platform {
-	out := make([]specs.Platform, 0, len(p))
-	for _, pp := range p {
-		out = append(out, specs.Platform{
-			OS:           pp.OS,
-			Architecture: pp.Architecture,
-			Variant:      pp.Variant,
-			OSVersion:    pp.OSVersion,
-			OSFeatures:   pp.OSFeatures,
+func fromAPIGCPolicy(in []*apitypes.GCPolicy) []PruneInfo {
+	out := make([]PruneInfo, 0, len(in))
+	for _, p := range in {
+		out = append(out, PruneInfo{
+			All:          p.All,
+			Filter:       p.Filters,
+			KeepDuration: time.Duration(p.KeepDuration),
+			KeepBytes:    p.KeepBytes,
 		})
 	}
 	return out
