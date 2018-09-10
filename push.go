@@ -14,13 +14,11 @@ import (
 
 const pushHelp = `Push an image or a repository to a registry.`
 
-func (cmd *pushCommand) Name() string       { return "push" }
-func (cmd *pushCommand) Args() string       { return "[OPTIONS] NAME[:TAG]" }
-func (cmd *pushCommand) ShortHelp() string  { return pushHelp }
-func (cmd *pushCommand) LongHelp() string   { return pushHelp }
-func (cmd *pushCommand) Hidden() bool       { return false }
-func (cmd *pushCommand) DoReexec() bool     { return true }
-func (cmd *pushCommand) RequiresRunc() bool { return false }
+func (cmd *pushCommand) Name() string      { return "push" }
+func (cmd *pushCommand) Args() string      { return "[OPTIONS] NAME[:TAG]" }
+func (cmd *pushCommand) ShortHelp() string { return pushHelp }
+func (cmd *pushCommand) LongHelp() string  { return pushHelp }
+func (cmd *pushCommand) Hidden() bool      { return false }
 
 func (cmd *pushCommand) Register(fs *flag.FlagSet) {
 	fs.BoolVar(&cmd.insecure, "insecure-registry", false, "Push to insecure registry")
@@ -35,6 +33,8 @@ func (cmd *pushCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image or repository to push")
 	}
+
+	reexec()
 
 	// Get the specified image.
 	cmd.image = args[0]

@@ -32,7 +32,7 @@ Show the version information.
 )
 
 var (
-	nilFunction = func(ctx context.Context, cmd Command) error {
+	nilFunction = func(ctx context.Context) error {
 		return nil
 	}
 	nilActionFunction = func(ctx context.Context, args []string) error {
@@ -41,7 +41,7 @@ var (
 
 	errExpected            = errors.New("expected error")
 	errExpectedFromCommand = errors.New("expected error command error")
-	errFunction            = func(ctx context.Context, cmd Command) error {
+	errFunction            = func(ctx context.Context) error {
 		return errExpected
 	}
 
@@ -401,11 +401,11 @@ func (c *capture) finish() (string, string) {
 }
 
 func (p *Program) isErrorOnBefore() bool {
-	return p.Before != nil && p.Before(context.Background(), nil) != nil
+	return p.Before != nil && p.Before(context.Background()) != nil
 }
 
 func (p *Program) isErrorOnAfter() bool {
-	return p.After != nil && p.After(context.Background(), nil) != nil
+	return p.After != nil && p.After(context.Background()) != nil
 }
 
 func (tc *testCase) expectUsageToBePrintedBeforeBefore(p *Program) bool {

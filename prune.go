@@ -16,19 +16,19 @@ import (
 
 const pruneHelp = `Prune and clean up the build cache.`
 
-func (cmd *pruneCommand) Name() string       { return "prune" }
-func (cmd *pruneCommand) Args() string       { return "[OPTIONS]" }
-func (cmd *pruneCommand) ShortHelp() string  { return pruneHelp }
-func (cmd *pruneCommand) LongHelp() string   { return pruneHelp }
-func (cmd *pruneCommand) Hidden() bool       { return false }
-func (cmd *pruneCommand) DoReexec() bool     { return true }
-func (cmd *pruneCommand) RequiresRunc() bool { return false }
+func (cmd *pruneCommand) Name() string      { return "prune" }
+func (cmd *pruneCommand) Args() string      { return "[OPTIONS]" }
+func (cmd *pruneCommand) ShortHelp() string { return pruneHelp }
+func (cmd *pruneCommand) LongHelp() string  { return pruneHelp }
+func (cmd *pruneCommand) Hidden() bool      { return false }
 
 func (cmd *pruneCommand) Register(fs *flag.FlagSet) {}
 
 type pruneCommand struct{}
 
 func (cmd *pruneCommand) Run(ctx context.Context, args []string) (err error) {
+	reexec()
+
 	// Create the context.
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)

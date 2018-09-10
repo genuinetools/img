@@ -17,13 +17,11 @@ import (
 // TODO(AkihiroSuda): support OCI archive
 const saveHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
 
-func (cmd *saveCommand) Name() string       { return "save" }
-func (cmd *saveCommand) Args() string       { return "[OPTIONS] IMAGE [IMAGE...]" }
-func (cmd *saveCommand) ShortHelp() string  { return saveHelp }
-func (cmd *saveCommand) LongHelp() string   { return saveHelp }
-func (cmd *saveCommand) Hidden() bool       { return false }
-func (cmd *saveCommand) DoReexec() bool     { return true }
-func (cmd *saveCommand) RequiresRunc() bool { return false }
+func (cmd *saveCommand) Name() string      { return "save" }
+func (cmd *saveCommand) Args() string      { return "[OPTIONS] IMAGE [IMAGE...]" }
+func (cmd *saveCommand) ShortHelp() string { return saveHelp }
+func (cmd *saveCommand) LongHelp() string  { return saveHelp }
+func (cmd *saveCommand) Hidden() bool      { return false }
 
 func (cmd *saveCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.output, "output", "", "write to a file, instead of STDOUT")
@@ -40,6 +38,8 @@ func (cmd *saveCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image to save")
 	}
+
+	reexec()
 
 	// Create the context.
 	id := identity.NewID()

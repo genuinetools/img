@@ -38,6 +38,8 @@ func (cmd *unpackCommand) Run(ctx context.Context, args []string) (err error) {
 		return fmt.Errorf("must pass an image to unpack as a rootfs")
 	}
 
+	reexec()
+
 	cmd.image = args[0]
 
 	if len(cmd.output) < 1 {

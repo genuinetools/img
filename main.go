@@ -30,12 +30,6 @@ var (
 	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend}
 )
 
-type command interface {
-	cli.Command
-	DoReexec() bool     // indicates whether the command should preform a re-exec or not
-	RequiresRunc() bool // indicates whether the command requires the runc binary
-}
-
 // stringSlice is a slice of strings
 type stringSlice []string
 
@@ -84,10 +78,7 @@ func main() {
 	p.FlagSet.StringVar(&stateDir, "s", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
 
 	// Set the before function.
-	p.Before = func(ctx context.Context, c cli.Command) error {
-		// Convert the type.
-		cmd := c.(command)
-
+	p.Before = func(ctx context.Context) error {
 		// Set the log level.
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
@@ -103,26 +94,6 @@ func main() {
 		}
 		if !found {
 			return fmt.Errorf("%s is not a valid snapshots backend", backend)
-		}
-
-		// Perform the re-exec if necessary.
-		if cmd.DoReexec() {
-			reexec()
-		}
-
-		// If the command requires runc and we do not have it installed,
-		// install it from the embedded asset.
-		if cmd.RequiresRunc() && !binutils.RuncBinaryExists() {
-			if len(os.Getenv("IMG_DISABLE_EMBEDDED_RUNC")) > 0 {
-				// Fail early with the error to install runc.
-				return fmt.Errorf("please install `runc`")
-			}
-			runcDir, err := binutils.InstallRuncBinary()
-			if err != nil {
-				os.RemoveAll(runcDir)
-				return fmt.Errorf("Installing embedded runc binary failed: %v", err)
-			}
-			defer os.RemoveAll(runcDir)
 		}
 
 		return nil
@@ -144,4 +115,24 @@ func defaultStateDirectory() string {
 		return filepath.Join(home, ".local", "share", "img")
 	}
 	return "/tmp/img"
+}
+
+// If the command requires runc and we do not have it installed,
+// install it from the embedded asset.
+func installRuncIfDNE() error {
+	if binutils.RuncBinaryExists() {
+		// return early.
+		return nil
+	}
+
+	if len(os.Getenv("IMG_DISABLE_EMBEDDED_RUNC")) > 0 {
+		// Fail early with the error to install runc.
+		return fmt.Errorf("please install `runc`")
+	}
+
+	if _, err := binutils.InstallRuncBinary(); err != nil {
+		return fmt.Errorf("Installing embedded runc binary failed: %v", err)
+	}
+
+	return nil
 }

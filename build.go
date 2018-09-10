@@ -32,13 +32,11 @@ import (
 
 const buildHelp = `Build an image from a Dockerfile.`
 
-func (cmd *buildCommand) Name() string       { return "build" }
-func (cmd *buildCommand) Args() string       { return "[OPTIONS] PATH" }
-func (cmd *buildCommand) ShortHelp() string  { return buildHelp }
-func (cmd *buildCommand) LongHelp() string   { return buildHelp }
-func (cmd *buildCommand) Hidden() bool       { return false }
-func (cmd *buildCommand) DoReexec() bool     { return true }
-func (cmd *buildCommand) RequiresRunc() bool { return true }
+func (cmd *buildCommand) Name() string      { return "build" }
+func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }
+func (cmd *buildCommand) ShortHelp() string { return buildHelp }
+func (cmd *buildCommand) LongHelp() string  { return buildHelp }
+func (cmd *buildCommand) Hidden() bool      { return false }
 
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.dockerfilePath, "file", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
@@ -67,6 +65,11 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 
 	if cmd.tag == "" {
 		return errors.New("please specify an image tag with `-t`")
+	}
+
+	reexec()
+	if err := installRuncIfDNE(); err != nil {
+		return err
 	}
 
 	// Get the specified context.

@@ -15,13 +15,11 @@ import (
 
 const pullHelp = `Pull an image or a repository from a registry.`
 
-func (cmd *pullCommand) Name() string       { return "pull" }
-func (cmd *pullCommand) Args() string       { return "[OPTIONS] NAME[:TAG|@DIGEST]" }
-func (cmd *pullCommand) ShortHelp() string  { return pullHelp }
-func (cmd *pullCommand) LongHelp() string   { return pullHelp }
-func (cmd *pullCommand) Hidden() bool       { return false }
-func (cmd *pullCommand) DoReexec() bool     { return true }
-func (cmd *pullCommand) RequiresRunc() bool { return false }
+func (cmd *pullCommand) Name() string      { return "pull" }
+func (cmd *pullCommand) Args() string      { return "[OPTIONS] NAME[:TAG|@DIGEST]" }
+func (cmd *pullCommand) ShortHelp() string { return pullHelp }
+func (cmd *pullCommand) LongHelp() string  { return pullHelp }
+func (cmd *pullCommand) Hidden() bool      { return false }
 
 func (cmd *pullCommand) Register(fs *flag.FlagSet) {}
 
@@ -33,6 +31,8 @@ func (cmd *pullCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image or repository to pull")
 	}
+
+	reexec()
 
 	// Get the specified image.
 	cmd.image = args[0]

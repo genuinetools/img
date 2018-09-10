@@ -44,7 +44,7 @@ func ExampleNewProgram_withCommand() {
 	p.FlagSet.BoolVar(&debug, "d", false, "enable debug logging")
 
 	// Set the before function.
-	p.Before = func(ctx context.Context, cmd cli.Command) error {
+	p.Before = func(ctx context.Context) error {
 		// Set the log level.
 		if debug {
 			// Setup your logger here...

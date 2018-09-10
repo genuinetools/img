@@ -33,6 +33,8 @@ func (cmd *tagCommand) Run(ctx context.Context, args []string) (err error) {
 		return fmt.Errorf("must pass an image or repository and target to tag")
 	}
 
+	reexec()
+
 	// Get the specified image and target.
 	cmd.image = args[0]
 	cmd.target = args[1]
