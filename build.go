@@ -41,7 +41,9 @@ func (cmd *buildCommand) DoReexec() bool     { return true }
 func (cmd *buildCommand) RequiresRunc() bool { return true }
 
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.dockerfilePath, "file", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+	fs.StringVar(&cmd.tag, "tag", "", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")

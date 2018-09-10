@@ -24,6 +24,7 @@ func (cmd *unpackCommand) DoReexec() bool     { return true }
 func (cmd *unpackCommand) RequiresRunc() bool { return false }
 
 func (cmd *unpackCommand) Register(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.output, "output", "", "Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)")
 	fs.StringVar(&cmd.output, "o", "", "Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)")
 }
 

@@ -22,7 +22,7 @@ import (
 
 const loginShortHelp = `Log in to a Docker registry.`
 
-var loginLongHelp = loginShortHelp + fmt.Sprintf("\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
+var loginLongHelp = loginShortHelp + fmt.Sprintf("\n\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
 
 func (cmd *loginCommand) Name() string       { return "login" }
 func (cmd *loginCommand) Args() string       { return "[OPTIONS] [SERVER]" }
@@ -34,7 +34,9 @@ func (cmd *loginCommand) RequiresRunc() bool { return false }
 
 func (cmd *loginCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.user, "u", "", "Username")
+	fs.StringVar(&cmd.user, "username", "", "Username")
 	fs.StringVar(&cmd.password, "p", "", "Password")
+	fs.StringVar(&cmd.password, "password", "", "Password")
 	fs.BoolVar(&cmd.passwordStdin, "password-stdin", false, "Take the password from stdin")
 }
 

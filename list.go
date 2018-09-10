@@ -27,6 +27,7 @@ func (cmd *listCommand) RequiresRunc() bool { return false }
 
 func (cmd *listCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
+	fs.Var(&cmd.filters, "filter", "Filter output based on conditions provided")
 }
 
 type listCommand struct {

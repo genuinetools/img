@@ -26,6 +26,7 @@ func (cmd *saveCommand) DoReexec() bool     { return true }
 func (cmd *saveCommand) RequiresRunc() bool { return false }
 
 func (cmd *saveCommand) Register(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.output, "output", "", "write to a file, instead of STDOUT")
 	fs.StringVar(&cmd.output, "o", "", "write to a file, instead of STDOUT")
 	fs.StringVar(&cmd.format, "format", "docker", "image output format (docker|oci)")
 }

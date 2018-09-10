@@ -79,7 +79,9 @@ func main() {
 	p.FlagSet.BoolVar(&debug, "debug", false, "enable debug logging")
 	p.FlagSet.BoolVar(&debug, "d", false, "enable debug logging")
 	p.FlagSet.StringVar(&backend, "backend", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
+	p.FlagSet.StringVar(&backend, "b", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
 	p.FlagSet.StringVar(&stateDir, "state", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
+	p.FlagSet.StringVar(&stateDir, "s", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
 
 	// Set the before function.
 	p.Before = func(ctx context.Context, c cli.Command) error {

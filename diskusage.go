@@ -30,6 +30,7 @@ func (cmd *diskUsageCommand) RequiresRunc() bool { return false }
 
 func (cmd *diskUsageCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
+	fs.Var(&cmd.filters, "filter", "Filter output based on conditions provided")
 }
 
 type diskUsageCommand struct {
