@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -30,7 +31,7 @@ type pushCommand struct {
 	insecure bool
 }
 
-func (cmd *pushCommand) Run(args []string) (err error) {
+func (cmd *pushCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image or repository to push")
 	}
@@ -48,7 +49,7 @@ func (cmd *pushCommand) Run(args []string) (err error) {
 	fmt.Printf("Pushing %s...\n", cmd.image)
 
 	// Create the context.
-	ctx := appcontext.Context()
+	ctx = appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err

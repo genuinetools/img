@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -11,7 +12,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 // TODO(AkihiroSuda): support OCI archive
@@ -35,13 +35,12 @@ type saveCommand struct {
 	format string
 }
 
-func (cmd *saveCommand) Run(args []string) (err error) {
+func (cmd *saveCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image to save")
 	}
 
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

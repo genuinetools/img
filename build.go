@@ -58,7 +58,7 @@ type buildCommand struct {
 	noConsole  bool
 }
 
-func (cmd *buildCommand) Run(args []string) (err error) {
+func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass a path to build")
 	}
@@ -137,7 +137,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
 	// Create the context.
-	ctx := appcontext.Context()
+	ctx = appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err

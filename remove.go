@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const removeHelp = `Remove one or more images.`
@@ -25,13 +25,12 @@ func (cmd *removeCommand) Register(fs *flag.FlagSet) {}
 
 type removeCommand struct{}
 
-func (cmd *removeCommand) Run(args []string) (err error) {
+func (cmd *removeCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image to remove")
 	}
 
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const unpackHelp = `Unpack an image to a rootfs directory.`
@@ -32,7 +32,7 @@ type unpackCommand struct {
 	output string
 }
 
-func (cmd *unpackCommand) Run(args []string) (err error) {
+func (cmd *unpackCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image to unpack as a rootfs")
 	}
@@ -48,7 +48,6 @@ func (cmd *unpackCommand) Run(args []string) (err error) {
 	}
 
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

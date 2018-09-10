@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -45,7 +46,7 @@ type loginCommand struct {
 	serverAddress string
 }
 
-func (cmd *loginCommand) Run(args []string) error {
+func (cmd *loginCommand) Run(ctx context.Context, args []string) error {
 	if cmd.password != "" {
 		logrus.Warnf("WARNING! Using --password via the CLI is insecure. Use --password-stdin.")
 		if cmd.passwordStdin {

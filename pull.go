@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -28,7 +29,7 @@ type pullCommand struct {
 	image string
 }
 
-func (cmd *pullCommand) Run(args []string) (err error) {
+func (cmd *pullCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image or repository to pull")
 	}
@@ -47,7 +48,7 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 
 	var listedImage *client.ListedImage
 	// Create the context.
-	ctx := appcontext.Context()
+	ctx = appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err

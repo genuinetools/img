@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const pruneHelp = `Prune and clean up the build cache.`
@@ -28,9 +28,8 @@ func (cmd *pruneCommand) Register(fs *flag.FlagSet) {}
 
 type pruneCommand struct{}
 
-func (cmd *pruneCommand) Run(args []string) (err error) {
+func (cmd *pruneCommand) Run(ctx context.Context, args []string) (err error) {
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const tagHelp = `Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.`
@@ -28,7 +28,7 @@ type tagCommand struct {
 	target string
 }
 
-func (cmd *tagCommand) Run(args []string) (err error) {
+func (cmd *tagCommand) Run(ctx context.Context, args []string) (err error) {
 	if len(args) < 2 {
 		return fmt.Errorf("must pass an image or repository and target to tag")
 	}
@@ -38,7 +38,6 @@ func (cmd *tagCommand) Run(args []string) (err error) {
 	cmd.target = args[1]
 
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

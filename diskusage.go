@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -12,7 +13,6 @@ import (
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const diskUsageShortHelp = `Show image disk usage.`
@@ -36,9 +36,8 @@ type diskUsageCommand struct {
 	filters stringSlice
 }
 
-func (cmd *diskUsageCommand) Run(args []string) (err error) {
+func (cmd *diskUsageCommand) Run(ctx context.Context, args []string) (err error) {
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

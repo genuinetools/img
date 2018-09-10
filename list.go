@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/util/appcontext"
 )
 
 const listHelp = `List images and digests.`
@@ -33,9 +33,8 @@ type listCommand struct {
 	filters stringSlice
 }
 
-func (cmd *listCommand) Run(args []string) (err error) {
+func (cmd *listCommand) Run(ctx context.Context, args []string) (err error) {
 	// Create the context.
-	ctx := appcontext.Context()
 	id := identity.NewID()
 	ctx = session.NewContext(ctx, id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")

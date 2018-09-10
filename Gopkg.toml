@@ -28,6 +28,10 @@
   name = "github.com/Sirupsen/logrus"
   source = "github.com/sirupsen/logrus"
 
+[[constraint]]
+  name = "github.com/genuinetools/pkg"
+  branch = "master"
+
 [[override]]
   name = "github.com/docker/docker"
   source = "github.com/moby/moby"

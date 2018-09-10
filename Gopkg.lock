@@ -326,6 +326,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:0fa61036802c53283606f16ffbbc01630e73dd6e678a283fd7eabdc81051105b"
+  name = "github.com/genuinetools/pkg"
+  packages = ["cli"]
+  pruneopts = "NUT"
+  revision = "4a92e63afc8670c3a64ef8b4dda2b66ae22de124"
+
+[[projects]]
+  branch = "master"
   digest = "1:ed4b7e81b9c79e51804beb42673626984cc4135790ee723a9e995cfff31fa2bc"
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
@@ -914,6 +922,7 @@
     "github.com/docker/docker/pkg/term",
     "github.com/docker/docker/registry",
     "github.com/docker/go-units",
+    "github.com/genuinetools/pkg/cli",
     "github.com/genuinetools/reg/registry",
     "github.com/godbus/dbus",
     "github.com/golang/protobuf/proto",
@@ -941,6 +950,7 @@
     "github.com/moby/buildkit/source/containerimage",
     "github.com/moby/buildkit/util/appcontext",
     "github.com/moby/buildkit/util/dockerexporter",
+    "github.com/moby/buildkit/util/network",
     "github.com/moby/buildkit/util/progress/progressui",
     "github.com/moby/buildkit/util/push",
     "github.com/moby/buildkit/util/resolver",
