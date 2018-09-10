@@ -17,26 +17,25 @@ jobs:
     - script: make all
     - stage: Run Test Coverage
       script: make cover
-      after_success:
-        - bash <(curl -s https://codecov.io/bash)
-    - stage: Build Release
-      script:
-        - make release
-        - echo "Deploying to GitHub releases ..."
-      deploy:
-        provider: releases
-        api_key:
-          secure: "U12GervAMGPIl6Gg2DXdNrLwi7alBco1Vp8FQ1JkCXbncY+Pkq+jske+PgYK8PspeEVr9HQwQYRYCrLVMZbwoNQhj6Ks2YP1FwDEUbS3k+ECDILiMG+MUlLSLJKZWzFxibKs/5QDmMZmA8Gyhvyk5yFcfc7mhMBXiydtcP1emMFntXjkI3xj96onE+8PNKLOmkoyWuC/yvi3VXl8CXPb8g6rztuZnfaGbSBIN9wxEUeJRN71+IRQxd1CHJPi1K1W5RBcD/GjHgzafW9tu/GJzCvWXzOTRctOte8gduXGFGMus4DhdLV1lf5tC08mcwm1XYoWWQYHB2WIR5T3fmIQhibJ2LxwC2rkBPDKAjyTzLLBA4D3LujmpF0gbVkwYeXwUQO3AfivfC6/YzJa8oJeL3igGMyc5ikHfHyOVRVA2eTxQBWe8J9C7OwxnYYzdsYu6BVPQ/S8J7eNhKTov+2Viw9un4fg3Mt6vbwVK2ZF3DwhQU03p9Hq38Thps4ic+fBix3kkWjBjFfFQbhdNL3oirZUad9JMGkB0afxmPiHkXZ5VYYF6gUNOCCi/dcW4aiE3uZWjaqW8QCQIzKGQKP9WtYbLL3hShfyvv8mZLnIzxiCdy9pogiwh3BOugBFG5NHRSJ8VGzwrMxKkyrpj+xEHlNiaRbrY8TLTSnkayLMC2Q="
-        file:
-          - cross/img-linux-amd64.md5
-          - cross/img-linux-amd64.sha256
-          - cross/img-linux-amd64
-        skip_cleanup: true
-        on:
-          tags: true
+      after_success: bash <(curl -s https://codecov.io/bash)
     - stage: Run e2e Tests
       script:
         - make install
         - ./contrib/e2e-dockerfiles-build-test.sh
       env:
         - STATE_DIR=$HOME/img
+    - stage: Build Release
+      script:
+        - make release
+        - echo "Deploying to GitHub releases ..."
+      deploy:
+        provider: releases
+        file:
+          - cross/img-linux-amd64
+          - cross/img-linux-amd64.md5
+          - cross/img-linux-amd64.sha256
+        skip_cleanup: true
+        on:
+          tags: true
+        api_key:
+          secure: "U12GervAMGPIl6Gg2DXdNrLwi7alBco1Vp8FQ1JkCXbncY+Pkq+jske+PgYK8PspeEVr9HQwQYRYCrLVMZbwoNQhj6Ks2YP1FwDEUbS3k+ECDILiMG+MUlLSLJKZWzFxibKs/5QDmMZmA8Gyhvyk5yFcfc7mhMBXiydtcP1emMFntXjkI3xj96onE+8PNKLOmkoyWuC/yvi3VXl8CXPb8g6rztuZnfaGbSBIN9wxEUeJRN71+IRQxd1CHJPi1K1W5RBcD/GjHgzafW9tu/GJzCvWXzOTRctOte8gduXGFGMus4DhdLV1lf5tC08mcwm1XYoWWQYHB2WIR5T3fmIQhibJ2LxwC2rkBPDKAjyTzLLBA4D3LujmpF0gbVkwYeXwUQO3AfivfC6/YzJa8oJeL3igGMyc5ikHfHyOVRVA2eTxQBWe8J9C7OwxnYYzdsYu6BVPQ/S8J7eNhKTov+2Viw9un4fg3Mt6vbwVK2ZF3DwhQU03p9Hq38Thps4ic+fBix3kkWjBjFfFQbhdNL3oirZUad9JMGkB0afxmPiHkXZ5VYYF6gUNOCCi/dcW4aiE3uZWjaqW8QCQIzKGQKP9WtYbLL3hShfyvv8mZLnIzxiCdy9pogiwh3BOugBFG5NHRSJ8VGzwrMxKkyrpj+xEHlNiaRbrY8TLTSnkayLMC2Q="

@@ -27,7 +27,7 @@ GO_LDFLAGS_STATIC=-ldflags "-w $(CTIMEVAR) -extldflags -static"
 GO := go
 
 # List the GOOS and GOARCH to build
-GOOSARCHES = linux/amd64
+GOOSARCHES = $(shell cat .goosarch)
 
 .PHONY: build
 build: runc $(NAME) ## Builds a dynamic executable or package

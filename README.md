@@ -96,6 +96,8 @@ NOTE: These steps work only for Linux. Compile and run in a container
 
 #### Binaries
 
+For installation instructions from binaries please visit the [Releases Page](https://github.com/genuinetools/img/releases).
+
 The below instructions mirror that of the [v0.4.9 release page](https://github.com/genuinetools/img/releases/tag/v0.4.9).
 
 ```console

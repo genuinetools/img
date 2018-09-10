@@ -21,8 +21,8 @@
 
 [prune]
   non-go = true
-  unused-packages = true
   go-tests = true
+  unused-packages = true
 
 [[override]]
   name = "github.com/Sirupsen/logrus"
