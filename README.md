@@ -160,7 +160,7 @@ $ sudo emerge -a app-emulation/img
 
 #### Running with Docker
 
-This currently **does not work**, to track the progress of making this work in a container see [upstream patches](#upstream-patches).
+This currently **does not work** without `--privileged`, to track the progress of making this work in a container without the `--privileged` flag see [upstream patches](#upstream-patches).
 
 ```console
 $ docker run --rm -it \
@@ -168,10 +168,7 @@ $ docker run --rm -it \
     --volume $(pwd):/home/user/src:ro \ # for the build context and dockerfile, can be read-only since we won't modify it
     --workdir /home/user/src \ # set the builder working directory
     --volume "${HOME}/.docker:/root/.docker:ro" \ # for credentials to push to docker hub or a registry
-    --cap-add SETGID \  # so we can set groups
-    --cap-add SETUID \  # so we can map users in a user namespace
-    --security-opt apparmor=unconfined \ # turn off apparmor so we can mount unprivileged
-    --security-opt seccomp=unconfined \ # turn off seccomp because it blocks new user namespaces
+    --privileged /
     r.j3ss.co/img build -t user/myimage .
 ```
 
