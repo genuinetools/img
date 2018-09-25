@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/boltdb/bolt"
 	"github.com/containerd/containerd/content/local"
 	"github.com/containerd/containerd/images"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	"github.com/containerd/containerd/platforms"
+	bolt "go.etcd.io/bbolt"
 )
 
 // ListedImage represents an image structure returuned from ListImages.

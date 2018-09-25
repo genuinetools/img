@@ -87,8 +87,7 @@
   branch = "master"
 
 [[override]]
-  name = "github.com/boltdb/bolt"
-#source = "github.com/coreos/bbolt"
+  name = "go.etcd.io/bbolt"
   branch = "master"
 
 [[constraint]]

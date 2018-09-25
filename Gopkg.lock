@@ -21,7 +21,7 @@
   version = "v0.4.11"
 
 [[projects]]
-  digest = "1:3e6c177640c7f58715643eb55ed3d36f6f5245f0b530f9062ade984d17df4f5e"
+  digest = "1:cdc437f886880a489106fbd4ea9de678603b7f7fecc4e339ebdd21074ee8b88b"
   name = "github.com/Microsoft/hcsshim"
   packages = [
     ".",
@@ -38,8 +38,8 @@
     "internal/wclayer",
   ]
   pruneopts = "NUT"
-  revision = "f3c754d1689c1a2028ca5d96103695422f131df3"
-  version = "v0.7.3"
+  revision = "e44e499d29527b244d6858772f1b9090eeaddc4e"
+  version = "v0.7.4"
 
 [[projects]]
   branch = "master"
@@ -59,14 +59,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d4a4d1d5574b087a5ecf939fdf49a1684137f8bd88397f2f71a93a90d03a9483"
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5"
-
-[[projects]]
-  branch = "master"
   digest = "1:34ceb29329410877bcae59925687ab0669d091617fbf85541872fc578c6339c9"
   name = "github.com/containerd/console"
   packages = ["."]
@@ -75,7 +67,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3e6a2b4ca96f8d863a2142139bb1fb810995d5cc2e84f38b0026bbecd158ce98"
+  digest = "1:18a8765adc0475b91b1948c4ce2f47ce2bbf180026c61c0fe9413c4ab8d46042"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -117,7 +109,7 @@
     "sys",
   ]
   pruneopts = "NUT"
-  revision = "1597270d0468ccebd29b78164c2e902514f426fd"
+  revision = "3bc4ba271e1c1ab580467748751b30aa7eb9b0c7"
 
 [[projects]]
   digest = "1:425146e192a9f76d5404f278247a5de107096ea3be397435741f642d6297549e"
@@ -161,7 +153,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1ae6152840bd4fe1009e4ce51d8cd989b452ad2e8aaf3bfa3b3ae55974fed729"
+  digest = "1:902917bc9b18df1c4d17c0bf076f31573ba051b6fb2211dd24c001dbce2fdd69"
   name = "github.com/docker/cli"
   packages = [
     "cli/config",
@@ -170,11 +162,11 @@
     "opts",
   ]
   pruneopts = "NUT"
-  revision = "8ec21567a763d5ba5e5a068061c399214c2536a2"
+  revision = "54c19e67f69ce1d20ec46d090654326079287a0f"
 
 [[projects]]
   branch = "master"
-  digest = "1:06bfc4521044f0b703af57507da959f7b486c0122cfac726ee2902ea4027d339"
+  digest = "1:1aed2b27277a9c4a2b3b40abf3e0484704a35482f24a804e7791c5172dcbf323"
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -195,11 +187,11 @@
     "registry/storage/cache/memory",
   ]
   pruneopts = "NUT"
-  revision = "642075f42c027b8a05b7d06f4f132939eb9ed902"
+  revision = "16128bbac47f75050e82f7e91b04df33775e0c23"
 
 [[projects]]
   branch = "master"
-  digest = "1:ac220dcfa13095c9a5ce506ede3c5e7254394efb99d5dc21160535e3f6e7d2f3"
+  digest = "1:0b96d4380d1ff63fc8888c096a8d69c06cdd83d331283f0752e785d1b898db6b"
   name = "github.com/docker/docker"
   packages = [
     "api/types",
@@ -235,7 +227,7 @@
     "registry/resumable",
   ]
   pruneopts = "NUT"
-  revision = "77faf158f5265711dbcbff0ffb855eed2e3b6ccd"
+  revision = "a9c061deec0f8d452e4feb7258046d5e32a1143b"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -318,7 +310,7 @@
   name = "github.com/genuinetools/reg"
   packages = ["registry"]
   pruneopts = "NUT"
-  revision = "73fdd320401196cbc2d128ed4396f13eaefad156"
+  revision = "d021aeb0b9786eac1212b5faaa70d11f56c60991"
 
 [[projects]]
   digest = "1:dfd1bfac4ef78bce8efe6c52548baaaba18f634c0101581f4773336c653289c2"
@@ -422,7 +414,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2673e95c66884c0898ab13a34d28b013cc382428f3e3bfc910e02101ef32fef3"
+  digest = "1:667186caa846fc5ef603984251ad46881cdf7be27b9098b867bf93eb0c9ebcf1"
   name = "github.com/moby/buildkit"
   packages = [
     "api/services/control",
@@ -466,13 +458,14 @@
     "session/filesync",
     "session/grpchijack",
     "session/secrets",
+    "session/sshforward",
     "session/testutil",
     "snapshot",
     "snapshot/blobmapping",
     "snapshot/containerd",
     "snapshot/imagerefchecker",
     "solver",
-    "solver/boltdbcachestorage",
+    "solver/bboltcachestorage",
     "solver/internal/pipe",
     "solver/llbsolver",
     "solver/llbsolver/ops",
@@ -508,7 +501,7 @@
     "worker/base",
   ]
   pruneopts = "NUT"
-  revision = "d88354f7856a1fafef6f23bc9c5a538c246f4023"
+  revision = "a927eaf23a2ecd62dd252fcfe32c49dd0322ac23"
 
 [[projects]]
   branch = "master"
@@ -547,7 +540,7 @@
     "libcontainer/user",
   ]
   pruneopts = "NUT"
-  revision = "70ca035aa6ecfc496e13365fdef20383408501ba"
+  revision = "00dc70017d222b178a002ed30e9321b12647af2d"
 
 [[projects]]
   digest = "1:57234a321bf1f8f98a8a9a5122a2404cc60d0800516f4ab7a7b2375e4b2d19ea"
@@ -595,7 +588,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f9fbb907f4a983700149f874d2816fabbde70c6f30ba354c17dcdb038e38666d"
+  digest = "1:3b374d4b78e68dbab0cc07ce56e75d8b267ce1ac1de6c7b610191789abd3fee1"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
@@ -603,7 +596,7 @@
     "prometheus/promhttp",
   ]
   pruneopts = "NUT"
-  revision = "7858729281ec582767b20e0d696b6041d995d5e0"
+  revision = "f69c853d21c15596929fa9126ba211247e7dca95"
 
 [[projects]]
   branch = "master"
@@ -627,7 +620,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6621142cd60b7150ab66f38ff36303ca55843dc5a635c1f9a28f95ecddab72b4"
+  digest = "1:26a2f5e891cc4d2321f18a0caa84c8e788663c17bed6a487f3cbe2c4295292d0"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
@@ -636,7 +629,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
+  revision = "418d78d0b9a7b7de3a6bbc8a23def624cc977bb2"
 
 [[projects]]
   digest = "1:b2339e83ce9b5c4f79405f949429a7f68a9a904fed903c672aac1e7ceb7f5f02"
@@ -648,11 +641,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e865a1cd94806d1bb0eaa0bffba2ccb5e25ac42e1f55328c83d5e3399c9961a4"
+  digest = "1:e14e467ed00ab98665623c5060fa17e3d7079be560ffc33cabafd05d35894f05"
   name = "github.com/syndtr/gocapability"
   packages = ["capability"]
   pruneopts = "NUT"
-  revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
+  revision = "d98352740cb2c55f81556b63d4a1ec64c5a319c2"
 
 [[projects]]
   branch = "master"
@@ -660,7 +653,7 @@
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "7e391b0e788f9b925f22bd3cf88e0210d1643673"
+  revision = "70b709f90a17dd62f41f8b1c14c1240a3ae22fee"
 
 [[projects]]
   branch = "master"
@@ -672,6 +665,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e907c2cf2df370592f4e3a5b8c2bcdf6e16709cace789d53ea7d22720e8b79c2"
+  name = "go.etcd.io/bbolt"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "7ee3ded59d4835e10f3e7d0f7603c42aa5e83820"
+
+[[projects]]
+  branch = "master"
   digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -680,7 +681,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:447c1e8b5d33de27fe86ebc38a8eadc1f1e80159fbf8aba1630e6be1e9808470"
+  digest = "1:8f96a3abd7277a1f433c5b7036c00f21188fd6a36ff1e8c9c1681ab14476e192"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -695,7 +696,7 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "161cd47e91fd58ac17490ef4d742dc98bb4cf60e"
+  revision = "f04abc6bdfa7a0171a8a0c9fd2ada9391044d056"
 
 [[projects]]
   branch = "master"
@@ -707,14 +708,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:581828cee9f0d31195c1ae52ea8935dfaec395cee6c23adc02109b892b391c2e"
+  digest = "1:16c7423676f53021ecdec1e73a3c69f50e11c5b4988388940e7cb1634276755d"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "d0be0721c37eeb5299f245a996a483160fc36940"
+  revision = "b09afc3d579e346c4a7e4705953acaf6f9e551bd"
 
 [[projects]]
   digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
@@ -749,14 +750,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
+  digest = "1:56b0bca90b7e5d1facf5fbdacba23e4e0ce069d25381b8e2f70ef1e7ebfb9c1a"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "11092d34479b07829b72e10713b159248caf5dad"
+  revision = "221a8d4f74948678f06caaa13c9d41d22e069ae8"
 
 [[projects]]
-  digest = "1:3260f4867582c3d330f0c784a164919183aa16688819705f20f8dc65758d299f"
+  digest = "1:fae299a942ba4907d7b7865fa5e51e892524a217468d10edbfd6ca7b3bb94111"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -789,14 +790,13 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/boltdb/bolt",
     "github.com/containerd/console",
     "github.com/containerd/containerd/content",
     "github.com/containerd/containerd/content/local",
@@ -842,7 +842,7 @@
     "github.com/moby/buildkit/session/filesync",
     "github.com/moby/buildkit/session/testutil",
     "github.com/moby/buildkit/snapshot/containerd",
-    "github.com/moby/buildkit/solver/boltdbcachestorage",
+    "github.com/moby/buildkit/solver/bboltcachestorage",
     "github.com/moby/buildkit/source",
     "github.com/moby/buildkit/source/containerimage",
     "github.com/moby/buildkit/util/appcontext",
@@ -858,6 +858,7 @@
     "github.com/opencontainers/runc/libcontainer/system",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
+    "go.etcd.io/bbolt",
     "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
   ]

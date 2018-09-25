@@ -268,6 +268,14 @@ func WithLinuxNamespace(ns specs.LinuxNamespace) SpecOpts {
 	}
 }
 
+// WithNewPrivileges turns off the NoNewPrivileges feature flag in the spec
+func WithNewPrivileges(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
+	setProcess(s)
+	s.Process.NoNewPrivileges = false
+
+	return nil
+}
+
 // WithImageConfig configures the spec to from the configuration of an Image
 func WithImageConfig(image Image) SpecOpts {
 	return WithImageConfigArgs(image, nil)
@@ -315,8 +323,14 @@ func WithImageConfigArgs(image Image, args []string) SpecOpts {
 			}
 			s.Process.Cwd = cwd
 			if config.User != "" {
-				return WithUser(config.User)(ctx, client, c, s)
+				if err := WithUser(config.User)(ctx, client, c, s); err != nil {
+					return err
+				}
+				return WithAdditionalGIDs(fmt.Sprintf("%d", s.Process.User.UID))(ctx, client, c, s)
 			}
+			// we should query the image's /etc/group for additional GIDs
+			// even if there is no specified user in the image config
+			return WithAdditionalGIDs("root")(ctx, client, c, s)
 		} else if s.Windows != nil {
 			s.Process.Env = config.Env
 			s.Process.Args = append(config.Entrypoint, config.Cmd...)
@@ -478,12 +492,13 @@ func WithUser(userstr string) SpecOpts {
 			}
 			f := func(root string) error {
 				if username != "" {
-					uid, _, err = getUIDGIDFromPath(root, func(u user.User) bool {
+					user, err := getUserFromPath(root, func(u user.User) bool {
 						return u.Name == username
 					})
 					if err != nil {
 						return err
 					}
+					uid = uint32(user.Uid)
 				}
 				if groupname != "" {
 					gid, err = getGIDFromPath(root, func(g user.Group) bool {
@@ -541,7 +556,7 @@ func WithUserID(uid uint32) SpecOpts {
 			if !isRootfsAbs(s.Root.Path) {
 				return errors.Errorf("rootfs absolute path is required")
 			}
-			uuid, ugid, err := getUIDGIDFromPath(s.Root.Path, func(u user.User) bool {
+			user, err := getUserFromPath(s.Root.Path, func(u user.User) bool {
 				return u.Uid == int(uid)
 			})
 			if err != nil {
@@ -551,7 +566,7 @@ func WithUserID(uid uint32) SpecOpts {
 				}
 				return err
 			}
-			s.Process.User.UID, s.Process.User.GID = uuid, ugid
+			s.Process.User.UID, s.Process.User.GID = uint32(user.Uid), uint32(user.Gid)
 			return nil
 
 		}
@@ -567,7 +582,7 @@ func WithUserID(uid uint32) SpecOpts {
 			return err
 		}
 		return mount.WithTempMount(ctx, mounts, func(root string) error {
-			uuid, ugid, err := getUIDGIDFromPath(root, func(u user.User) bool {
+			user, err := getUserFromPath(root, func(u user.User) bool {
 				return u.Uid == int(uid)
 			})
 			if err != nil {
@@ -577,7 +592,7 @@ func WithUserID(uid uint32) SpecOpts {
 				}
 				return err
 			}
-			s.Process.User.UID, s.Process.User.GID = uuid, ugid
+			s.Process.User.UID, s.Process.User.GID = uint32(user.Uid), uint32(user.Gid)
 			return nil
 		})
 	}
@@ -595,13 +610,13 @@ func WithUsername(username string) SpecOpts {
 				if !isRootfsAbs(s.Root.Path) {
 					return errors.Errorf("rootfs absolute path is required")
 				}
-				uid, gid, err := getUIDGIDFromPath(s.Root.Path, func(u user.User) bool {
+				user, err := getUserFromPath(s.Root.Path, func(u user.User) bool {
 					return u.Name == username
 				})
 				if err != nil {
 					return err
 				}
-				s.Process.User.UID, s.Process.User.GID = uid, gid
+				s.Process.User.UID, s.Process.User.GID = uint32(user.Uid), uint32(user.Gid)
 				return nil
 			}
 			if c.Snapshotter == "" {
@@ -616,13 +631,13 @@ func WithUsername(username string) SpecOpts {
 				return err
 			}
 			return mount.WithTempMount(ctx, mounts, func(root string) error {
-				uid, gid, err := getUIDGIDFromPath(root, func(u user.User) bool {
+				user, err := getUserFromPath(root, func(u user.User) bool {
 					return u.Name == username
 				})
 				if err != nil {
 					return err
 				}
-				s.Process.User.UID, s.Process.User.GID = uid, gid
+				s.Process.User.UID, s.Process.User.GID = uint32(user.Uid), uint32(user.Gid)
 				return nil
 			})
 		} else if s.Windows != nil {
@@ -631,6 +646,71 @@ func WithUsername(username string) SpecOpts {
 			return errors.New("spec does not contain Linux or Windows section")
 		}
 		return nil
+	}
+}
+
+// WithAdditionalGIDs sets the OCI spec's additionalGids array to any additional groups listed
+// for a particular user in the /etc/groups file of the image's root filesystem
+// The passed in user can be either a uid or a username.
+func WithAdditionalGIDs(userstr string) SpecOpts {
+	return func(ctx context.Context, client Client, c *containers.Container, s *Spec) (err error) {
+		setProcess(s)
+		setAdditionalGids := func(root string) error {
+			var username string
+			uid, err := strconv.Atoi(userstr)
+			if err == nil {
+				user, err := getUserFromPath(root, func(u user.User) bool {
+					return u.Uid == uid
+				})
+				if err != nil {
+					if os.IsNotExist(err) || err == errNoUsersFound {
+						return nil
+					}
+					return err
+				}
+				username = user.Name
+			} else {
+				username = userstr
+			}
+			gids, err := getSupplementalGroupsFromPath(root, func(g user.Group) bool {
+				// we only want supplemental groups
+				if g.Name == username {
+					return false
+				}
+				for _, entry := range g.List {
+					if entry == username {
+						return true
+					}
+				}
+				return false
+			})
+			if err != nil {
+				if os.IsNotExist(err) {
+					return nil
+				}
+				return err
+			}
+			s.Process.User.AdditionalGids = gids
+			return nil
+		}
+		if c.Snapshotter == "" && c.SnapshotKey == "" {
+			if !isRootfsAbs(s.Root.Path) {
+				return errors.Errorf("rootfs absolute path is required")
+			}
+			return setAdditionalGids(s.Root.Path)
+		}
+		if c.Snapshotter == "" {
+			return errors.Errorf("no snapshotter set for container")
+		}
+		if c.SnapshotKey == "" {
+			return errors.Errorf("rootfs snapshot not created for container")
+		}
+		snapshotter := client.SnapshotService(c.Snapshotter)
+		mounts, err := snapshotter.Mounts(ctx, c.SnapshotKey)
+		if err != nil {
+			return err
+		}
+		return mount.WithTempMount(ctx, mounts, setAdditionalGids)
 	}
 }
 
@@ -681,20 +761,19 @@ func WithAmbientCapabilities(caps []string) SpecOpts {
 
 var errNoUsersFound = errors.New("no users found")
 
-func getUIDGIDFromPath(root string, filter func(user.User) bool) (uid, gid uint32, err error) {
+func getUserFromPath(root string, filter func(user.User) bool) (user.User, error) {
 	ppath, err := fs.RootPath(root, "/etc/passwd")
 	if err != nil {
-		return 0, 0, err
+		return user.User{}, err
 	}
 	users, err := user.ParsePasswdFileFilter(ppath, filter)
 	if err != nil {
-		return 0, 0, err
+		return user.User{}, err
 	}
 	if len(users) == 0 {
-		return 0, 0, errNoUsersFound
+		return user.User{}, errNoUsersFound
 	}
-	u := users[0]
-	return uint32(u.Uid), uint32(u.Gid), nil
+	return users[0], nil
 }
 
 var errNoGroupsFound = errors.New("no groups found")
@@ -713,6 +792,26 @@ func getGIDFromPath(root string, filter func(user.Group) bool) (gid uint32, err 
 	}
 	g := groups[0]
 	return uint32(g.Gid), nil
+}
+
+func getSupplementalGroupsFromPath(root string, filter func(user.Group) bool) ([]uint32, error) {
+	gpath, err := fs.RootPath(root, "/etc/group")
+	if err != nil {
+		return []uint32{}, err
+	}
+	groups, err := user.ParseGroupFileFilter(gpath, filter)
+	if err != nil {
+		return []uint32{}, err
+	}
+	if len(groups) == 0 {
+		// if there are no additional groups; just return an empty set
+		return []uint32{}, nil
+	}
+	addlGids := []uint32{}
+	for _, grp := range groups {
+		addlGids = append(addlGids, uint32(grp.Gid))
+	}
+	return addlGids, nil
 }
 
 func isRootfsAbs(root string) bool {
@@ -912,3 +1011,14 @@ var WithPrivileged = Compose(
 	WithApparmorProfile(""),
 	WithSeccompUnconfined,
 )
+
+// WithWindowsHyperV sets the Windows.HyperV section for HyperV isolation of containers.
+func WithWindowsHyperV(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
+	if s.Windows == nil {
+		s.Windows = &specs.Windows{}
+	}
+	if s.Windows.HyperV == nil {
+		s.Windows.HyperV = &specs.WindowsHyperV{}
+	}
+	return nil
+}

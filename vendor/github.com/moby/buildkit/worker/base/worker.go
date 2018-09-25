@@ -223,8 +223,12 @@ func (w *Worker) GCPolicy() []client.PruneInfo {
 	return w.WorkerOpt.GCPolicy
 }
 
-func (w *Worker) LoadRef(id string) (cache.ImmutableRef, error) {
-	return w.CacheManager.Get(context.TODO(), id)
+func (w *Worker) LoadRef(id string, hidden bool) (cache.ImmutableRef, error) {
+	var opts []cache.RefOption
+	if hidden {
+		opts = append(opts, cache.NoUpdateLastUsed)
+	}
+	return w.CacheManager.Get(context.TODO(), id, opts...)
 }
 
 func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge) (solver.Op, error) {
@@ -282,7 +286,7 @@ func (w *Worker) Exporter(name string) (exporter.Exporter, error) {
 func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIfNeeded bool) (*solver.Remote, error) {
 	diffPairs, err := blobs.GetDiffPairs(ctx, w.ContentStore, w.Snapshotter, w.Differ, ref, createIfNeeded)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed calculaing diff pairs for exported snapshot")
+		return nil, errors.Wrap(err, "failed calculating diff pairs for exported snapshot")
 	}
 	if len(diffPairs) == 0 {
 		return nil, nil

@@ -9,7 +9,7 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/builder"
 	"github.com/moby/buildkit/frontend/gateway"
 	"github.com/moby/buildkit/frontend/gateway/forwarder"
-	"github.com/moby/buildkit/solver/boltdbcachestorage"
+	"github.com/moby/buildkit/solver/bboltcachestorage"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
 )
@@ -43,7 +43,7 @@ func (c *Client) createController() error {
 	frontends["gateway.v0"] = gateway.NewGatewayFrontend(wc)
 
 	// Create the cache storage
-	cacheStorage, err := boltdbcachestorage.NewStore(filepath.Join(c.root, "cache.db"))
+	cacheStorage, err := bboltcachestorage.NewStore(filepath.Join(c.root, "cache.db"))
 	if err != nil {
 		return err
 	}
