@@ -49,6 +49,8 @@ cross/
 coverage.txt
 profile.out
 
+!go.mod
+
 _output/
 
 # Generated embedded runc
@@ -56,4 +58,3 @@ internal/binutils/runc.go
 
 # direnv files
 .envrc
-
