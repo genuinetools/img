@@ -4,6 +4,9 @@ PKG := github.com/genuinetools/$(NAME)
 
 CGO_ENABLED := 1
 
+# Set any default go build tags
+BUILDTAGS := seccomp
+
 include basic.mk
 
 RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
