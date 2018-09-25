@@ -26,14 +26,14 @@ GO := go
 GOOSARCHES = $(shell cat .goosarch)
 
 .PHONY: build
-build: runc $(NAME) ## Builds a dynamic executable or package.
+build: prebuild $(NAME) ## Builds a dynamic executable or package.
 
 $(NAME): $(wildcard *.go) $(wildcard */*.go) VERSION.txt
 	@echo "+ $@"
 	$(GO) build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o $(NAME) .
 
 .PHONY: static
-static: runc ## Builds a static executable.
+static: prebuild ## Builds a static executable.
 	@echo "+ $@"
 	CGO_ENABLED=$(CGO_ENABLED) $(GO) build \
 				-tags "$(BUILDTAGS) static_build" \
@@ -52,7 +52,7 @@ lint: ## Verifies `golint` passes.
 	@golint ./... | grep -v '.pb.go:' | grep -v vendor | tee /dev/stderr
 
 .PHONY: test
-test: runc ## Runs the go tests.
+test: prebuild ## Runs the go tests.
 	@echo "+ $@"
 	@$(GO) test -v -tags "$(BUILDTAGS) cgo" $(shell $(GO) list ./... | grep -v vendor)
 
@@ -67,7 +67,7 @@ staticcheck: ## Verifies `staticcheck` passes.
 	@staticcheck $(shell $(GO) list ./... | grep -v vendor) | grep -v '.pb.go:' | tee /dev/stderr
 
 .PHONY: cover
-cover: runc ## Runs go test with coverage.
+cover: prebuild ## Runs go test with coverage.
 	@echo "" > coverage.txt
 	@for d in $(shell $(GO) list ./... | grep -v vendor); do \
 		$(GO) test -race -coverprofile=profile.out -covermode=atomic "$$d"; \
@@ -78,7 +78,7 @@ cover: runc ## Runs go test with coverage.
 	done;
 
 .PHONY: install
-install: runc ## Installs the executable or package.
+install: prebuild ## Installs the executable or package.
 	@echo "+ $@"
 	$(GO) install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
 
@@ -93,7 +93,7 @@ sha256sum $(BUILDDIR)/$(1)/$(2)/$(NAME) > $(BUILDDIR)/$(1)/$(2)/$(NAME).sha256;
 endef
 
 .PHONY: cross
-cross: *.go VERSION.txt ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary).
+cross: *.go VERSION.txt prebuild ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary).
 	@echo "+ $@"
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
@@ -107,7 +107,7 @@ sha256sum $(BUILDDIR)/$(NAME)-$(1)-$(2) > $(BUILDDIR)/$(NAME)-$(1)-$(2).sha256;
 endef
 
 .PHONY: release
-release: *.go VERSION.txt ## Builds the cross-compiled binaries, naming them in such a way for release (eg. binary-GOOS-GOARCH).
+release: *.go VERSION.txt prebuild ## Builds the cross-compiled binaries, naming them in such a way for release (eg. binary-GOOS-GOARCH).
 	@echo "+ $@"
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildrelease,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
@@ -139,6 +139,15 @@ AUTHORS:
 	@$(file >$@,# This file lists all individuals having contributed content to the repository.)
 	@$(file >>$@,# For how it is generated, see `make AUTHORS`.)
 	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" >> $@
+
+.PHONY: vendor
+vendor: ## Updates the vendoring directory.
+	@$(RM) Gopkg.toml Gopkg.lock
+	@$(RM) go.mod go.sum
+	@$(RM) -r vendor
+	@GO111MODULE=on $(GO) mod init
+	@GO111MODULE=on $(GO) mod tidy
+	@GO111MODULE=on $(GO) mod vendor
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages.

@@ -9,6 +9,9 @@ BUILDTAGS := seccomp
 
 include basic.mk
 
+.PHONY: prebuild
+prebuild: runc
+
 RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
 $(RUNCBUILDDIR):
 	git clone --depth 1 https://github.com/opencontainers/runc.git "$@"
