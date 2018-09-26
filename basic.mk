@@ -25,6 +25,18 @@ GO := go
 # List the GOOS and GOARCH to build
 GOOSARCHES = $(shell cat .goosarch)
 
+# Set the graph driver as the current graphdriver if not set.
+DOCKER_GRAPHDRIVER := $(if $(DOCKER_GRAPHDRIVER),$(DOCKER_GRAPHDRIVER),$(shell docker info 2>&1 | grep "Storage Driver" | sed 's/.*: //'))
+export DOCKER_GRAPHDRIVER
+
+# If this session isn't interactive, then we don't want to allocate a
+# TTY, which would fail, but if it is interactive, we do want to attach
+# so that the user can send e.g. ^C through.
+INTERACTIVE := $(shell [ -t 0 ] && echo 1 || echo 0)
+ifeq ($(INTERACTIVE), 1)
+	DOCKER_FLAGS += -t
+endif
+
 .PHONY: build
 build: prebuild $(NAME) ## Builds a dynamic executable or package.
 
@@ -134,6 +146,10 @@ REGISTRY := r.j3ss.co
 image: ## Create the docker image from the Dockerfile.
 	@docker build --rm --force-rm -t $(REGISTRY)/$(NAME) .
 
+.PHONY: image-dev
+image-dev:
+	@docker build --rm --force-rm -f Dockerfile.dev -t $(REGISTRY)/$(NAME):dev .
+
 .PHONY: AUTHORS
 AUTHORS:
 	@$(file >$@,# This file lists all individuals having contributed content to the repository.)
@@ -142,12 +158,12 @@ AUTHORS:
 
 .PHONY: vendor
 vendor: ## Updates the vendoring directory.
-	@$(RM) Gopkg.toml Gopkg.lock
-	@$(RM) go.mod go.sum
+	@$(RM) go.sum
 	@$(RM) -r vendor
-	@GO111MODULE=on $(GO) mod init
-	@GO111MODULE=on $(GO) mod tidy
-	@GO111MODULE=on $(GO) mod vendor
+	GO111MODULE=on $(GO) mod init || true
+	GO111MODULE=on $(GO) mod tidy
+	GO111MODULE=on $(GO) mod vendor
+	@$(RM) Gopkg.toml Gopkg.lock
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages.
@@ -158,3 +174,12 @@ clean: ## Cleanup any build binaries or packages.
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | sed 's/^[^:]*://g' | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+check_defined = \
+    $(strip $(foreach 1,$1, \
+	$(call __check_defined,$1,$(strip $(value 2)))))
+
+__check_defined = \
+    $(if $(value $1),, \
+    $(error Undefined $1$(if $2, ($2))$(if $(value @), \
+    required by target `$@')))
