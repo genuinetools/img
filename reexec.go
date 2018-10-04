@@ -33,6 +33,11 @@ func reexec() {
 			}
 		}()
 
+		// If newuidmap is not present re-exec will fail
+		if _, err := exec.LookPath("newuidmap"); err != nil {
+			logrus.Fatalf("newuidmap not found (install uidmap package?): %v", err)
+		}
+
 		// Initialize and re-exec with our unshare.
 		cmd := exec.Command("/proc/self/exe", os.Args[1:]...)
 		cmd.Env = append(os.Environ(), "IMG_DO_UNSHARE=1")
