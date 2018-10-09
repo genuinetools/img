@@ -27,16 +27,15 @@ RUN make static && mv img /usr/bin/img
 #    (but note that the SUID binary is not executable after unsharing the usernamespace. so this issue is not critical)
 # 2. As of early October 2018, the upstream shadow newuidmap/newgidmap depends on CAP_SYS_ADMIN.
 #    So we need to apply https://github.com/shadow-maint/shadow/pull/132 .
-FROM alpine AS idmap
+FROM alpine:3.8 AS idmap
 RUN apk add --no-cache autoconf automake build-base byacc gettext gettext-dev gcc git libcap-dev libtool libxslt
-RUN git clone https://github.com/giuseppe/shadow.git \
-  && cd shadow \
-  && git checkout 336cead97d87be6c4828521f50a992e76a17e442 \
-  && ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
+RUN ( git clone https://github.com/giuseppe/shadow.git /shadow && cd /shadow && git checkout 336cead97d87be6c4828521f50a992e76a17e442 )
+WORKDIR /shadow
+RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   && make \
   && cp src/newuidmap src/newgidmap /usr/bin
 
-FROM alpine AS base
+FROM alpine:3.8 AS base
 MAINTAINER Jessica Frazelle <jess@linux.com>
 RUN apk add --no-cache git
 COPY --from=img /usr/bin/img /usr/bin/img
