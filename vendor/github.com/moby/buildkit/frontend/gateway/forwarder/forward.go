@@ -5,14 +5,18 @@ import (
 	"sync"
 
 	"github.com/moby/buildkit/cache"
+	cacheutil "github.com/moby/buildkit/cache/util"
 	clienttypes "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/gateway/client"
+	gwpb "github.com/moby/buildkit/frontend/gateway/pb"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/solver"
+	opspb "github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/util/apicaps"
 	"github.com/moby/buildkit/worker"
 	"github.com/pkg/errors"
+	fstypes "github.com/tonistiigi/fsutil/types"
 )
 
 func llbBridgeToGatewayClient(ctx context.Context, llbBridge frontend.FrontendLLBBridge, opts map[string]string, workerInfos []clienttypes.WorkerInfo) (*bridgeClient, error) {
@@ -79,6 +83,8 @@ func (c *bridgeClient) BuildOpts() client.BuildOpts {
 		SessionID: c.sid,
 		Workers:   workers,
 		Product:   apicaps.ExportedProduct,
+		Caps:      gwpb.Caps.CapSet(gwpb.Caps.All()),
+		LLBCaps:   opspb.Caps.CapSet(opspb.Caps.All()),
 	}
 }
 
@@ -132,16 +138,36 @@ func (r *ref) ReadFile(ctx context.Context, req client.ReadRequest) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
-	newReq := cache.ReadRequest{
+	newReq := cacheutil.ReadRequest{
 		Filename: req.Filename,
 	}
 	if r := req.Range; r != nil {
-		newReq.Range = &cache.FileRange{
+		newReq.Range = &cacheutil.FileRange{
 			Offset: r.Offset,
 			Length: r.Length,
 		}
 	}
-	return cache.ReadFile(ctx, ref, newReq)
+	return cacheutil.ReadFile(ctx, ref, newReq)
+}
+
+func (r *ref) ReadDir(ctx context.Context, req client.ReadDirRequest) ([]*fstypes.Stat, error) {
+	ref, err := r.getImmutableRef()
+	if err != nil {
+		return nil, err
+	}
+	newReq := cacheutil.ReadDirRequest{
+		Path:           req.Path,
+		IncludePattern: req.IncludePattern,
+	}
+	return cacheutil.ReadDir(ctx, ref, newReq)
+}
+
+func (r *ref) StatFile(ctx context.Context, req client.StatRequest) (*fstypes.Stat, error) {
+	ref, err := r.getImmutableRef()
+	if err != nil {
+		return nil, err
+	}
+	return cacheutil.StatFile(ctx, ref, req.Path)
 }
 
 func (r *ref) getImmutableRef() (cache.ImmutableRef, error) {

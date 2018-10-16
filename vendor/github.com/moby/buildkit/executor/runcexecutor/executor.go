@@ -85,6 +85,10 @@ func New(opt Opt, networkProviders map[pb.NetMode]network.Provider) (executor.Ex
 		return nil, err
 	}
 
+	// clean up old hosts/resolv.conf file. ignore errors
+	os.RemoveAll(filepath.Join(root, "hosts"))
+	os.RemoveAll(filepath.Join(root, "resolv.conf"))
+
 	runtime := &runc.Runc{
 		Command:      cmd,
 		Log:          filepath.Join(root, "runc-log.json"),
@@ -263,7 +267,13 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 	}
 
 	if status != 0 {
-		return errors.Errorf("exit code: %d", status)
+		err := errors.Errorf("exit code: %d", status)
+		select {
+		case <-ctx.Done():
+			return errors.Wrapf(ctx.Err(), err.Error())
+		default:
+			return err
+		}
 	}
 
 	return nil
