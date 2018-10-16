@@ -5,7 +5,7 @@ notifications:
 go:
   - 1.11.x
 before_install:
-  - go get github.com/golang/lint/golint
+  - go get golang.org/x/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
   - go get -u github.com/jteeuwen/go-bindata/...
   - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/backports.list
