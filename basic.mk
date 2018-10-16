@@ -51,7 +51,7 @@ static: prebuild ## Builds a static executable.
 				-tags "$(BUILDTAGS) static_build" \
 				${GO_LDFLAGS_STATIC} -o $(NAME) .
 
-all: clean build fmt lint test staticcheck vet install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install.
+all: clean build fmt lint test staticcheck vet verify-vendor install ## Runs a clean, build, fmt, lint, test, staticcheck, vet and install.
 
 .PHONY: fmt
 fmt: ## Verifies all files have been `gofmt`ed.
@@ -164,6 +164,10 @@ vendor: ## Updates the vendoring directory.
 	GO111MODULE=on $(GO) mod tidy
 	GO111MODULE=on $(GO) mod vendor
 	@$(RM) Gopkg.toml Gopkg.lock
+
+.PHONY: verify-vendor
+verify-vendor: ## Verifies the vendoring directory.
+	GO111MODULE=on $(GO) mod verify
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages.
