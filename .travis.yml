@@ -3,7 +3,7 @@ sudo: true
 notifications:
   email: true
 go:
-  - 1.10.x
+  - 1.11.x
 before_install:
   - go get github.com/golang/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
