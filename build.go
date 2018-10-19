@@ -45,12 +45,14 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
+	fs.Var(&cmd.labels, "label", "Set metadata for an image")
 	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
 }
 
 type buildCommand struct {
 	buildArgs      stringSlice
 	dockerfilePath string
+	labels         stringSlice
 	target         string
 	tag            string
 
@@ -136,6 +138,14 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 			return fmt.Errorf("invalid build-arg value %s", buildArg)
 		}
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
+	}
+
+	for _, label := range cmd.labels {
+		kv := strings.SplitN(label, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid label value %s", label)
+		}
+		frontendAttrs["label:"+kv[0]] = kv[1]
 	}
 
 	fmt.Printf("Building %s\n", cmd.tag)
