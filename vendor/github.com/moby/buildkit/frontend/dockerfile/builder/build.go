@@ -48,6 +48,9 @@ var gitUrlPathWithFragmentSuffix = regexp.MustCompile("\\.git(?:#.+)?$")
 
 func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	opts := c.BuildOpts().Opts
+	caps := c.BuildOpts().LLBCaps
+
+	marshalOpts := []llb.ConstraintsOpt{llb.WithCaps(caps)}
 
 	defaultBuildPlatform := platforms.DefaultSpec()
 	if workers := c.BuildOpts().Workers; len(workers) > 0 && len(workers[0].Platforms) > 0 {
@@ -93,10 +96,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		}
 	}
 
-	name := "load Dockerfile"
-	if filename != "Dockerfile" {
-		name += " from " + filename
-	}
+	name := "load build definition from " + filename
 
 	src := llb.Local(LocalNameDockerfile,
 		llb.IncludePatterns([]string{filename}),
@@ -111,7 +111,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		buildContext = &src
 	} else if httpPrefix.MatchString(opts[LocalNameContext]) {
 		httpContext := llb.HTTP(opts[LocalNameContext], llb.Filename("context"), dockerfile2llb.WithInternalName("load remote build context"))
-		def, err := httpContext.Marshal()
+		def, err := httpContext.Marshal(marshalOpts...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to marshal httpcontext")
 		}
@@ -154,7 +154,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		}
 	}
 
-	def, err := src.Marshal()
+	def, err := src.Marshal(marshalOpts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal local source")
 	}
@@ -195,7 +195,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 				)
 				dockerignoreState = &st
 			}
-			def, err := dockerignoreState.Marshal()
+			def, err := dockerignoreState.Marshal(marshalOpts...)
 			if err != nil {
 				return err
 			}
@@ -272,6 +272,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 					ExtraHosts:        extraHosts,
 					ForceNetMode:      defaultNetMode,
 					OverrideCopyImage: opts[keyOverrideCopyImage],
+					LLBCaps:           &caps,
 				})
 
 				if err != nil {

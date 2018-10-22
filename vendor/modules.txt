@@ -64,10 +64,10 @@ github.com/containerd/containerd/events
 github.com/containerd/continuity
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
-github.com/containerd/continuity/sysx
 github.com/containerd/continuity/devices
 github.com/containerd/continuity/driver
 github.com/containerd/continuity/proto
+github.com/containerd/continuity/sysx
 github.com/containerd/continuity/syscallx
 # github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
 github.com/containerd/go-runc
@@ -174,7 +174,7 @@ github.com/gorilla/context
 github.com/gorilla/mux
 # github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc
-# github.com/hashicorp/go-immutable-radix v1.0.0 => ../../tonistiigi/go-immutable-radix
+# github.com/hashicorp/go-immutable-radix v1.0.0 => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/golang-lru v0.5.0
 github.com/hashicorp/golang-lru/simplelru
@@ -182,7 +182,7 @@ github.com/hashicorp/golang-lru/simplelru
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure
-# github.com/moby/buildkit v0.0.0-20180925011041-a927eaf23a2e
+# github.com/moby/buildkit v0.3.1-0.20181016065855-0d80bd17a30e
 github.com/moby/buildkit/api/services/control
 github.com/moby/buildkit/client
 github.com/moby/buildkit/identity
@@ -238,6 +238,7 @@ github.com/moby/buildkit/cache/blobs
 github.com/moby/buildkit/exporter/containerimage/exptypes
 github.com/moby/buildkit/util/progress
 github.com/moby/buildkit/frontend/dockerfile/dockerfile2llb
+github.com/moby/buildkit/cache/util
 github.com/moby/buildkit/util/tracing
 github.com/moby/buildkit/session/auth
 github.com/moby/buildkit/snapshot/blobmapping
@@ -307,7 +308,8 @@ github.com/prometheus/procfs/internal/util
 github.com/sirupsen/logrus
 # github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 github.com/syndtr/gocapability/capability
-# github.com/tonistiigi/fsutil v0.0.0-20180925004926-70b709f90a17
+# github.com/tonistiigi/fsutil v0.0.0-20181011223333-2862f6bc5ac9
+github.com/tonistiigi/fsutil/types
 github.com/tonistiigi/fsutil
 # github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 github.com/tonistiigi/units

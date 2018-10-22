@@ -1,6 +1,6 @@
 module github.com/genuinetools/img
 
-replace github.com/hashicorp/go-immutable-radix v1.0.0 => ../../tonistiigi/go-immutable-radix
+replace github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
@@ -17,7 +17,7 @@ require (
 	github.com/containerd/fifo v0.0.0-20180307165137-3d5202aec260 // indirect
 	github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
 	github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd // indirect
-	github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31 // indirect
+	github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31
 	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v0.0.0-20180920165730-54c19e67f69c
@@ -43,15 +43,18 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.0 // indirect
+	github.com/hashicorp/uuid v0.0.0-20160311170451-ebb0a03e909c // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
-	github.com/moby/buildkit v0.0.0-20180925011041-a927eaf23a2e
+	github.com/moby/buildkit v0.3.1-0.20181016065855-0d80bd17a30e
 	github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c // indirect
+	github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618 // indirect
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/opencontainers/go-digest v0.0.0-20180430190053-c9281466c8b2 // indirect
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v0.0.0-20180920170208-00dc70017d22
-	github.com/opencontainers/runtime-spec v1.0.1 // indirect
+	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/opencontainers/selinux v1.0.0-rc1 // indirect
 	github.com/opentracing-contrib/go-stdlib v0.0.0-20180702182724-07a764486eb1 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
@@ -66,15 +69,16 @@ require (
 	github.com/sirupsen/logrus v1.0.6
 	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20180925004926-70b709f90a17 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20181011223333-2862f6bc5ac9 // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
+	github.com/urfave/cli v1.20.0
 	github.com/vishvananda/netlink v1.0.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	go.etcd.io/bbolt v1.3.1-etcd.8
 	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b // indirect
 	golang.org/x/net v0.0.0-20180925072008-f04abc6bdfa7 // indirect
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
-	golang.org/x/sys v0.0.0-20180925112736-b09afc3d579e // indirect
+	golang.org/x/sys v0.0.0-20180925112736-b09afc3d579e
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	google.golang.org/genproto v0.0.0-20180924164928-221a8d4f7494 // indirect
 	google.golang.org/grpc v1.15.0

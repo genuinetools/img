@@ -1,4 +1,4 @@
-// +build dfrunmount dfextall
+// +build dfrunmount
 
 package dockerfile2llb
 
@@ -63,6 +63,14 @@ func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*
 				return nil, err
 			}
 			out = append(out, secret)
+			continue
+		}
+		if mount.Type == instructions.MountTypeSSH {
+			ssh, err := dispatchSSH(mount)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, ssh)
 			continue
 		}
 		if mount.ReadOnly {
