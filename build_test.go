@@ -107,3 +107,20 @@ func TestBuildAPT(t *testing.T) {
   RUN apt update
   `))
 }
+
+func TestBuildLabels(t *testing.T) {
+	name := "testbuildlabels"
+
+	args := []string{"build", "-t", name, "--label", "cli-label-1=cli1", "--label", "cli-label-2=cli2", "-"}
+	_, err := doRun(args, withDockerfile(`
+  FROM scratch as builder
+  LABEL stage "builder"
+  FROM scratch
+  LABEL stage "final"
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}
