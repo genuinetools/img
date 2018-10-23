@@ -220,6 +220,7 @@ Flags:
   --build-arg    Set build-time variables (default: [])
   -d, --debug    enable debug logging (default: false)
   -f, --file     Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
+  --label        Set metadata for an image (default: [])
   --no-console   Use non-console progress UI (default: false)
   -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
   -t, --tag      Name and optionally a tag in the 'name:tag' format (default: <none>)
