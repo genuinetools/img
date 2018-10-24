@@ -41,8 +41,8 @@ func (cmd *buildCommand) Hidden() bool      { return false }
 func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.dockerfilePath, "file", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	fs.StringVar(&cmd.tag, "tag", "", "Name and optionally a tag in the 'name:tag' format")
-	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
+	fs.Var(&cmd.tags, "tag", "Name and optionally a tag in the 'name:tag' format")
+	fs.Var(&cmd.tags, "t", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
 	fs.Var(&cmd.labels, "label", "Set metadata for an image")
@@ -54,7 +54,7 @@ type buildCommand struct {
 	dockerfilePath string
 	labels         stringSlice
 	target         string
-	tag            string
+	tags           stringSlice
 
 	contextDir string
 	noConsole  bool
@@ -65,7 +65,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		return fmt.Errorf("must pass a path to build")
 	}
 
-	if cmd.tag == "" {
+	if len(cmd.tags) < 1 {
 		return errors.New("please specify an image tag with `-t`")
 	}
 
@@ -100,14 +100,18 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		defer os.RemoveAll(cmd.contextDir)
 	}
 
-	// Parse the image name and tag.
-	named, err := reference.ParseNormalizedNamed(cmd.tag)
-	if err != nil {
-		return fmt.Errorf("parsing image name %q failed: %v", cmd.tag, err)
+	for position, tag := range cmd.tags {
+		// Parse the image name and tag.
+		named, err := reference.ParseNormalizedNamed(tag)
+		if err != nil {
+			return fmt.Errorf("parsing image name %q failed: %v", tag, err)
+		}
+		// Add the latest tag if they did not provide one.
+		named = reference.TagNameOnly(named)
+		cmd.tags[position] = named.String()
 	}
-	// Add the latest lag if they did not provide one.
-	named = reference.TagNameOnly(named)
-	cmd.tag = named.String()
+
+	initialTag := cmd.tags[0]
 
 	// Set the dockerfile path as the default if one was not given.
 	if cmd.dockerfilePath == "" {
@@ -126,7 +130,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 
 	// Create the frontend attrs.
 	frontendAttrs := map[string]string{
-		// We use the base for filename here becasue we already set up the local dirs which sets the path in createController.
+		// We use the base for filename here because we already set up the local dirs which sets the path in createController.
 		"filename": filepath.Base(cmd.dockerfilePath),
 		"target":   cmd.target,
 	}
@@ -148,7 +152,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		frontendAttrs["label:"+kv[0]] = kv[1]
 	}
 
-	fmt.Printf("Building %s\n", cmd.tag)
+	fmt.Printf("Building %s\n", initialTag)
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
 	// Create the context.
@@ -174,7 +178,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 			Session:  sess.ID(),
 			Exporter: "image",
 			ExporterAttrs: map[string]string{
-				"name": cmd.tag,
+				"name": strings.Join(cmd.tags, ","),
 			},
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,
@@ -186,7 +190,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 	if err := eg.Wait(); err != nil {
 		return err
 	}
-	fmt.Printf("Successfully built %s\n", cmd.tag)
+	fmt.Printf("Successfully built %s\n", initialTag)
 
 	return nil
 }
