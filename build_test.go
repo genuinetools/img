@@ -124,3 +124,22 @@ func TestBuildLabels(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestBuildMultipleTags(t *testing.T) {
+	names := []string{"testbuildmultipletags", "testbuildmultipletags:v1", "testbuildmultipletagsv1"}
+	args := []string{"build"}
+
+	for _, name := range names {
+		args = append(args, "-t", name)
+	}
+	args = append(args, "-")
+
+	_, err := doRun(args, withDockerfile(`
+  FROM scratch
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}

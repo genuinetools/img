@@ -223,7 +223,7 @@ Flags:
   --label        Set metadata for an image (default: [])
   --no-console   Use non-console progress UI (default: false)
   -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
-  -t, --tag      Name and optionally a tag in the 'name:tag' format (default: <none>)
+  -t, --tag      Name and optionally a tag in the 'name:tag' format (default: [])
   --target       Set the target build stage to build (default: <none>)
 ```
 
