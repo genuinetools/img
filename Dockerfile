@@ -25,12 +25,16 @@ RUN make static && mv img /usr/bin/img
 # We don't use the Alpine shadow pkg bacause:
 # 1. Alpine shadow makes SUID `su` executable without password: https://github.com/gliderlabs/docker-alpine/issues/430
 #    (but note that the SUID binary is not executable after unsharing the usernamespace. so this issue is not critical)
-# 2. As of early October 2018, the upstream shadow newuidmap/newgidmap depends on CAP_SYS_ADMIN.
-#    So we need to apply https://github.com/shadow-maint/shadow/pull/132 .
+# 2. To allow running img in a container without CAP_SYS_ADMIN, we need to do either
+#     a) install newuidmap/newgidmap with file capabilities rather than SETUID (requires kernel >= 4.14)
+#     b) install newuidmap/newgidmap >= 20181028
+#    We choose b) until kernel >= 4.14 gets widely adopted.
+#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138
 FROM alpine:3.8 AS idmap
 RUN apk add --no-cache autoconf automake build-base byacc gettext gettext-dev gcc git libcap-dev libtool libxslt
-RUN ( git clone -b no-cap-sys-admin https://github.com/giuseppe/shadow.git /shadow && cd /shadow )
+RUN git clone https://github.com/shadow-maint/shadow.git /shadow
 WORKDIR /shadow
+RUN git checkout 42324e501768675993235e03f7e4569135802d18
 RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   && make \
   && cp src/newuidmap src/newgidmap /usr/bin
