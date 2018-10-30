@@ -47,6 +47,7 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
 	fs.Var(&cmd.labels, "label", "Set metadata for an image")
 	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
+	fs.BoolVar(&cmd.noCache, "no-cache", false, "Do not use cache when building the image")
 }
 
 type buildCommand struct {
@@ -58,6 +59,7 @@ type buildCommand struct {
 
 	contextDir string
 	noConsole  bool
+	noCache    bool
 }
 
 func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
@@ -133,6 +135,9 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		// We use the base for filename here because we already set up the local dirs which sets the path in createController.
 		"filename": filepath.Base(cmd.dockerfilePath),
 		"target":   cmd.target,
+	}
+	if cmd.noCache {
+		frontendAttrs["no-cache"] = ""
 	}
 
 	// Get the build args and add them to frontend attrs.
