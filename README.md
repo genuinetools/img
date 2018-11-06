@@ -110,7 +110,7 @@ The below instructions mirror that of the [v0.5.2 release page](https://github.c
 
 ```console
 # Export the sha256sum for verification.
-$ export IMG_SHA256="c7db856ef0472df30115c3f76180a1c001d22406e22dbae60a648cc0afee15d3"
+$ export IMG_SHA256="e6dd104cc9d76fe33e0638036f8f1f58d7ab4388162dda01a21cf74d31dee0ab"
 
 # Download and check the sha256sum.
 $ curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.2/img-linux-amd64" -o "/usr/local/bin/img" \
