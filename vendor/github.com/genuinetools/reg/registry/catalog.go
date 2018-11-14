@@ -19,7 +19,7 @@ func (r *Registry) Catalog(u string) ([]string, error) {
 	r.Logf("registry.catalog url=%s", uri)
 
 	var response catalogResponse
-	h, err := r.getJSON(uri, &response, false)
+	h, err := r.getJSON(uri, &response)
 	if err != nil {
 		return nil, err
 	}

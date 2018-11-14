@@ -60,7 +60,7 @@ github.com/containerd/containerd/rootfs
 github.com/containerd/containerd/events/exchange
 github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/events
-# github.com/containerd/continuity v0.0.0-20180829013124-f44b615e492b
+# github.com/containerd/continuity v0.0.0-20180921161001-7f53d412b9eb
 github.com/containerd/continuity
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
@@ -150,7 +150,7 @@ github.com/docker/libnetwork/types
 github.com/docker/libtrust
 # github.com/genuinetools/pkg v0.0.0-20180910213200-1c141f661797
 github.com/genuinetools/pkg/cli
-# github.com/genuinetools/reg v0.15.8
+# github.com/genuinetools/reg v0.16.0
 github.com/genuinetools/reg/registry
 # github.com/gogo/googleapis v1.1.0
 github.com/gogo/googleapis/google/rpc
@@ -274,7 +274,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/identity
-# github.com/opencontainers/runc v0.0.0-20180920170208-00dc70017d22
+# github.com/opencontainers/runc v1.0.0-rc2.0.20181113215238-10d38b660a77
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.1

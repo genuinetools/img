@@ -15,7 +15,7 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-// Registry defines the client for retriving information from the registry API.
+// Registry defines the client for retrieving information from the registry API.
 type Registry struct {
 	URL      string
 	Domain   string
@@ -41,9 +41,11 @@ func Log(format string, args ...interface{}) {
 
 // Opt holds the options for a new registry.
 type Opt struct {
+	Domain   string
 	Insecure bool
 	Debug    bool
 	SkipPing bool
+	NonSSL   bool
 	Timeout  time.Duration
 	Headers  map[string]string
 }
@@ -64,10 +66,26 @@ func New(auth types.AuthConfig, opt Opt) (*Registry, error) {
 }
 
 func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, opt Opt) (*Registry, error) {
-	url := strings.TrimSuffix(auth.ServerAddress, "/")
+	if len(opt.Domain) < 1 {
+		opt.Domain = auth.ServerAddress
+	}
+	url := strings.TrimSuffix(opt.Domain, "/")
+	authURL := strings.TrimSuffix(auth.ServerAddress, "/")
 
 	if !reProtocol.MatchString(url) {
-		url = "https://" + url
+		if !opt.NonSSL {
+			url = "https://" + url
+		} else {
+			url = "http://" + url
+		}
+	}
+
+	if !reProtocol.MatchString(authURL) {
+		if !opt.NonSSL {
+			authURL = "https://" + authURL
+		} else {
+			authURL = "http://" + authURL
+		}
 	}
 
 	tokenTransport := &TokenTransport{
@@ -77,7 +95,7 @@ func newFromTransport(auth types.AuthConfig, transport http.RoundTripper, opt Op
 	}
 	basicAuthTransport := &BasicTransport{
 		Transport: tokenTransport,
-		URL:       url,
+		URL:       authURL,
 		Username:  auth.Username,
 		Password:  auth.Password,
 	}
@@ -124,14 +142,19 @@ func (r *Registry) url(pathTemplate string, args ...interface{}) string {
 	return url
 }
 
-func (r *Registry) getJSON(url string, response interface{}, addV2Header bool) (http.Header, error) {
+func (r *Registry) getJSON(url string, response interface{}) (http.Header, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	if addV2Header {
-		req.Header.Add("Accept", fmt.Sprintf("%s,%s;q=0.9", schema2.MediaTypeManifest, manifestlist.MediaTypeManifestList))
+
+	switch response.(type) {
+	case *schema2.Manifest:
+		req.Header.Add("Accept", fmt.Sprintf("%s;q=0.9", schema2.MediaTypeManifest))
+	case *manifestlist.ManifestList:
+		req.Header.Add("Accept", fmt.Sprintf("%s;q=0.9", manifestlist.MediaTypeManifestList))
 	}
+
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return nil, err

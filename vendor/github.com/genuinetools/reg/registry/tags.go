@@ -10,7 +10,7 @@ func (r *Registry) Tags(repository string) ([]string, error) {
 	r.Logf("registry.tags url=%s repository=%s", url, repository)
 
 	var response tagsResponse
-	if _, err := r.getJSON(url, &response, false); err != nil {
+	if _, err := r.getJSON(url, &response); err != nil {
 		return nil, err
 	}
 

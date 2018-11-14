@@ -3,6 +3,7 @@ package registry
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +12,11 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+)
+
+var (
+	// ErrUnexpectedSchemaVersion a specific schema version was requested, but was not returned
+	ErrUnexpectedSchemaVersion = errors.New("recieved a different schema version than expected")
 )
 
 // Manifest returns the manifest for a specific repository:tag.
@@ -51,7 +57,7 @@ func (r *Registry) ManifestList(repository, ref string) (manifestlist.ManifestLi
 	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m manifestlist.ManifestList
-	if _, err := r.getJSON(uri, &m, true); err != nil {
+	if _, err := r.getJSON(uri, &m); err != nil {
 		r.Logf("registry.manifests response=%v", m)
 		return m, err
 	}
@@ -65,9 +71,13 @@ func (r *Registry) ManifestV2(repository, ref string) (schema2.Manifest, error) 
 	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m schema2.Manifest
-	if _, err := r.getJSON(uri, &m, true); err != nil {
+	if _, err := r.getJSON(uri, &m); err != nil {
 		r.Logf("registry.manifests response=%v", m)
 		return m, err
+	}
+
+	if m.Versioned.SchemaVersion != 2 {
+		return m, ErrUnexpectedSchemaVersion
 	}
 
 	return m, nil
@@ -79,9 +89,13 @@ func (r *Registry) ManifestV1(repository, ref string) (schema1.SignedManifest, e
 	r.Logf("registry.manifests uri=%s repository=%s ref=%s", uri, repository, ref)
 
 	var m schema1.SignedManifest
-	if _, err := r.getJSON(uri, &m, false); err != nil {
+	if _, err := r.getJSON(uri, &m); err != nil {
 		r.Logf("registry.manifests response=%v", m)
 		return m, err
+	}
+
+	if m.Versioned.SchemaVersion != 1 {
+		return m, ErrUnexpectedSchemaVersion
 	}
 
 	return m, nil
