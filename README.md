@@ -106,23 +106,6 @@ NOTE: These steps work only for Linux. Compile and run in a container
 
 For installation instructions from binaries please visit the [Releases Page](https://github.com/genuinetools/img/releases).
 
-The below instructions mirror that of the [v0.5.3 release page](https://github.com/genuinetools/img/releases/tag/v0.5.3).
-
-```console
-# Export the sha256sum for verification.
-$ export IMG_SHA256="e6dd104cc9d76fe33e0638036f8f1f58d7ab4388162dda01a21cf74d31dee0ab"
-
-# Download and check the sha256sum.
-$ curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.3/img-linux-amd64" -o "/usr/local/bin/img" \
-	&& echo "${IMG_SHA256}  /usr/local/bin/img" | sha256sum -c - \
-	&& chmod a+x "/usr/local/bin/img"
-
-$ echo "img installed!"
-
-# Run it!
-$ img -h
-```
-
 #### From Source
 
 ```bash
