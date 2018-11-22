@@ -32,9 +32,10 @@ RUN make static && mv img /usr/bin/img
 #    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138
 FROM alpine:3.8 AS idmap
 RUN apk add --no-cache autoconf automake build-base byacc gettext gettext-dev gcc git libcap-dev libtool libxslt
-RUN git clone https://github.com/shadow-maint/shadow.git /shadow
+RUN git clone https://github.com/giuseppe/shadow.git /shadow
 WORKDIR /shadow
-RUN git checkout 42324e501768675993235e03f7e4569135802d18
+# https://github.com/shadow-maint/shadow/pull/141 (See https://github.com/genuinetools/img/issues/191)
+RUN git checkout idmapping-always-seteuid
 RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   && make \
   && cp src/newuidmap src/newgidmap /usr/bin
