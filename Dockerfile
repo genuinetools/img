@@ -27,15 +27,14 @@ RUN make static && mv img /usr/bin/img
 #    (but note that the SUID binary is not executable after unsharing the usernamespace. so this issue is not critical)
 # 2. To allow running img in a container without CAP_SYS_ADMIN, we need to do either
 #     a) install newuidmap/newgidmap with file capabilities rather than SETUID (requires kernel >= 4.14)
-#     b) install newuidmap/newgidmap >= 20181028
+#     b) install newuidmap/newgidmap >= 20181125 (59c2dabb264ef7b3137f5edb52c0b31d5af0cf76)
 #    We choose b) until kernel >= 4.14 gets widely adopted.
-#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138
+#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138 https://github.com/shadow-maint/shadow/pull/141
 FROM alpine:3.8 AS idmap
 RUN apk add --no-cache autoconf automake build-base byacc gettext gettext-dev gcc git libcap-dev libtool libxslt
-RUN git clone https://github.com/giuseppe/shadow.git /shadow
+RUN git clone https://github.com/shadow-maint/shadow.git /shadow
 WORKDIR /shadow
-# https://github.com/shadow-maint/shadow/pull/141 (See https://github.com/genuinetools/img/issues/191)
-RUN git checkout idmapping-always-seteuid
+RUN git checkout 59c2dabb264ef7b3137f5edb52c0b31d5af0cf76
 RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   && make \
   && cp src/newuidmap src/newgidmap /usr/bin
