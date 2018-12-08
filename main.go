@@ -57,6 +57,7 @@ func main() {
 		&diskUsageCommand{},
 		&listCommand{},
 		&loginCommand{},
+		&logoutCommand{},
 		&pruneCommand{},
 		&pullCommand{},
 		&pushCommand{},
