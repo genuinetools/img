@@ -46,15 +46,9 @@ func (cmd *logoutCommand) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("loading config file failed: %v", err)
 	}
 
-	var loggedIn bool
-
 	// check if we're logged in based on the records in the config file
 	// which means it couldn't have user/pass cause they may be in the creds store
-	if _, ok := dcfg.AuthConfigs[cmd.serverAddress]; ok {
-		loggedIn = true
-	}
-
-	if !loggedIn {
+	if _, loggedIn := dcfg.AuthConfigs[cmd.serverAddress]; !loggedIn {
 		fmt.Fprintf(os.Stdout, "Not logged in to %s\n", cmd.serverAddress)
 		return nil
 	}
