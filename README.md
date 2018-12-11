@@ -519,7 +519,7 @@ Flags:
 
   -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
   -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/weston/.local/share/img)
+  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
 
 ```
 
