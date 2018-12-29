@@ -17,6 +17,39 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
 
 <!-- toc -->
 
+- [Goals](#goals)
+      - [Upstream Patches](#upstream-patches)
+      - [Benchmarks](#benchmarks)
+- [Installation](#installation)
+    + [Binaries](#binaries)
+    + [From Source](#from-source)
+    + [Arch Linux](#arch-linux)
+    + [Gentoo](#gentoo)
+    + [Running with Docker](#running-with-docker)
+- [Usage](#usage)
+  * [Build an Image](#build-an-image)
+  * [List Image Layers](#list-image-layers)
+  * [Pull an Image](#pull-an-image)
+  * [Push an Image](#push-an-image)
+  * [Tag an Image](#tag-an-image)
+  * [Export an Image to Docker](#export-an-image-to-docker)
+  * [Unpack an Image to a rootfs](#unpack-an-image-to-a-rootfs)
+  * [Remove an Image](#remove-an-image)
+  * [Disk Usage](#disk-usage)
+  * [Prune and Cleanup the Build Cache](#prune-and-cleanup-the-build-cache)
+  * [Login to a Registry](#login-to-a-registry)
+  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
+- [How It Works](#how-it-works)
+  * [Unprivileged Mounting](#unprivileged-mounting)
+  * [High Level](#high-level)
+  * [Low Level](#low-level)
+  * [Snapshotter Backends](#snapshotter-backends)
+    + [auto (default)](#auto-default)
+    + [native](#native)
+    + [overlayfs](#overlayfs)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+
 <!-- tocstop -->
 
 ## Goals
