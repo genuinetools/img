@@ -19,7 +19,7 @@ RUN git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com
 FROM gobuild-base AS img
 WORKDIR /go/src/github.com/genuinetools/img
 COPY . .
-RUN go get -u github.com/jteeuwen/go-bindata/...
+RUN go get -u github.com/jteeuwen/go-bindata/go-bindata
 RUN make static && mv img /usr/bin/img
 
 # We don't use the Alpine shadow pkg bacause:
