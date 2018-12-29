@@ -10,7 +10,7 @@ container image builder.
 `img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
 as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 
-The commands/UX are the same as `docker {build,tag,push,pull,login,save}` so all you 
+The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
 **Table of Contents**
@@ -183,6 +183,7 @@ Commands:
   du       Show image disk usage.
   ls       List images and digests.
   login    Log in to a Docker registry.
+  logout   Log out from a Docker registry.
   prune    Prune and clean up the build cache.
   pull     Pull an image or a repository from a registry.
   push     Push an image or a repository to a registry.
@@ -208,6 +209,7 @@ Flags:
   -d, --debug    enable debug logging (default: false)
   -f, --file     Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
   --label        Set metadata for an image (default: [])
+  --no-cache     Do not use cache when building the image (default: false)
   --no-console   Use non-console progress UI (default: false)
   -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
   -t, --tag      Name and optionally a tag in the 'name:tag' format (default: [])
@@ -504,6 +506,24 @@ Flags:
   --password-stdin  Take the password from stdin (default: false)
   -s, --state       directory to hold the global state (default: /home/user/.local/share/img)
   -u, --username    Username (default: <none>)
+```
+
+### Logout from a Registry
+
+```console
+$ img logout -h
+Usage: img logout [SERVER]
+
+Log out from a Docker registry.
+
+If no server is specified, the default (https://index.docker.io/v1/) is used.
+
+Flags:
+
+  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
+  -d, --debug    enable debug logging (default: false)
+  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+
 ```
 
 ### Using Self-Signed Certs with a Registry
