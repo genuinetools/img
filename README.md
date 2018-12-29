@@ -38,6 +38,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
   * [Disk Usage](#disk-usage)
   * [Prune and Cleanup the Build Cache](#prune-and-cleanup-the-build-cache)
   * [Login to a Registry](#login-to-a-registry)
+  * [Logout from a Registry](#logout-from-a-registry)
   * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 - [How It Works](#how-it-works)
   * [Unprivileged Mounting](#unprivileged-mounting)
