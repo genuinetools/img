@@ -13,40 +13,11 @@ as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 The commands/UX are the same as `docker {build,tag,push,pull,login,save}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
-##### Table of Contents
+**Table of Contents**
 
- * [Goals](README.md#goals)
-   * [Upstream Patches](README.md#upstream-patches)
-   * [Benchmarks](README.md#benchmarks)
- * [Installation](README.md#installation)
-   * [Binaries](README.md#binaries)
-   * [From Source](README.md#from-source)
-   * [Arch Linux](README.md#arch-linux)
-   * [Gentoo](README.md#gentoo)
-   * [Running with Docker](README.md#running-with-docker)
- * [Usage](README.md#usage)
-   * [Build an Image](README.md#build-an-image)
-   * [List Image Layers](README.md#list-image-layers)
-   * [Pull an Image](README.md#pull-an-image)
-   * [Push an Image](README.md#push-an-image)
-   * [Tag an Image](README.md#tag-an-image)
-   * [Export an Image to Docker](README.md#export-an-image-to-docker)
-   * [Unpack an Image to a rootfs](README.md#unpack-an-image-to-a-rootfs)
-   * [Remove an Image](README.md#remove-an-image)
-   * [Disk Usage](README.md#disk-usage)
-   * [Prune and Cleanup the Build Cache](README.md#prune-and-cleanup-the-build-cache)
-   * [Login to a Registry](README.md#login-to-a-registry)
-   * [Using Self-Signed Certs with a Registry](README.md#using-self-signed-certs-with-a-registry)
- * [How It Works](README.md#how-it-works)
-   * [Unprivileged Mounting](README.md#unprivileged-mounting)
-   * [High Level](README.md#high-level)
-   * [Low Level](README.md#low-level)
-   * [Snapshotter Backends](README.md#snapshotter-backends)
-      * [auto (default)](README.md#auto-default)
-      * [native](README.md#native)
-      * [overlayfs](README.md#overlayfs)
- * [Contributing](README.md#contributing)
- * [Acknowledgements](README.md#acknowledgements)
+<!-- toc -->
+
+<!-- tocstop -->
 
 ## Goals
 
