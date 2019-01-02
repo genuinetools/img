@@ -132,7 +132,7 @@ func installRuncIfDNE() error {
 	}
 
 	if _, err := binutils.InstallRuncBinary(); err != nil {
-		return fmt.Errorf("Installing embedded runc binary failed: %v", err)
+		return fmt.Errorf("installing embedded runc binary failed: %v", err)
 	}
 
 	return nil

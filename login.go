@@ -59,7 +59,7 @@ func (cmd *loginCommand) Run(ctx context.Context, args []string) error {
 	// Handle when the password is coming over stdin.
 	if cmd.passwordStdin {
 		if cmd.user == "" {
-			return errors.New("Must provide --username with --password-stdin")
+			return errors.New("must provide --username with --password-stdin")
 		}
 
 		// Read from stadin.
@@ -148,7 +148,7 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 		}
 	}
 	if flUser == "" {
-		return dcfg, authConfig, fmt.Errorf("Username cannot be empty")
+		return dcfg, authConfig, fmt.Errorf("username cannot be empty")
 	}
 	if flPassword == "" {
 		oldState, err := term.SaveState(os.Stdin.Fd())
@@ -165,7 +165,7 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 			return dcfg, authConfig, fmt.Errorf("restoring old terminal failed: %v", err)
 		}
 		if flPassword == "" {
-			return dcfg, authConfig, fmt.Errorf("Password is required")
+			return dcfg, authConfig, fmt.Errorf("password is required")
 		}
 	}
 
