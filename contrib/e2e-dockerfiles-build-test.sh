@@ -22,6 +22,10 @@ build_and_push(){
 	echo "Building ${REPO_URL}/${base}:${suite} for context ${build_dir}"
 	img build -state "$STATE_DIR" -t ${REPO_URL}/${base}:${suite} ${build_dir}
 
+	echo "[In Container] Building ${REPO_URL}/${base}:${suite} for context ${build_dir}"
+	# Do the same but in a docker container.
+	docker run --rm --name img --volume $(pwd):/home/user/src:ro --workdir /home/user/src --privileged r.j3ss.co/img build -t ${REPO_URL}/${base}:${suite} ${build_dir}
+
 	# on successful build, push the image
 	echo "                       ---                                   "
 	echo "Successfully built ${base}:${suite} with context ${build_dir}"
@@ -42,11 +46,11 @@ dofile() {
 	{
 		$SCRIPT build_and_push "${base}" "${suite}" "${build_dir}"
 	} || {
-	# add to errors
-	echo "${base}:${suite}" >> $ERRORS
-}
-echo
-echo
+		# add to errors
+		echo "${base}:${suite}" >> $ERRORS
+	}
+	echo
+	echo
 }
 
 main(){
