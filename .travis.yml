@@ -30,6 +30,7 @@ jobs:
     - stage: Build Release
       script:
         - make release
+      before_deploy:
         - echo "Deploying to GitHub releases ..."
       deploy:
         provider: releases
