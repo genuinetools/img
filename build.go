@@ -48,6 +48,7 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.labels, "label", "Set metadata for an image")
 	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&cmd.noCache, "no-cache", false, "Do not use cache when building the image")
+	fs.Var(&cmd.cacheFrom, "cache-from", "Images to consider as cache sources")
 }
 
 type buildCommand struct {
@@ -56,6 +57,7 @@ type buildCommand struct {
 	labels         stringSlice
 	target         string
 	tags           stringSlice
+	cacheFrom      stringSlice
 
 	contextDir string
 	noConsole  bool
@@ -136,6 +138,10 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		"filename": filepath.Base(cmd.dockerfilePath),
 		"target":   cmd.target,
 	}
+
+	cacheFrom := append([]string{}, cmd.cacheFrom...)
+	frontendAttrs["cache-from"] = strings.Join(cacheFrom, ",")
+
 	if cmd.noCache {
 		frontendAttrs["no-cache"] = ""
 	}
