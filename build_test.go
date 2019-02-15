@@ -143,3 +143,16 @@ func TestBuildMultipleTags(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestBuildMultiplePlatforms(t *testing.T) {
+	args := []string{"build", "--platform", "amd64", "--platform", "linux/arm64,linux/arm/v7", "-t", "testbuildplatforms", "-"}
+
+	_, err := doRun(args, withDockerfile(`
+  FROM alpine
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}

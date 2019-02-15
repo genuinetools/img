@@ -27,6 +27,7 @@ github.com/checkpoint-restore/go-criu/rpc
 github.com/containerd/console
 # github.com/containerd/containerd v1.3.0-0.20190212172151-f5b0fa220df8
 github.com/containerd/containerd/namespaces
+github.com/containerd/containerd/platforms
 github.com/containerd/containerd/content
 github.com/containerd/containerd/content/local
 github.com/containerd/containerd/diff/apply
@@ -35,12 +36,11 @@ github.com/containerd/containerd/errdefs
 github.com/containerd/containerd/images
 github.com/containerd/containerd/images/oci
 github.com/containerd/containerd/metadata
-github.com/containerd/containerd/platforms
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/snapshots/native
 github.com/containerd/containerd/snapshots/overlay
-github.com/containerd/containerd/filters
 github.com/containerd/containerd/log
+github.com/containerd/containerd/filters
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/archive
 github.com/containerd/containerd/archive/compression
@@ -54,8 +54,8 @@ github.com/containerd/containerd/leases
 github.com/containerd/containerd/metadata/boltutil
 github.com/containerd/containerd/plugin
 github.com/containerd/containerd/snapshots/storage
-github.com/containerd/containerd/contrib/seccomp
 github.com/containerd/containerd/oci
+github.com/containerd/containerd/contrib/seccomp
 github.com/containerd/containerd/reference
 github.com/containerd/containerd/remotes
 github.com/containerd/containerd/remotes/docker
@@ -94,8 +94,8 @@ github.com/cyphar/filepath-securejoin
 # github.com/docker/cli v0.0.0-20190131223713-234462756460
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
-github.com/docker/cli/cli/config/credentials
 github.com/docker/cli/cli/config/types
+github.com/docker/cli/cli/config/credentials
 # github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
 github.com/docker/distribution/reference
 github.com/docker/distribution/digestset
@@ -215,6 +215,7 @@ github.com/moby/buildkit/cache
 github.com/moby/buildkit/cache/metadata
 github.com/moby/buildkit/control
 github.com/moby/buildkit/executor
+github.com/moby/buildkit/executor/oci
 github.com/moby/buildkit/executor/runcexecutor
 github.com/moby/buildkit/exporter
 github.com/moby/buildkit/exporter/containerimage
@@ -229,6 +230,7 @@ github.com/moby/buildkit/snapshot/containerd
 github.com/moby/buildkit/solver/bboltcachestorage
 github.com/moby/buildkit/source
 github.com/moby/buildkit/source/containerimage
+github.com/moby/buildkit/util/binfmt_misc
 github.com/moby/buildkit/util/dockerexporter
 github.com/moby/buildkit/util/network
 github.com/moby/buildkit/util/push
@@ -255,7 +257,6 @@ github.com/moby/buildkit/cache/remotecache
 github.com/moby/buildkit/control/gateway
 github.com/moby/buildkit/solver
 github.com/moby/buildkit/solver/llbsolver
-github.com/moby/buildkit/executor/oci
 github.com/moby/buildkit/util/rootless/specconv
 github.com/moby/buildkit/util/system
 github.com/moby/buildkit/cache/blobs

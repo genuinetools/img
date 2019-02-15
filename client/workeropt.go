@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/moby/buildkit/util/binfmt_misc"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -118,6 +119,15 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 
 	xlabels := base.Labels("oci", c.backend)
 
+	var supportedPlatforms []specs.Platform
+	for _, p := range binfmt_misc.SupportedPlatforms() {
+		parsed, err := platforms.Parse(p)
+		if err != nil {
+			return opt, err
+		}
+		supportedPlatforms = append(supportedPlatforms, platforms.Normalize(parsed))
+	}
+
 	opt = base.WorkerOpt{
 		ID:                 id,
 		Labels:             xlabels,
@@ -128,7 +138,7 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 		Applier:            apply.NewFileSystemApplier(contentStore),
 		Differ:             walking.NewWalkingDiff(contentStore),
 		ImageStore:         imageStore,
-		Platforms:          []specs.Platform{platforms.Normalize(platforms.DefaultSpec())},
+		Platforms:          supportedPlatforms,
 		ResolveOptionsFunc: resolver.NewResolveOptionsFunc(nil),
 	}
 

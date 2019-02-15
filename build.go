@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/containerd/containerd/platforms"
 	"io"
 	"io/ioutil"
 	"os"
@@ -44,6 +45,7 @@ func (cmd *buildCommand) Register(fs *flag.FlagSet) {
 	fs.Var(&cmd.tags, "tag", "Name and optionally a tag in the 'name:tag' format")
 	fs.Var(&cmd.tags, "t", "Name and optionally a tag in the 'name:tag' format")
 	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
+	fs.Var(&cmd.platforms, "platform", "Set platforms for which the image should be built")
 	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
 	fs.Var(&cmd.labels, "label", "Set metadata for an image")
 	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
@@ -56,6 +58,7 @@ type buildCommand struct {
 	labels         stringSlice
 	target         string
 	tags           stringSlice
+	platforms      stringSlice
 
 	contextDir string
 	noConsole  bool
@@ -123,6 +126,11 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		}
 	}
 
+	if len(cmd.platforms) < 1 {
+		cmd.platforms = []string{platforms.DefaultString()}
+	}
+	platforms := strings.Join(cmd.platforms, ",")
+
 	// Create the client.
 	c, err := client.New(stateDir, backend, cmd.getLocalDirs())
 	if err != nil {
@@ -135,6 +143,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		// We use the base for filename here because we already set up the local dirs which sets the path in createController.
 		"filename": filepath.Base(cmd.dockerfilePath),
 		"target":   cmd.target,
+		"platform": platforms,
 	}
 	if cmd.noCache {
 		frontendAttrs["no-cache"] = ""
