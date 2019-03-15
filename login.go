@@ -13,7 +13,8 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/cli/cli/config/types"
+	dockerapitypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
 	registryapi "github.com/genuinetools/reg/registry"
@@ -88,7 +89,7 @@ func (cmd *loginCommand) Run(ctx context.Context, args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	r, err := registryapi.New(authConfig, registryapi.Opt{Debug: debug})
+	r, err := registryapi.New(cliconfigtypes2dockerapitypes(authConfig), registryapi.Opt{Debug: debug})
 	if err != nil {
 		return fmt.Errorf("creating registry client failed: %v", err)
 	}
@@ -195,4 +196,16 @@ func promptWithDefault(out io.Writer, prompt string, configDefault string) {
 	}
 
 	fmt.Fprintf(out, "%s (%s): ", prompt, configDefault)
+}
+
+func cliconfigtypes2dockerapitypes(in types.AuthConfig) dockerapitypes.AuthConfig {
+	return dockerapitypes.AuthConfig{
+		Username:      in.Username,
+		Password:      in.Password,
+		Auth:          in.Auth,
+		Email:         in.Email,
+		ServerAddress: in.ServerAddress,
+		IdentityToken: in.IdentityToken,
+		RegistryToken: in.RegistryToken,
+	}
 }

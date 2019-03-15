@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	emptyImageName   = "scratch"
-	localNameContext = "context"
-	historyComment   = "buildkit.dockerfile.v0"
+	emptyImageName          = "scratch"
+	defaultContextLocalName = "context"
+	historyComment          = "buildkit.dockerfile.v0"
 
-	DefaultCopyImage = "tonistiigi/copy:v0.1.9@sha256:e8f159d3f00786604b93c675ee2783f8dc194bb565e61ca5788f6a6e9d304061"
+	DefaultCopyImage = "docker/dockerfile-copy:v0.1.9@sha256:e8f159d3f00786604b93c675ee2783f8dc194bb565e61ca5788f6a6e9d304061"
 )
 
 type ConvertOpt struct {
@@ -59,11 +59,16 @@ type ConvertOpt struct {
 	ForceNetMode      pb.NetMode
 	OverrideCopyImage string
 	LLBCaps           *apicaps.CapSet
+	ContextLocalName  string
 }
 
 func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State, *Image, error) {
 	if len(dt) == 0 {
 		return nil, nil, errors.Errorf("the Dockerfile cannot be empty")
+	}
+
+	if opt.ContextLocalName == "" {
+		opt.ContextLocalName = defaultContextLocalName
 	}
 
 	platformOpt := buildPlatformOpt(&opt)
@@ -250,7 +255,6 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 								}
 							}
 							d.stage.BaseName = ref.String()
-							_ = ref
 							if len(img.RootFS.DiffIDs) == 0 {
 								isScratch = true
 								// schema1 images can't return diffIDs so double check :(
@@ -358,14 +362,14 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	opts := []llb.LocalOption{
 		llb.SessionID(opt.SessionID),
 		llb.ExcludePatterns(opt.Excludes),
-		llb.SharedKeyHint(localNameContext),
+		llb.SharedKeyHint(opt.ContextLocalName),
 		WithInternalName("load build context"),
 	}
 	if includePatterns := normalizeContextPaths(ctxPaths); includePatterns != nil {
 		opts = append(opts, llb.FollowPaths(includePatterns))
 	}
 
-	bc := llb.Local(localNameContext, opts...)
+	bc := llb.Local(opt.ContextLocalName, opts...)
 	if opt.BuildContext != nil {
 		bc = *opt.BuildContext
 	}
@@ -469,7 +473,9 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 		err = dispatchCopy(d, c.SourcesAndDest, opt.buildContext, true, c, "", opt)
 		if err == nil {
 			for _, src := range c.Sources() {
-				d.ctxPaths[path.Join("/", filepath.ToSlash(src))] = struct{}{}
+				if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
+					d.ctxPaths[path.Join("/", filepath.ToSlash(src))] = struct{}{}
+				}
 			}
 		}
 	case *instructions.LabelCommand:
@@ -1137,8 +1143,8 @@ func autoDetectPlatform(img Image, target specs.Platform, supported []specs.Plat
 	return target
 }
 
-func WithInternalName(name string, a ...interface{}) llb.ConstraintsOpt {
-	return llb.WithCustomName("[internal] "+name, a...)
+func WithInternalName(name string) llb.ConstraintsOpt {
+	return llb.WithCustomName("[internal] " + name)
 }
 
 func uppercaseCmd(str string) string {

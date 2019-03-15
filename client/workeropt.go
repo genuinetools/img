@@ -31,10 +31,6 @@ import (
 
 // createWorkerOpt creates a base.WorkerOpt to be used for a new worker.
 func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err error) {
-	sm, err := c.getSessionManager()
-	if err != nil {
-		return opt, err
-	}
 	// Create the metadata store.
 	md, err := metadata.NewStore(filepath.Join(c.root, "metadata.db"))
 	if err != nil {
@@ -121,7 +117,6 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	opt = base.WorkerOpt{
 		ID:                 id,
 		Labels:             xlabels,
-		SessionManager:     sm,
 		MetadataStore:      md,
 		Executor:           exe,
 		Snapshotter:        containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
