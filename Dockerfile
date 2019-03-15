@@ -1,4 +1,3 @@
-ARG RUNC_VERSION=7cb3cde1f49eae53fb8fff5012c0750a64eb928b
 FROM golang:1.11-alpine AS gobuild-base
 RUN apk add --no-cache \
 	bash \
@@ -8,14 +7,6 @@ RUN apk add --no-cache \
 	libseccomp-dev \
 	linux-headers \
 	make
-
-FROM gobuild-base AS runc
-ARG RUNC_VERSION
-RUN git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
-	&& cd "$GOPATH/src/github.com/opencontainers/runc" \
-	&& git checkout $RUNC_VERSION \
-	&& make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\"" \
-	&& mv runc /usr/bin/runc
 
 FROM gobuild-base AS img
 WORKDIR /go/src/github.com/genuinetools/img
@@ -44,7 +35,6 @@ FROM alpine:3.8 AS base
 MAINTAINER Jessica Frazelle <jess@linux.com>
 RUN apk add --no-cache git
 COPY --from=img /usr/bin/img /usr/bin/img
-COPY --from=runc /usr/bin/runc /usr/bin/runc
 COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
 COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
 RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
