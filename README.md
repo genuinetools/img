@@ -148,7 +148,7 @@ $ sudo emerge -a app-emulation/img
 
 #### Running with Docker
 
-This currently **does not work** without `--privileged`, to track the progress of making this work in a container without the `--privileged` flag see [upstream patches](#upstream-patches).
+Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.6.0.
 
 ```console
 $ docker run --rm -it \
@@ -156,9 +156,23 @@ $ docker run --rm -it \
     --volume $(pwd):/home/user/src:ro \ # for the build context and dockerfile, can be read-only since we won't modify it
     --workdir /home/user/src \ # set the builder working directory
     --volume "${HOME}/.docker:/root/.docker:ro" \ # for credentials to push to docker hub or a registry
-    --privileged \
+    --security-opt seccomp=unconfined --security-opt apparmor=unconfined \ # required by runc
     r.j3ss.co/img build -t user/myimage .
 ```
+
+To enable PID namespace isolation (which disallows build containers to `kill(2)` the `img` process), you need to specify
+`--privileged` so that build containers can mount `/proc` with unshared PID namespaces.
+Note that even with `--privileged`, `img` works as an unprivileged user with UID 1000.
+
+See [docker/cli patch](#upstream-patches) for how to allow mounting `/proc` without `--privileged`.
+
+### Running with Kubernetes
+
+Since `img` v0.6.0, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
+
+However, to enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
+`securityContext.privileged` to `true`).
+`securityContext.procMount` is available since Kubernetes 1.12 with Docker 18.06/containerd 1.2/CRI-O 1.12.
 
 ## Usage
 
