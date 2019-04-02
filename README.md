@@ -23,6 +23,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
 - [Installation](#installation)
     + [Binaries](#binaries)
     + [From Source](#from-source)
+    + [Alpine Linux](#alpine-linux)
     + [Arch Linux](#arch-linux)
     + [Gentoo](#gentoo)
     + [Running with Docker](#running-with-docker)
@@ -123,6 +124,14 @@ $ sudo make install
 
 # For packagers if you would like to disable the embedded `runc`, please use:
 $ make BUILDTAGS="seccomp noembed"
+```
+
+#### Alpine Linux
+
+There is an [APKBUILD](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/img).
+
+```console
+$ apk add img
 ```
 
 #### Arch Linux
