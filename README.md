@@ -26,6 +26,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
     + [Arch Linux](#arch-linux)
     + [Gentoo](#gentoo)
     + [Running with Docker](#running-with-docker)
+  * [Running with Kubernetes](#running-with-kubernetes)
 - [Usage](#usage)
   * [Build an Image](#build-an-image)
   * [List Image Layers](#list-image-layers)
