@@ -1,16 +1,19 @@
 language: go
-sudo: true
+dist: xenial
 notifications:
   email: true
 go:
   - 1.11.x
+addons:
+  apt:
+    packages:
+      - libseccomp-dev
+      - parallel
+      - uidmap
 before_install:
   - go get golang.org/x/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
   - go get -u github.com/jteeuwen/go-bindata/...
-  - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/backports.list
-  - sudo apt update
-  - sudo apt install -y --no-install-recommends -t trusty-backports libseccomp-dev parallel uidmap
   - curl -sSL -o runc https://misc.j3ss.co/tmp/runc && chmod +x runc && sudo mv runc /usr/bin/runc
 jobs:
   include:
@@ -27,6 +30,7 @@ jobs:
     - stage: Build Release
       script:
         - make release
+      before_deploy:
         - echo "Deploying to GitHub releases ..."
       deploy:
         provider: releases
