@@ -1,4 +1,4 @@
-// +build linux freebsd solaris
+// +build !windows
 
 /*
    Copyright The containerd Authors.

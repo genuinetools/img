@@ -15,8 +15,19 @@ env:
   - TRAVIS_GOOS=linux
   - TRAVIS_GOOS=darwin
 
+install:
+  - go get -u github.com/vbatts/git-validation
+  - go get -u github.com/kunalkushwaha/ltag
+  - go get -u github.com/LK4D4/vndr
+
+before_script:
+  - pushd ..; git clone https://github.com/containerd/project; popd
+
 script:
   - export GOOS=${TRAVIS_GOOS}
+  - DCO_VERBOSITY=-q ../project/script/validate/dco
+  - ../project/script/validate/fileheader ../project/
+  - ../project/script/validate/vendor
   - make build binaries
   - if [ "$GOOS" = "linux" ]; then make vet test; fi
   - if [ "$GOOS" != "linux" ]; then make test-compile; fi

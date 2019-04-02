@@ -24,7 +24,17 @@ build_and_push(){
 
 	echo "[In Container] Building ${REPO_URL}/${base}:${suite} for context ${build_dir}"
 	# Do the same but in a docker container.
-	docker run --rm --name img --volume $(pwd):/home/user/src:ro --workdir /home/user/src --privileged r.j3ss.co/img build -t ${REPO_URL}/${base}:${suite} ${build_dir}
+    name=${REPO_URL}-${base}-${suite}
+    set +e
+	docker run --name $name --volume $(pwd):/home/user/src:ro --workdir /home/user/src --privileged r.j3ss.co/img build --no-console -t ${REPO_URL}/${base}:${suite} ${build_dir}  > /dev/null 2>&1
+    status=$?
+    set -e
+    if [[ $status != 0 ]]; then
+        docker logs $name
+        docker rm -f $name
+        exit $status
+    fi
+    docker rm -f $name
 
 	# on successful build, push the image
 	echo "                       ---                                   "

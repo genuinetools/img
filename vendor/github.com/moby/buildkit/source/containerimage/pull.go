@@ -30,13 +30,12 @@ import (
 // code can be used with any implementation
 
 type SourceOpt struct {
-	SessionManager *session.Manager
-	Snapshotter    snapshot.Snapshotter
-	ContentStore   content.Store
-	Applier        diff.Applier
-	CacheAccessor  cache.Accessor
-	ImageStore     images.Store // optional
-	ResolverOpt    resolver.ResolveOptionsFunc
+	Snapshotter   snapshot.Snapshotter
+	ContentStore  content.Store
+	Applier       diff.Applier
+	CacheAccessor cache.Accessor
+	ImageStore    images.Store // optional
+	ResolverOpt   resolver.ResolveOptionsFunc
 }
 
 type imageSource struct {
@@ -56,7 +55,7 @@ func (is *imageSource) ID() string {
 	return source.DockerImageScheme
 }
 
-func (is *imageSource) ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt) (digest.Digest, []byte, error) {
+func (is *imageSource) ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt, sm *session.Manager) (digest.Digest, []byte, error) {
 	type t struct {
 		dgst digest.Digest
 		dt   []byte
@@ -72,7 +71,7 @@ func (is *imageSource) ResolveImageConfig(ctx context.Context, ref string, opt g
 	}
 
 	res, err := is.g.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
-		dgst, dt, err := imageutil.Config(ctx, ref, pull.NewResolver(ctx, is.ResolverOpt, is.SessionManager, is.ImageStore, rm, ref), is.ContentStore, opt.Platform)
+		dgst, dt, err := imageutil.Config(ctx, ref, pull.NewResolver(ctx, is.ResolverOpt, sm, is.ImageStore, rm, ref), is.ContentStore, opt.Platform)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +84,7 @@ func (is *imageSource) ResolveImageConfig(ctx context.Context, ref string, opt g
 	return typed.dgst, typed.dt, nil
 }
 
-func (is *imageSource) Resolve(ctx context.Context, id source.Identifier) (source.SourceInstance, error) {
+func (is *imageSource) Resolve(ctx context.Context, id source.Identifier, sm *session.Manager) (source.SourceInstance, error) {
 	imageIdentifier, ok := id.(*source.ImageIdentifier)
 	if !ok {
 		return nil, errors.Errorf("invalid image identifier %v", id)
@@ -101,7 +100,7 @@ func (is *imageSource) Resolve(ctx context.Context, id source.Identifier) (sourc
 		ContentStore: is.ContentStore,
 		Applier:      is.Applier,
 		Src:          imageIdentifier.Reference,
-		Resolver:     pull.NewResolver(ctx, is.ResolverOpt, is.SessionManager, is.ImageStore, imageIdentifier.ResolveMode, imageIdentifier.Reference.String()),
+		Resolver:     pull.NewResolver(ctx, is.ResolverOpt, sm, is.ImageStore, imageIdentifier.ResolveMode, imageIdentifier.Reference.String()),
 		Platform:     &platform,
 	}
 	p := &puller{
@@ -160,14 +159,18 @@ func (p *puller) CacheKey(ctx context.Context, index int) (string, bool, error) 
 	}
 	_, dt, err := imageutil.Config(ctx, ref.String(), p.Resolver, p.ContentStore, &p.Platform)
 	if err != nil {
-		// this happens on schema1 images
+		return "", false, err
+	}
+
+	k := cacheKeyFromConfig(dt).String()
+	if k == "" {
 		k, err := mainManifestKey(ctx, desc, p.Platform)
 		if err != nil {
 			return "", false, err
 		}
 		return k.String(), true, nil
 	}
-	return cacheKeyFromConfig(dt).String(), true, nil
+	return k, true, nil
 }
 
 func (p *puller) Snapshot(ctx context.Context) (cache.ImmutableRef, error) {
@@ -226,8 +229,8 @@ func cacheKeyFromConfig(dt []byte) digest.Digest {
 	if err != nil {
 		return digest.FromBytes(dt)
 	}
-	if img.RootFS.Type != "layers" {
-		return digest.FromBytes(dt)
+	if img.RootFS.Type != "layers" || len(img.RootFS.DiffIDs) == 0 {
+		return ""
 	}
 	return identity.ChainID(img.RootFS.DiffIDs)
 }

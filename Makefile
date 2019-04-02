@@ -13,8 +13,10 @@ include basic.mk
 prebuild: runc
 
 RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
+RUNCCOMMIT=7cb3cde1f49eae53fb8fff5012c0750a64eb928b
 $(RUNCBUILDDIR):
-	git clone --depth 1 https://github.com/opencontainers/runc.git "$@"
+	git clone https://github.com/opencontainers/runc.git "$@"
+	( cd "$@" ; git checkout $(RUNCCOMMIT) )
 
 $(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
 	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"

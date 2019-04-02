@@ -1,5 +1,4 @@
-ARG RUNC_VERSION=9f9c96235cc97674e935002fc3d78361b696a69e
-FROM golang:1.10-alpine AS gobuild-base
+FROM golang:1.11-alpine AS gobuild-base
 RUN apk add --no-cache \
 	bash \
 	build-base \
@@ -8,13 +7,6 @@ RUN apk add --no-cache \
 	libseccomp-dev \
 	linux-headers \
 	make
-
-FROM gobuild-base AS runc
-ARG RUNC_VERSION
-RUN git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com/opencontainers/runc" \
-	&& cd "$GOPATH/src/github.com/opencontainers/runc" \
-	&& make static BUILDTAGS="seccomp" EXTRA_FLAGS="-buildmode pie" EXTRA_LDFLAGS="-extldflags \\\"-fno-PIC -static\\\"" \
-	&& mv runc /usr/bin/runc
 
 FROM gobuild-base AS img
 WORKDIR /go/src/github.com/genuinetools/img
@@ -43,7 +35,6 @@ FROM alpine:3.8 AS base
 MAINTAINER Jessica Frazelle <jess@linux.com>
 RUN apk add --no-cache git
 COPY --from=img /usr/bin/img /usr/bin/img
-COPY --from=runc /usr/bin/runc /usr/bin/runc
 COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
 COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
 RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
@@ -51,10 +42,12 @@ RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
   && mkdir -p /run/user/1000 \
   && chown -R user /run/user/1000 /home/user \
   && echo user:100000:65536 | tee /etc/subuid | tee /etc/subgid
-# As of v3.8.1, Alpine does not set SUID bit on the busybox version of /bin/su.
-# However, future version may set SUID bit on /bin/su.
-# We lock the root account so as to disable su completely.
-RUN passwd -l root
+# In previous version of `alpine:3.8`, the root was not locked and su-able
+# without any password when SUID bit is set on `/bin/su`.
+#
+# As of 3/15/2019, the root is locked by default, but we expliciltly lock the
+# root just in case.
+RUN passwd -l root || true
 
 FROM base AS debug
 RUN apk add --no-cache bash strace

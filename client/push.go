@@ -30,5 +30,9 @@ func (c *Client) Push(ctx context.Context, image string, insecure bool) error {
 		return fmt.Errorf("getting image %q failed: %v", image, err)
 	}
 
-	return push.Push(ctx, opt.SessionManager, opt.ContentStore, imgObj.Target.Digest, image, insecure, opt.ResolveOptionsFunc)
+	sm, err := c.getSessionManager()
+	if err != nil {
+		return err
+	}
+	return push.Push(ctx, sm, opt.ContentStore, imgObj.Target.Digest, image, insecure, opt.ResolveOptionsFunc)
 }

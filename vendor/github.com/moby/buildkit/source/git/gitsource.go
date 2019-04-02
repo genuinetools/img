@@ -16,6 +16,7 @@ import (
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/progress/logs"
@@ -37,17 +38,20 @@ type gitSource struct {
 	locker *locker.Locker
 }
 
+// Supported returns nil if the system supports Git source
+func Supported() error {
+	if err := exec.Command("git", "version").Run(); err != nil {
+		return errors.Wrap(err, "failed to find git binary")
+	}
+	return nil
+}
+
 func NewSource(opt Opt) (source.Source, error) {
 	gs := &gitSource{
 		md:     opt.MetadataStore,
 		cache:  opt.CacheAccessor,
 		locker: locker.New(),
 	}
-
-	if err := exec.Command("git", "version").Run(); err != nil {
-		return nil, errors.Wrap(err, "failed to find git binary")
-	}
-
 	return gs, nil
 }
 
@@ -149,7 +153,7 @@ type gitSourceHandler struct {
 	cacheKey string
 }
 
-func (gs *gitSource) Resolve(ctx context.Context, id source.Identifier) (source.SourceInstance, error) {
+func (gs *gitSource) Resolve(ctx context.Context, id source.Identifier, _ *session.Manager) (source.SourceInstance, error) {
 	gitIdentifier, ok := id.(*source.GitIdentifier)
 	if !ok {
 		return nil, errors.Errorf("invalid git identifier %v", id)
@@ -245,6 +249,9 @@ func (gs *gitSourceHandler) Snapshot(ctx context.Context) (out cache.ImmutableRe
 	}
 
 	if doFetch {
+		// make sure no old lock files have leaked
+		os.RemoveAll(filepath.Join(gitDir, "shallow.lock"))
+
 		args := []string{"fetch"}
 		if !isCommitSHA(ref) { // TODO: find a branch from ls-remote?
 			args = append(args, "--depth=1", "--no-tags")

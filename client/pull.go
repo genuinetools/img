@@ -15,6 +15,10 @@ import (
 
 // Pull retrieves an image from a remote registry.
 func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
+	sm, err := c.getSessionManager()
+	if err != nil {
+		return nil, err
+	}
 	// Parse the image name and tag.
 	named, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -46,18 +50,17 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 
 	// Create the source for the pull.
 	srcOpt := containerimage.SourceOpt{
-		SessionManager: opt.SessionManager,
-		Snapshotter:    opt.Snapshotter,
-		ContentStore:   opt.ContentStore,
-		Applier:        opt.Applier,
-		CacheAccessor:  cm,
-		ImageStore:     opt.ImageStore,
+		Snapshotter:   opt.Snapshotter,
+		ContentStore:  opt.ContentStore,
+		Applier:       opt.Applier,
+		CacheAccessor: cm,
+		ImageStore:    opt.ImageStore,
 	}
 	src, err := containerimage.NewSource(srcOpt)
 	if err != nil {
 		return nil, err
 	}
-	s, err := src.Resolve(ctx, identifier)
+	s, err := src.Resolve(ctx, identifier, sm)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +79,8 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 		return nil, err
 	}
 	expOpt := imageexporter.Opt{
-		SessionManager: opt.SessionManager,
-		Images:         opt.ImageStore,
-		ImageWriter:    iw,
+		Images:      opt.ImageStore,
+		ImageWriter: iw,
 	}
 	exp, err := imageexporter.New(expOpt)
 	if err != nil {

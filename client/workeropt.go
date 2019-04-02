@@ -3,7 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/containerd/containerd/content/local"
@@ -17,6 +19,7 @@ import (
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/executor"
+	executoroci "github.com/moby/buildkit/executor/oci"
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/network"
@@ -31,10 +34,6 @@ import (
 
 // createWorkerOpt creates a base.WorkerOpt to be used for a new worker.
 func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err error) {
-	sm, err := c.getSessionManager()
-	if err != nil {
-		return opt, err
-	}
 	// Create the metadata store.
 	md, err := metadata.NewStore(filepath.Join(c.root, "metadata.db"))
 	if err != nil {
@@ -65,8 +64,9 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	var exe executor.Executor
 	if withExecutor {
 		exeOpt := runcexecutor.Opt{
-			Root:     filepath.Join(c.root, "executor"),
-			Rootless: unprivileged,
+			Root:        filepath.Join(c.root, "executor"),
+			Rootless:    unprivileged,
+			ProcessMode: processMode(),
 		}
 		exe, err = runcexecutor.New(exeOpt, network.Default())
 		if err != nil {
@@ -121,7 +121,6 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	opt = base.WorkerOpt{
 		ID:                 id,
 		Labels:             xlabels,
-		SessionManager:     sm,
 		MetadataStore:      md,
 		Executor:           exe,
 		Snapshotter:        containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
@@ -134,4 +133,19 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	}
 
 	return opt, err
+}
+
+func processMode() executoroci.ProcessMode {
+	mountArgs := []string{"-t", "proc", "none", "/proc"}
+	cmd := exec.Command("mount", mountArgs...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig:    syscall.SIGKILL,
+		Cloneflags:   syscall.CLONE_NEWPID,
+		Unshareflags: syscall.CLONE_NEWNS,
+	}
+	if b, err := cmd.CombinedOutput(); err != nil {
+		logrus.Warnf("Process sandbox is not available, consider unmasking procfs: %v", string(b))
+		return executoroci.NoProcessSandbox
+	}
+	return executoroci.ProcessSandbox
 }
