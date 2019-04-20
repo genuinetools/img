@@ -193,54 +193,59 @@ Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns
 
 ```console
 $ img -h
-img -  Standalone, daemon-less, unprivileged Dockerfile and OCI compatible container image builder.
+img -  Standalone, daemon-less, unprivileged Dockerfile and OCI compatible container image builder
 
-Usage: img <command>
+Usage: img [OPTIONS] COMMAND [ARG...]
 
 Flags:
-
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -h, --help             help for img
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
+  -v, --version          Print version information and quit
 
 Commands:
+  build       Build an image from a Dockerfile
+  du          Show image disk usage.
+  help        Help about any command
+  login       Log in to a Docker registry.
+  logout      Log out from a Docker registry.
+  ls          List images and digests.
+  prune       Prune and clean up the build cache.
+  pull        Pull an image or a repository from a registry.
+  push        Push an image or a repository to a registry.
+  rm          Remove one or more images.
+  save        Save an image to a tar archive (streamed to STDOUT by default).
+  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
+  unpack      Unpack an image to a rootfs directory.
+  version     Show the version information.
 
-  build    Build an image from a Dockerfile.
-  du       Show image disk usage.
-  ls       List images and digests.
-  login    Log in to a Docker registry.
-  logout   Log out from a Docker registry.
-  prune    Prune and clean up the build cache.
-  pull     Pull an image or a repository from a registry.
-  push     Push an image or a repository to a registry.
-  rm       Remove one or more images.
-  save     Save an image to a tar archive (streamed to STDOUT by default).
-  tag      Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
-  unpack   Unpack an image to a rootfs directory.
-  version  Show the version information.
+Use "img [command] --help" for more information about a command.
 ```
 
 ### Build an Image
 
 ```console
 $ img build -h
+build -  Build an image from a Dockerfile
+
 Usage: img build [OPTIONS] PATH
 
-Build an image from a Dockerfile.
-
 Flags:
+      --build-arg list   Set build-time variables
+  -f, --file string      Name of the Dockerfile (Default is 'PATH/Dockerfile')
+  -h, --help             help for build
+      --label list       Set metadata for an image
+      --no-cache         Do not use cache when building the image
+      --no-console       Use non-console progress UI
+      --platform list    Set platforms for which the image should be built
+  -t, --tag list         Name and optionally a tag in the 'name:tag' format
+      --target string    Set the target build stage to build
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  --build-arg    Set build-time variables (default: [])
-  -d, --debug    enable debug logging (default: false)
-  -f, --file     Name of the Dockerfile (Default is 'PATH/Dockerfile') (default: <none>)
-  --label        Set metadata for an image (default: [])
-  --no-cache     Do not use cache when building the image (default: false)
-  --no-console   Use non-console progress UI (default: false)
-  --platform     Set platforms for which the image should be built (default: <yourPlatform>)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
-  -t, --tag      Name and optionally a tag in the 'name:tag' format (default: [])
-  --target       Set the target build stage to build (default: <none>)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 **Use just like you would `docker build`.**
@@ -320,16 +325,18 @@ NOTE: cross-OS builds are slightly more complicated to get `RUN` commands workin
 
 ```console
 $ img ls -h
+ls -  List images and digests.
+
 Usage: img ls [OPTIONS]
 
-List images and digests.
-
 Flags:
+  -f, --filter list   Filter output based on conditions provided
+  -h, --help          help for ls
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -f, --filter   Filter output based on conditions provided (default: [])
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -346,15 +353,17 @@ If you need to use self-signed certs with your registry, see
 
 ```console
 $ img pull -h
+pull -  Pull an image or a repository from a registry.
+
 Usage: img pull [OPTIONS] NAME[:TAG|@DIGEST]
 
-Pull an image or a repository from a registry.
-
 Flags:
+  -h, --help   help for pull
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -371,16 +380,18 @@ If you need to use self-signed certs with your registry, see
 
 ```console
 $ img push -h
+push -  Push an image or a repository to a registry.
+
 Usage: img push [OPTIONS] NAME[:TAG]
 
-Push an image or a repository to a registry.
-
 Flags:
+  -h, --help                help for push
+      --insecure-registry   Push to insecure registry
 
-  -b, --backend        backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug          enable debug logging (default: false)
-  --insecure-registry  Push to insecure registry (default: false)
-  -s, --state          directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -393,15 +404,17 @@ Successfully pushed jess/thing:latest
 
 ```console
 $ img tag -h
+tag -  Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
+
 Usage: img tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
 
-Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
-
 Flags:
+  -h, --help   help for tag
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -413,17 +426,19 @@ Successfully tagged jess/thing as jess/otherthing
 
 ```console
 $ img save -h
+save -  Save an image to a tar archive (streamed to STDOUT by default).
+
 Usage: img save [OPTIONS] IMAGE [IMAGE...]
 
-Save an image to a tar archive (streamed to STDOUT by default).
-
 Flags:
+      --format string   image output format (docker|oci) (default "docker")
+  -h, --help            help for save
+  -o, --output string   write to a file, instead of STDOUT
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  --format       image output format (docker|oci) (default: docker)
-  -o, --output   write to a file, instead of STDOUT (default: <none>)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -439,16 +454,18 @@ Loaded image: jess/thing
 
 ```console
 $ img unpack -h
+unpack -  Unpack an image to a rootfs directory.
+
 Usage: img unpack [OPTIONS] IMAGE
 
-Unpack an image to a rootfs directory.
-
 Flags:
+  -h, --help            help for unpack
+  -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -o, --output   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory) (default: <none>)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -460,31 +477,35 @@ Successfully unpacked rootfs for busybox to: /home/user/rootfs
 
 ```console
 $ img rm -h
+rm -  Remove one or more images.
+
 Usage: img rm [OPTIONS] IMAGE [IMAGE...]
 
-Remove one or more images.
-
 Flags:
+  -h, --help   help for rm
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ### Disk Usage
 
 ```console
 $ img du -h
+du -  Show image disk usage.
+
 Usage: img du [OPTIONS]
 
-Show image disk usage.
-
 Flags:
+  -f, --filter list   Filter output based on conditions provided
+  -h, --help          help for du
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -f, --filter   Filter output based on conditions provided (default: [])
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -507,15 +528,17 @@ Total:          1.08GiB
 
 ```console
 $ img prune -h
+prune -  Prune and clean up the build cache.
+
 Usage: img prune [OPTIONS]
 
-Prune and clean up the build cache.
-
 Flags:
+  -h, --help   help for prune
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ```console
@@ -547,38 +570,37 @@ If you need to use self-signed certs with your registry, see
 
 ```console
 $ img login -h
+login -  Log in to a Docker registry.
+
 Usage: img login [OPTIONS] [SERVER]
 
-Log in to a Docker registry.
-
-If no server is specified, the default (https://index.docker.io/v1/) is used.
-
 Flags:
+  -h, --help              help for login
+  -p, --password string   Password
+      --password-stdin    Take the password from stdin
+  -u, --user string       Username
 
-  -b, --backend     backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug       enable debug logging (default: false)
-  -p, --password    Password (default: <none>)
-  --password-stdin  Take the password from stdin (default: false)
-  -s, --state       directory to hold the global state (default: /home/user/.local/share/img)
-  -u, --username    Username (default: <none>)
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ### Logout from a Registry
 
 ```console
 $ img logout -h
+logout -  Log out from a Docker registry.
+
 Usage: img logout [SERVER]
 
-Log out from a Docker registry.
-
-If no server is specified, the default (https://index.docker.io/v1/) is used.
-
 Flags:
+  -h, --help   help for logout
 
-  -b, --backend  backend for snapshots ([auto native overlayfs]) (default: auto)
-  -d, --debug    enable debug logging (default: false)
-  -s, --state    directory to hold the global state (default: /home/user/.local/share/img)
-
+Global Flags:
+  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -d, --debug            enable debug logging
+  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
 ### Using Self-Signed Certs with a Registry

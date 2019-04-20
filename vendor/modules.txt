@@ -21,8 +21,6 @@ github.com/Microsoft/hcsshim/internal/longpath
 github.com/Microsoft/hcsshim/internal/safefile
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
-# github.com/checkpoint-restore/go-criu v0.0.0-20190109184317-bdb7599cd87b
-github.com/checkpoint-restore/go-criu/rpc
 # github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
 github.com/containerd/console
 # github.com/containerd/containerd v1.3.0-0.20190426060238-3a3f0aac8819
@@ -82,12 +80,6 @@ github.com/containerd/go-runc
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd
 github.com/containerd/typeurl
-# github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
-github.com/coreos/go-systemd/activation
-github.com/coreos/go-systemd/dbus
-github.com/coreos/go-systemd/util
-# github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
-github.com/coreos/pkg/dlopen
 # github.com/cyphar/filepath-securejoin v0.2.2
 github.com/cyphar/filepath-securejoin
 # github.com/docker/cli v0.0.0-20190321234815-f40f9c240ab0
@@ -165,12 +157,8 @@ github.com/docker/libnetwork/resolvconf/dns
 github.com/docker/libnetwork/types
 # github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 github.com/docker/libtrust
-# github.com/genuinetools/pkg v0.0.0-20180910213200-1c141f661797
-github.com/genuinetools/pkg/cli
 # github.com/genuinetools/reg v0.16.0
 github.com/genuinetools/reg/registry
-# github.com/godbus/dbus v4.1.0+incompatible
-github.com/godbus/dbus
 # github.com/gofrs/flock v0.7.0
 github.com/gofrs/flock
 # github.com/gogo/googleapis v1.1.0
@@ -182,8 +170,8 @@ github.com/gogo/protobuf/types
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/protobuf v1.2.0
-github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes/timestamp
+github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
@@ -199,6 +187,8 @@ github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/golang-lru v0.5.0
 github.com/hashicorp/golang-lru/simplelru
+# github.com/inconshreveable/mousetrap v1.0.0
+github.com/inconshreveable/mousetrap
 # github.com/ishidawataru/sctp v0.0.0-20180213033435-07191f837fed
 github.com/ishidawataru/sctp
 # github.com/jaguilar/vt100 v0.0.0-20150826170717-2703a27b14ea => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
@@ -303,8 +293,6 @@ github.com/moby/buildkit/session/upload
 github.com/moby/buildkit/frontend/dockerfile/command
 # github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c
 github.com/morikuni/aec
-# github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618
-github.com/mrunalp/fileutils
 # github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
@@ -313,27 +301,9 @@ github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/identity
 # github.com/opencontainers/runc v1.0.1-0.20190307181833-2b18fe1d885e
 github.com/opencontainers/runc/libcontainer/system
-github.com/opencontainers/runc/libcontainer
-github.com/opencontainers/runc/libcontainer/cgroups
-github.com/opencontainers/runc/libcontainer/cgroups/systemd
-github.com/opencontainers/runc/libcontainer/configs
-github.com/opencontainers/runc/libcontainer/intelrdt
-github.com/opencontainers/runc/libcontainer/nsenter
-github.com/opencontainers/runc/libcontainer/specconv
 github.com/opencontainers/runc/libcontainer/user
-github.com/opencontainers/runc/libcontainer/utils
-github.com/opencontainers/runc/libcontainer/apparmor
-github.com/opencontainers/runc/libcontainer/cgroups/fs
-github.com/opencontainers/runc/libcontainer/configs/validate
-github.com/opencontainers/runc/libcontainer/keys
-github.com/opencontainers/runc/libcontainer/mount
-github.com/opencontainers/runc/libcontainer/seccomp
-github.com/opencontainers/runc/libcontainer/stacktrace
 # github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/opencontainers/selinux v1.0.0
-github.com/opencontainers/selinux/go-selinux/label
-github.com/opencontainers/selinux/go-selinux
 # github.com/opentracing-contrib/go-stdlib v0.0.0-20180702182724-07a764486eb1
 github.com/opentracing-contrib/go-stdlib/nethttp
 # github.com/opentracing/opentracing-go v1.0.2
@@ -359,10 +329,12 @@ github.com/prometheus/procfs
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs
 github.com/prometheus/procfs/internal/util
-# github.com/seccomp/libseccomp-golang v0.9.0
-github.com/seccomp/libseccomp-golang
 # github.com/sirupsen/logrus v1.3.0
 github.com/sirupsen/logrus
+# github.com/spf13/cobra v0.0.5
+github.com/spf13/cobra
+# github.com/spf13/pflag v1.0.3
+github.com/spf13/pflag
 # github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 github.com/syndtr/gocapability/capability
 # github.com/tonistiigi/fsutil v0.0.0-20190327153851-3bbb99cdbd76
@@ -371,13 +343,6 @@ github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/copy
 # github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 github.com/tonistiigi/units
-# github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5
-github.com/urfave/cli
-# github.com/vishvananda/netlink v1.0.0
-github.com/vishvananda/netlink
-github.com/vishvananda/netlink/nl
-# github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc
-github.com/vishvananda/netns
 # go.etcd.io/bbolt v1.3.2
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20190129210102-ccddf3741a0c

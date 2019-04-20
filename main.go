@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,8 +10,8 @@ import (
 	_ "github.com/genuinetools/img/internal/unshare"
 	"github.com/genuinetools/img/types"
 	"github.com/genuinetools/img/version"
-	"github.com/genuinetools/pkg/cli"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -42,44 +40,82 @@ func (s *stringSlice) Set(value string) error {
 	return nil
 }
 
-func main() {
-	// Create a new cli program.
-	p := cli.NewProgram()
-	p.Name = "img"
-	p.Description = "Standalone, daemon-less, unprivileged Dockerfile and OCI compatible container image builder"
-	// Set the GitCommit and Version.
-	p.GitCommit = version.GITCOMMIT
-	p.Version = version.VERSION
+const rootHelpTemplate = `{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
 
-	// Build the list of available commands.
-	p.Commands = []cli.Command{
-		&buildCommand{},
-		&diskUsageCommand{},
-		&listCommand{},
-		&loginCommand{},
-		&logoutCommand{},
-		&pruneCommand{},
-		&pullCommand{},
-		&pushCommand{},
-		&removeCommand{},
-		&saveCommand{},
-		&tagCommand{},
-		&unpackCommand{},
+const rootUsageTemplate = `{{.Name}} -  {{.Short}}
+
+Usage: {{if .Runnable}}{{.UseLine}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableSubCommands}}
+
+Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+
+func main() {
+	var printVersionAndExit bool
+
+	cmd := &cobra.Command{
+		Use:              "img [OPTIONS] COMMAND [ARG...]",
+		Short:            "Standalone, daemon-less, unprivileged Dockerfile and OCI compatible container image builder",
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+			return fmt.Errorf("img: '%s' is not a img command.\nSee 'img --help'", args[0])
+
+		},
+		Version:               fmt.Sprintf("%s, build %s", version.VERSION, version.GITCOMMIT),
+		DisableFlagsInUseLine: true,
 	}
+
+	cmd.SetHelpTemplate(rootHelpTemplate)
+	cmd.SetUsageTemplate(rootUsageTemplate)
+
+	cmd.AddCommand(
+		newBuildCommand(),
+		newDiskUsageCommand(),
+		newListCommand(),
+		newLoginCommand(),
+		newLogoutCommand(),
+		newPruneCommand(),
+		newPullCommand(),
+		newPushCommand(),
+		newRemoveCommand(),
+		newSaveCommand(),
+		newTagCommand(),
+		newUnpackCommand(),
+		newVersionCommand(),
+	)
 
 	defaultStateDir := defaultStateDirectory()
 
+	// Version flag
+	cmd.Flags().BoolVarP(&printVersionAndExit, "version", "v", false, "Print version information and quit")
+
 	// Setup the global flags.
-	p.FlagSet = flag.NewFlagSet("img", flag.ExitOnError)
-	p.FlagSet.BoolVar(&debug, "debug", false, "enable debug logging")
-	p.FlagSet.BoolVar(&debug, "d", false, "enable debug logging")
-	p.FlagSet.StringVar(&backend, "backend", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
-	p.FlagSet.StringVar(&backend, "b", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
-	p.FlagSet.StringVar(&stateDir, "state", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
-	p.FlagSet.StringVar(&stateDir, "s", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
+	flags := cmd.PersistentFlags()
+	flags.BoolVarP(&debug, "debug", "d", false, "enable debug logging")
+	flags.StringVarP(&backend, "backend", "b", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
+	flags.StringVarP(&stateDir, "state", "s", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
 
 	// Set the before function.
-	p.Before = func(ctx context.Context) error {
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if printVersionAndExit {
+			fmt.Printf("img %s, build %s", version.VERSION, version.GITCOMMIT)
+			os.Exit(0)
+		}
+
 		// Set the log level.
 		if debug {
 			logrus.SetLevel(logrus.DebugLevel)
@@ -101,7 +137,9 @@ func main() {
 	}
 
 	// Run our program.
-	p.Run()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
 func defaultStateDirectory() string {

@@ -7,7 +7,7 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
-	"flag"
+
 	"fmt"
 	"github.com/containerd/containerd/platforms"
 	"io"
@@ -28,52 +28,85 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
 
-const buildHelp = `Build an image from a Dockerfile.`
+const buildUsageShortHelp = `Build an image from a Dockerfile`
+const buildUsageLongHelp = `Build an image from a Dockerfile`
 
-func (cmd *buildCommand) Name() string      { return "build" }
-func (cmd *buildCommand) Args() string      { return "[OPTIONS] PATH" }
-func (cmd *buildCommand) ShortHelp() string { return buildHelp }
-func (cmd *buildCommand) LongHelp() string  { return buildHelp }
-func (cmd *buildCommand) Hidden() bool      { return false }
+func newBuildCommand() *cobra.Command {
 
-func (cmd *buildCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.dockerfilePath, "file", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	fs.Var(&cmd.tags, "tag", "Name and optionally a tag in the 'name:tag' format")
-	fs.Var(&cmd.tags, "t", "Name and optionally a tag in the 'name:tag' format")
-	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
-	fs.Var(&cmd.platforms, "platform", "Set platforms for which the image should be built")
-	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
-	fs.Var(&cmd.labels, "label", "Set metadata for an image")
-	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
-	fs.BoolVar(&cmd.noCache, "no-cache", false, "Do not use cache when building the image")
+	build := &buildCommand{
+		tags:      newListValue().WithValidator(validateTag),
+		buildArgs: newListValue(),
+		labels:    newListValue(),
+		platforms: newListValue(),
+	}
+
+	cmd := &cobra.Command{
+		Use:                   "build [OPTIONS] PATH",
+		DisableFlagsInUseLine: true,
+		Short:                 buildUsageShortHelp,
+		Long:                  buildUsageLongHelp,
+		Args:                  build.ValidateArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return build.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.StringVarP(&build.dockerfilePath, "file", "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+	fs.VarP(build.tags, "tag", "t", "Name and optionally a tag in the 'name:tag' format")
+	fs.StringVar(&build.target, "target", "", "Set the target build stage to build")
+	fs.Var(build.platforms, "platform", "Set platforms for which the image should be built")
+	fs.Var(build.buildArgs, "build-arg", "Set build-time variables")
+	fs.Var(build.labels, "label", "Set metadata for an image")
+	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
+	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
+
+	return cmd
 }
 
 type buildCommand struct {
-	buildArgs      stringSlice
+	buildArgs      *listValue
 	dockerfilePath string
-	labels         stringSlice
+	labels         *listValue
 	target         string
-	tags           stringSlice
-	platforms      stringSlice
+	tags           *listValue
+	platforms      *listValue
 
 	contextDir string
 	noConsole  bool
 	noCache    bool
 }
 
-func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
+// validateTag checks if the given image name can be resolved, and ensures the latest tag is added if it is missing.
+func validateTag(repo string) (string, error) {
+	named, err := reference.ParseNormalizedNamed(repo)
+	if err != nil {
+		return "", err
+	}
+
+	// Add the latest tag if they did not provide one.
+	repo = reference.TagNameOnly(named).String()
+
+	return repo, nil
+}
+
+func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass a path to build")
 	}
 
-	if len(cmd.tags) < 1 {
+	if cmd.tags.Len() < 1 {
 		return errors.New("please specify an image tag with `-t`")
 	}
+	return nil
+}
 
+func (cmd *buildCommand) Run(args []string) (err error) {
 	reexec()
 	if err := installRuncIfDNE(); err != nil {
 		return err
@@ -105,18 +138,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		defer os.RemoveAll(cmd.contextDir)
 	}
 
-	for position, tag := range cmd.tags {
-		// Parse the image name and tag.
-		named, err := reference.ParseNormalizedNamed(tag)
-		if err != nil {
-			return fmt.Errorf("parsing image name %q failed: %v", tag, err)
-		}
-		// Add the latest tag if they did not provide one.
-		named = reference.TagNameOnly(named)
-		cmd.tags[position] = named.String()
-	}
-
-	initialTag := cmd.tags[0]
+	initialTag := cmd.tags.GetAll()[0]
 
 	// Set the dockerfile path as the default if one was not given.
 	if cmd.dockerfilePath == "" {
@@ -126,10 +148,13 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		}
 	}
 
-	if len(cmd.platforms) < 1 {
-		cmd.platforms = []string{platforms.DefaultString()}
+	if cmd.platforms.Len() < 1 {
+		err = cmd.platforms.Set(platforms.DefaultString())
+		if err != nil {
+			return err
+		}
 	}
-	platforms := strings.Join(cmd.platforms, ",")
+	platforms := strings.Join(cmd.platforms.GetAll(), ",")
 
 	// Create the client.
 	c, err := client.New(stateDir, backend, cmd.getLocalDirs())
@@ -150,7 +175,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 	}
 
 	// Get the build args and add them to frontend attrs.
-	for _, buildArg := range cmd.buildArgs {
+	for _, buildArg := range cmd.buildArgs.GetAll() {
 		kv := strings.SplitN(buildArg, "=", 2)
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid build-arg value %s", buildArg)
@@ -158,7 +183,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 
-	for _, label := range cmd.labels {
+	for _, label := range cmd.labels.GetAll() {
 		kv := strings.SplitN(label, "=", 2)
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid label value %s", label)
@@ -170,7 +195,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 	fmt.Println("Setting up the rootfs... this may take a bit.")
 
 	// Create the context.
-	ctx = appcontext.Context()
+	ctx := appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err
@@ -192,7 +217,7 @@ func (cmd *buildCommand) Run(ctx context.Context, args []string) (err error) {
 			Session:  sess.ID(),
 			Exporter: "image",
 			ExporterAttrs: map[string]string{
-				"name": strings.Join(cmd.tags, ","),
+				"name": strings.Join(cmd.tags.GetAll(), ","),
 			},
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,

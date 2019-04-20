@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 
 	"github.com/docker/cli/cli/config"
@@ -14,22 +13,37 @@ const logoutShortHelp = `Log out from a Docker registry.`
 
 var logoutLongHelp = logoutShortHelp + fmt.Sprintf("\n\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
 
-func (cmd *logoutCommand) Name() string       { return "logout" }
-func (cmd *logoutCommand) Args() string       { return "[SERVER]" }
-func (cmd *logoutCommand) ShortHelp() string  { return logoutShortHelp }
-func (cmd *logoutCommand) LongHelp() string   { return logoutLongHelp }
-func (cmd *logoutCommand) Hidden() bool       { return false }
-func (cmd *logoutCommand) DoReexec() bool     { return false }
-func (cmd *logoutCommand) RequiresRunc() bool { return false }
+func newLogoutCommand() *cobra.Command {
 
-func (cmd *logoutCommand) Register(fs *flag.FlagSet) {
+	logout := &logoutCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "logout [SERVER]",
+		DisableFlagsInUseLine: true,
+		Short:                 logoutShortHelp,
+		Long:                  logoutLongHelp,
+		Args:                  logout.ValidateArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return logout.Run(args)
+		},
+	}
+
+	return cmd
 }
 
 type logoutCommand struct {
 	serverAddress string
 }
 
-func (cmd *logoutCommand) Run(ctx context.Context, args []string) error {
+func (cmd *logoutCommand) ValidateArgs(c *cobra.Command, args []string) error {
+	if len(args) > 1 {
+		return fmt.Errorf("logout expects zero or one arguments, found %d", len(args))
+	}
+
+	return nil
+}
+
+func (cmd *logoutCommand) Run(args []string) error {
 	if len(args) > 0 {
 		cmd.serverAddress = args[0]
 	}

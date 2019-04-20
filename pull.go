@@ -1,37 +1,51 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 
 	"github.com/containerd/containerd/namespaces"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/appcontext"
 	"golang.org/x/sync/errgroup"
 )
 
-const pullHelp = `Pull an image or a repository from a registry.`
+const pullUsageShortHelp = `Pull an image or a repository from a registry.`
+const pullUsageLongHelp = `Pull an image or a repository from a registry.`
 
-func (cmd *pullCommand) Name() string      { return "pull" }
-func (cmd *pullCommand) Args() string      { return "[OPTIONS] NAME[:TAG|@DIGEST]" }
-func (cmd *pullCommand) ShortHelp() string { return pullHelp }
-func (cmd *pullCommand) LongHelp() string  { return pullHelp }
-func (cmd *pullCommand) Hidden() bool      { return false }
+func newPullCommand() *cobra.Command {
 
-func (cmd *pullCommand) Register(fs *flag.FlagSet) {}
+	pull := &pullCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "pull [OPTIONS] NAME[:TAG|@DIGEST]",
+		DisableFlagsInUseLine: true,
+		Short:                 pullUsageShortHelp,
+		Long:                  pullUsageLongHelp,
+		Args:                  validatePullImageArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return pull.Run(args)
+		},
+	}
+
+	return cmd
+}
+
+func validatePullImageArgs(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("must pass an image or repository to pull")
+	}
+
+	return nil
+}
 
 type pullCommand struct {
 	image string
 }
 
-func (cmd *pullCommand) Run(ctx context.Context, args []string) (err error) {
-	if len(args) < 1 {
-		return fmt.Errorf("must pass an image or repository to pull")
-	}
-
+func (cmd *pullCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Get the specified image.
@@ -48,7 +62,7 @@ func (cmd *pullCommand) Run(ctx context.Context, args []string) (err error) {
 
 	var listedImage *client.ListedImage
 	// Create the context.
-	ctx = appcontext.Context()
+	ctx := appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err

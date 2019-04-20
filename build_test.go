@@ -156,3 +156,16 @@ func TestBuildMultiplePlatforms(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestBuildContextFirstInCommand(t *testing.T) {
+	args := []string{"build", "-", "-t", "testbuildargsfirst"}
+
+	_, err := doRun(args, withDockerfile(`
+  FROM busybox
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}

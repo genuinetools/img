@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"io"
 	"os"
 
@@ -15,18 +15,30 @@ import (
 )
 
 // TODO(AkihiroSuda): support OCI archive
-const saveHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
+const saveUsageShortHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
+const saveUsageLongHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
 
-func (cmd *saveCommand) Name() string      { return "save" }
-func (cmd *saveCommand) Args() string      { return "[OPTIONS] IMAGE [IMAGE...]" }
-func (cmd *saveCommand) ShortHelp() string { return saveHelp }
-func (cmd *saveCommand) LongHelp() string  { return saveHelp }
-func (cmd *saveCommand) Hidden() bool      { return false }
+func newSaveCommand() *cobra.Command {
 
-func (cmd *saveCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.output, "output", "", "write to a file, instead of STDOUT")
-	fs.StringVar(&cmd.output, "o", "", "write to a file, instead of STDOUT")
-	fs.StringVar(&cmd.format, "format", "docker", "image output format (docker|oci)")
+	save := &saveCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "save [OPTIONS] IMAGE [IMAGE...]",
+		DisableFlagsInUseLine: true,
+		Short:                 saveUsageShortHelp,
+		Long:                  saveUsageLongHelp,
+		Args:                  save.ValidateArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return save.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.StringVarP(&save.output, "output", "o", "", "write to a file, instead of STDOUT")
+	fs.StringVar(&save.format, "format", "docker", "image output format (docker|oci)")
+
+	return cmd
 }
 
 type saveCommand struct {
@@ -34,16 +46,20 @@ type saveCommand struct {
 	format string
 }
 
-func (cmd *saveCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *saveCommand) ValidateArgs(c *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image to save")
 	}
 
+	return nil
+}
+
+func (cmd *saveCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.
