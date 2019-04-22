@@ -14,8 +14,7 @@ before_install:
   - go get golang.org/x/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
   - go get -u github.com/jteeuwen/go-bindata/...
-install:
-  - sudo make runc-install
+  - make runc-install
 jobs:
   include:
     - script: make all

@@ -33,6 +33,6 @@ else
 runc: internal/binutils/runc.go ## Builds runc locally so it can be embedded in the resulting binary.
 	$(RM) -r $(RUNCBUILDDIR)
 runc-install: $(RUNCBUILDDIR)/runc
-	cp $(RUNCBUILDDIR)/runc /usr/bin/runc
+	sudo cp $(RUNCBUILDDIR)/runc /usr/bin/runc
 	$(RM) -r $(RUNCBUILDDIR)
 endif
