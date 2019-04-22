@@ -1,4 +1,6 @@
-FROM ubuntu:xenial
+
+
+FROM ubuntu:xenial AS base
 
 # gcc for cgo
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates \
 		libseccomp-dev \
 		parallel \
-		uidmap \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV GOLANG_VERSION 1.11.9
@@ -60,17 +61,45 @@ RUN go get -u github.com/jteeuwen/go-bindata/go-bindata \
     && go get honnef.co/go/tools/cmd/staticcheck \
     && go get -u github.com/jteeuwen/go-bindata/... 
 
-# RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
-#   && useradd -u 1000 --home-dir /home/user user \
-#   && mkdir -p /run/user/1000 \
-#   && mkdir -p /home/user \
-#   && chown -R user /run/user/1000 /home/user \
-#   && chown -R user /go \
-#   && echo user:100000:65536 | tee /etc/subuid | tee /etc/subgid
+# We don't use the xenial shadow pkg bacause:
+# 1. To allow running img in a container without CAP_SYS_ADMIN, we need to do either
+#     a) install newuidmap/newgidmap with file capabilities rather than SETUID (requires kernel >= 4.14)
+#     b) install newuidmap/newgidmap >= 20181125 (59c2dabb264ef7b3137f5edb52c0b31d5af0cf76)
+#    We choose b) until kernel >= 4.14 gets widely adopted.
+#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138 https://github.com/shadow-maint/shadow/pull/141
+FROM base AS idmap
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      autoconf \
+      automake \
+      autopoint \
+      byacc \
+      gettext \
+      libcap-dev \
+      libtool \
+      libxslt1-dev \
+	  && rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/shadow-maint/shadow.git /shadow
+WORKDIR /shadow
+RUN git checkout 59c2dabb264ef7b3137f5edb52c0b31d5af0cf76
+RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
+  && make \
+  && cp src/newuidmap src/newgidmap /usr/bin
 
-# USER user
-# ENV USER user
-# ENV HOME /home/user
-# ENV XDG_RUNTIME_DIR=/run/user/1000
+FROM base
+
+COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
+COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
+RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
+  && useradd -u 1000 --home-dir /home/user user \
+  && mkdir -p /run/user/1000 \
+  && mkdir -p /home/user \
+  && chown -R user /run/user/1000 /home/user \
+  && chown -R user /go \
+  && echo user:100000:65536 | tee /etc/subuid | tee /etc/subgid
+
+USER user
+ENV USER user
+ENV HOME /home/user
+ENV XDG_RUNTIME_DIR=/run/user/1000
 
 WORKDIR /home/user
