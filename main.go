@@ -28,18 +28,6 @@ var (
 	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend}
 )
 
-// stringSlice is a slice of strings
-type stringSlice []string
-
-// implement the flag interface for stringSlice
-func (s *stringSlice) String() string {
-	return fmt.Sprintf("%s", *s)
-}
-func (s *stringSlice) Set(value string) error {
-	*s = append(*s, value)
-	return nil
-}
-
 const rootHelpTemplate = `{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
 
 const rootUsageTemplate = `{{.Name}} -  {{.Short}}
@@ -72,7 +60,7 @@ func main() {
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return fmt.Errorf("img: '%s' is not a img command.\nSee 'img --help'", args[0])
+			return fmt.Errorf("img: '%s' is not an img command.\nSee 'img --help'", args[0])
 
 		},
 		Version:               fmt.Sprintf("%s, build %s", version.VERSION, version.GITCOMMIT),
