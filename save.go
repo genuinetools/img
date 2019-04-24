@@ -25,6 +25,7 @@ func newSaveCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "save [OPTIONS] IMAGE [IMAGE...]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 saveUsageShortHelp,
 		Long:                  saveUsageLongHelp,
 		Args:                  save.ValidateArgs,

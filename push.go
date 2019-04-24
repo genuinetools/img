@@ -21,6 +21,7 @@ func newPushCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "push [OPTIONS] NAME[:TAG]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 pushUsageShortHelp,
 		Long:                  pushUsageLongHelp,
 		Args:                  push.ValidateArgs,

@@ -31,6 +31,7 @@ func newLoginCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "login [OPTIONS] [SERVER]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 loginUsageShortHelp,
 		Long:                  loginUsageLongHelp,
 		Args:                  login.ValidateArgs(),

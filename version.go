@@ -15,10 +15,12 @@ func newVersionCommand() *cobra.Command {
 	version := &versionCommand{}
 
 	cmd := &cobra.Command{
-		Use:   "version",
-		Short: versionHelp,
-		Long:  versionHelp,
-		Args:  validateHasNoArgs,
+		Use:                   "version",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 versionHelp,
+		Long:                  versionHelp,
+		Args:                  validateHasNoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return version.Run(args)
 		},

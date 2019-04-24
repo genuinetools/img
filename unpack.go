@@ -23,6 +23,7 @@ func newUnpackCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "unpack [OPTIONS] IMAGE",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 unpackUsageShortHelp,
 		Long:                  unpackUsageLongHelp,
 		Args:                  validateUnpackImageArgs,

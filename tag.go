@@ -21,6 +21,7 @@ func newTagCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 tagUsageShortHelp,
 		Long:                  tagUsageLongHelp,
 		Args:                  tag.ValidateArgs,

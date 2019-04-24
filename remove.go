@@ -21,6 +21,7 @@ func newRemoveCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "rm [OPTIONS] IMAGE [IMAGE...]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 removeUsageShortHelp,
 		Long:                  removeUsageLongHelp,
 		Args:                  remove.ValidateArgs,

@@ -27,6 +27,7 @@ func newListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "ls [OPTIONS]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 listUsageShortHelp,
 		Long:                  listUsageLongHelp,
 		Args:                  validateHasNoArgs,

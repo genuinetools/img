@@ -20,6 +20,7 @@ func newLogoutCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "logout [SERVER]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 logoutShortHelp,
 		Long:                  logoutLongHelp,
 		Args:                  logout.ValidateArgs,

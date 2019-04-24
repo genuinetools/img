@@ -47,6 +47,7 @@ func newBuildCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "build [OPTIONS] PATH",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 buildUsageShortHelp,
 		Long:                  buildUsageLongHelp,
 		Args:                  build.ValidateArgs,

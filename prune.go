@@ -23,6 +23,7 @@ func newPruneCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "prune [OPTIONS]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 pruneUsageShortHelp,
 		Long:                  pruneUsageLongHelp,
 		Args:                  validateHasNoArgs,

@@ -28,6 +28,7 @@ func newDiskUsageCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "du [OPTIONS]",
 		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
 		Short:                 diskUsageShortHelp,
 		Long:                  diskUsageLongHelp,
 		Args:                  validateHasNoArgs,
