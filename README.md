@@ -287,6 +287,29 @@ Setting up the rootfs... this may take a bit.
 Successfully built r.j3ss.co/img:latest
 ```
 
+#### Cross Platform
+
+In order to use the `--platform` to cross-build option there are some additional requirements.
+
+[Currently](https://github.com/moby/buildkit/blob/v0.5.0/util/binfmt_misc/detect.go#L14) buildkit supports the following platforms:
+* linux/amd64
+* linux/arm64
+* linux/arm/v7
+* linux/arm/v6
+
+Qemu binaries for the desired architecture are required to be installed on the host (static bindings are recommended to avoid shared library loading issues).
+
+The kernel [binfmt_misc](https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html) parameters must be set with the following flags: `OCF`.
+You can check the settings in `/proc` to ensure they are set correctly.
+```console
+$ cat /proc/sys/fs/binfmt_misc/qemu-arm | grep flags
+flags: OCF
+```
+
+On Debian/Ubuntu the above should be available with the `qemu-user-static` package >= `1:2.12+dfsg-3`
+
+If you use multiple `--platform` options for the same build, they will be included into a [manifest](https://docs.docker.com/engine/reference/commandline/manifest/) and should work for the different platforms built for.
+
 ### List Image Layers
 
 ```console
