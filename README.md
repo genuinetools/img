@@ -30,6 +30,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
   * [Running with Kubernetes](#running-with-kubernetes)
 - [Usage](#usage)
   * [Build an Image](#build-an-image)
+    + [Cross Platform](#cross-platform)
   * [List Image Layers](#list-image-layers)
   * [Pull an Image](#pull-an-image)
   * [Push an Image](#push-an-image)
@@ -289,17 +290,22 @@ Successfully built r.j3ss.co/img:latest
 
 #### Cross Platform
 
-In order to use the `--platform` to cross-build option there are some additional requirements.
+`img` and the underlying `buildkit` library support building containers for arbitrary platforms (OS and architecture combinations). In `img` this can be achieved using the `--platform` option, but note that
+using the `RUN` command during a build requires installing support for the desired platform, and any `FROM` images used must exist for the target platform as well.
 
-[Currently](https://github.com/moby/buildkit/blob/v0.5.0/util/binfmt_misc/detect.go#L14) buildkit supports the following platforms:
+Some common platforms include:
 * linux/amd64
 * linux/arm64
 * linux/arm/v7
 * linux/arm/v6
+* linux/s390x
+* linux/ppc64le
+* darwin/amd64
+* windows/amd64
 
-Qemu binaries for the desired architecture are required to be installed on the host (static bindings are recommended to avoid shared library loading issues).
+If you use multiple `--platform` options for the same build, they will be included into a [manifest](https://docs.docker.com/engine/reference/commandline/manifest/) and should work for the different platforms built for.
 
-The kernel [binfmt_misc](https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html) parameters must be set with the following flags: `OCF`.
+The most common way to get `RUN` working in cross-platform builds is to install an emulator such as QEMU on the host system (static bindings are recommended to avoid shared library loading issues). To properly use the emulator inside the build environment, the kernel [binfmt_misc](https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html) parameters must be set with the following flags: `OCF`.
 You can check the settings in `/proc` to ensure they are set correctly.
 ```console
 $ cat /proc/sys/fs/binfmt_misc/qemu-arm | grep flags
@@ -308,7 +314,7 @@ flags: OCF
 
 On Debian/Ubuntu the above should be available with the `qemu-user-static` package >= `1:2.12+dfsg-3`
 
-If you use multiple `--platform` options for the same build, they will be included into a [manifest](https://docs.docker.com/engine/reference/commandline/manifest/) and should work for the different platforms built for.
+NOTE: cross-OS builds are slightly more complicated to get `RUN` commands working, but follow from the same principle.
 
 ### List Image Layers
 
