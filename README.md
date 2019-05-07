@@ -159,7 +159,7 @@ $ sudo emerge -a app-emulation/img
 
 #### Running with Docker
 
-Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.6.0.
+Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7.
 
 ```console
 $ docker run --rm -it \
@@ -179,7 +179,7 @@ See [docker/cli patch](#upstream-patches) for how to allow mounting `/proc` with
 
 ### Running with Kubernetes
 
-Since `img` v0.6.0, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
+Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
 
 However, to enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
 `securityContext.privileged` to `true`).
