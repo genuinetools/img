@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"runtime"
 	"time"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/platforms"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/exporter"
@@ -33,6 +33,7 @@ const (
 type WriterOpt struct {
 	Snapshotter  snapshot.Snapshotter
 	ContentStore content.Store
+	Applier      diff.Applier
 	Differ       diff.Comparer
 }
 
@@ -290,10 +291,30 @@ func (ic *ImageWriter) ContentStore() content.Store {
 	return ic.opt.ContentStore
 }
 
+func (ic *ImageWriter) Snapshotter() snapshot.Snapshotter {
+	return ic.opt.Snapshotter
+}
+
+func (ic *ImageWriter) Applier() diff.Applier {
+	return ic.opt.Applier
+}
+
 func emptyImageConfig() ([]byte, error) {
-	img := ocispec.Image{
-		Architecture: runtime.GOARCH,
-		OS:           runtime.GOOS,
+	pl := platforms.Normalize(platforms.DefaultSpec())
+
+	type image struct {
+		ocispec.Image
+
+		// Variant defines platform variant. To be added to OCI.
+		Variant string `json:"variant,omitempty"`
+	}
+
+	img := image{
+		Image: ocispec.Image{
+			Architecture: pl.Architecture,
+			OS:           pl.OS,
+		},
+		Variant: pl.Variant,
 	}
 	img.RootFS.Type = "layers"
 	img.Config.WorkingDir = "/"

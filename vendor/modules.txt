@@ -1,7 +1,7 @@
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 github.com/Azure/go-ansiterm/winterm
 github.com/Azure/go-ansiterm
-# github.com/Microsoft/go-winio v0.4.11
+# github.com/Microsoft/go-winio v0.4.13-0.20190408173621-84b4ab48a507
 github.com/Microsoft/go-winio
 # github.com/Microsoft/hcsshim v0.8.5
 github.com/Microsoft/hcsshim
@@ -23,9 +23,9 @@ github.com/Microsoft/hcsshim/internal/safefile
 github.com/beorn7/perks/quantile
 # github.com/checkpoint-restore/go-criu v0.0.0-20190109184317-bdb7599cd87b
 github.com/checkpoint-restore/go-criu/rpc
-# github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1
+# github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
 github.com/containerd/console
-# github.com/containerd/containerd v1.3.0-0.20190212172151-f5b0fa220df8
+# github.com/containerd/containerd v1.3.0-0.20190426060238-3a3f0aac8819
 github.com/containerd/containerd/namespaces
 github.com/containerd/containerd/platforms
 github.com/containerd/containerd/content
@@ -54,23 +54,20 @@ github.com/containerd/containerd/leases
 github.com/containerd/containerd/metadata/boltutil
 github.com/containerd/containerd/plugin
 github.com/containerd/containerd/snapshots/storage
-github.com/containerd/containerd/oci
 github.com/containerd/containerd/contrib/seccomp
+github.com/containerd/containerd/oci
+github.com/containerd/containerd/rootfs
 github.com/containerd/containerd/reference
 github.com/containerd/containerd/remotes
 github.com/containerd/containerd/remotes/docker
-github.com/containerd/containerd/rootfs
 github.com/containerd/containerd/api/services/content/v1
 github.com/containerd/containerd/content/proxy
-github.com/containerd/containerd/services/content
+github.com/containerd/containerd/services/content/contentserver
 github.com/containerd/containerd/events/exchange
 github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/version
-github.com/containerd/containerd/api/events
 github.com/containerd/containerd/events
-github.com/containerd/containerd/services
-github.com/containerd/containerd/api/types
-# github.com/containerd/continuity v0.0.0-20181001140422-bd77b46c8352
+# github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/fs
 github.com/containerd/continuity
 github.com/containerd/continuity/sysx
@@ -81,9 +78,11 @@ github.com/containerd/continuity/proto
 github.com/containerd/continuity/syscallx
 # github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
 github.com/containerd/go-runc
+# github.com/containerd/ttrpc v0.0.0-20190411181408-699c4e40d1e7
+github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd
 github.com/containerd/typeurl
-# github.com/coreos/go-systemd v0.0.0-20181031085051-9002847aa142
+# github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/activation
 github.com/coreos/go-systemd/dbus
 github.com/coreos/go-systemd/util
@@ -91,7 +90,7 @@ github.com/coreos/go-systemd/util
 github.com/coreos/pkg/dlopen
 # github.com/cyphar/filepath-securejoin v0.2.2
 github.com/cyphar/filepath-securejoin
-# github.com/docker/cli v0.0.0-20190131223713-234462756460
+# github.com/docker/cli v0.0.0-20190321234815-f40f9c240ab0
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/types
@@ -113,7 +112,7 @@ github.com/docker/distribution/registry/api/v2
 github.com/docker/distribution/registry/storage/cache
 github.com/docker/distribution/registry/storage/cache/memory
 github.com/docker/distribution/metrics
-# github.com/docker/docker v0.7.3-0.20190315021241-05e7d000f2fc
+# github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 github.com/docker/docker/api/types
 github.com/docker/docker/pkg/archive
 github.com/docker/docker/pkg/term
@@ -145,6 +144,8 @@ github.com/docker/docker/api/types/swarm/runtime
 github.com/docker/docker/pkg/mount
 github.com/docker/docker/pkg/signal
 github.com/docker/docker/pkg/locker
+github.com/docker/docker/pkg/chrootarchive
+github.com/docker/docker/pkg/reexec
 # github.com/docker/docker-credential-helpers v0.6.1
 github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
@@ -200,11 +201,15 @@ github.com/hashicorp/go-immutable-radix
 github.com/hashicorp/golang-lru/simplelru
 # github.com/ishidawataru/sctp v0.0.0-20180213033435-07191f837fed
 github.com/ishidawataru/sctp
+# github.com/jaguilar/vt100 v0.0.0-20150826170717-2703a27b14ea => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+github.com/jaguilar/vt100
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+github.com/konsorten/go-windows-terminal-sequences
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure
-# github.com/moby/buildkit v0.4.0
+# github.com/moby/buildkit v0.5.1
 github.com/moby/buildkit/api/services/control
 github.com/moby/buildkit/client
 github.com/moby/buildkit/identity
@@ -242,6 +247,7 @@ github.com/moby/buildkit/api/types
 github.com/moby/buildkit/solver/pb
 github.com/moby/buildkit/util/entitlements
 github.com/moby/buildkit/client/buildid
+github.com/moby/buildkit/client/connhelper
 github.com/moby/buildkit/client/llb
 github.com/moby/buildkit/client/ociindex
 github.com/moby/buildkit/frontend/gateway/client
@@ -257,8 +263,8 @@ github.com/moby/buildkit/cache/remotecache
 github.com/moby/buildkit/control/gateway
 github.com/moby/buildkit/solver
 github.com/moby/buildkit/solver/llbsolver
-github.com/moby/buildkit/util/rootless/specconv
 github.com/moby/buildkit/util/system
+github.com/moby/buildkit/util/rootless/specconv
 github.com/moby/buildkit/cache/blobs
 github.com/moby/buildkit/exporter/containerimage/exptypes
 github.com/moby/buildkit/util/progress
@@ -272,6 +278,7 @@ github.com/moby/buildkit/util/pull
 github.com/moby/buildkit/util/winlayers
 github.com/moby/buildkit/exporter/local
 github.com/moby/buildkit/exporter/oci
+github.com/moby/buildkit/exporter/tar
 github.com/moby/buildkit/snapshot/imagerefchecker
 github.com/moby/buildkit/solver/llbsolver/ops
 github.com/moby/buildkit/source/git
@@ -289,7 +296,10 @@ github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/session/secrets
 github.com/moby/buildkit/session/sshforward
+github.com/moby/buildkit/solver/llbsolver/file
+github.com/moby/buildkit/solver/llbsolver/ops/fileoptypes
 github.com/moby/buildkit/util/progress/logs
+github.com/moby/buildkit/session/upload
 github.com/moby/buildkit/frontend/dockerfile/command
 # github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c
 github.com/morikuni/aec
@@ -301,7 +311,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/identity
-# github.com/opencontainers/runc v1.0.0-rc2.0.20181113215238-10d38b660a77
+# github.com/opencontainers/runc v1.0.1-0.20190307181833-2b18fe1d885e
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer
 github.com/opencontainers/runc/libcontainer/cgroups
@@ -319,7 +329,6 @@ github.com/opencontainers/runc/libcontainer/keys
 github.com/opencontainers/runc/libcontainer/mount
 github.com/opencontainers/runc/libcontainer/seccomp
 github.com/opencontainers/runc/libcontainer/stacktrace
-github.com/opencontainers/runc/libcontainer/criurpc
 # github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.0.0
@@ -352,13 +361,14 @@ github.com/prometheus/procfs/xfs
 github.com/prometheus/procfs/internal/util
 # github.com/seccomp/libseccomp-golang v0.9.0
 github.com/seccomp/libseccomp-golang
-# github.com/sirupsen/logrus v1.0.6
+# github.com/sirupsen/logrus v1.3.0
 github.com/sirupsen/logrus
 # github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 github.com/syndtr/gocapability/capability
-# github.com/tonistiigi/fsutil v0.0.0-20190130224639-b4281fa67095
+# github.com/tonistiigi/fsutil v0.0.0-20190327153851-3bbb99cdbd76
 github.com/tonistiigi/fsutil/types
 github.com/tonistiigi/fsutil
+github.com/tonistiigi/fsutil/copy
 # github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 github.com/tonistiigi/units
 # github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5
@@ -368,7 +378,7 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc
 github.com/vishvananda/netns
-# go.etcd.io/bbolt v1.3.1-etcd.8
+# go.etcd.io/bbolt v1.3.2
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20190129210102-ccddf3741a0c
 golang.org/x/crypto/ssh/terminal
@@ -386,7 +396,7 @@ golang.org/x/net/internal/socks
 # golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20180925112736-b09afc3d579e
+# golang.org/x/sys v0.0.0-20190303122642-d455e41777fc
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
