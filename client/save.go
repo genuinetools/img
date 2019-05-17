@@ -42,7 +42,7 @@ func (c *Client) SaveImage(ctx context.Context, image, format string, writer io.
 	switch format {
 	case "docker":
 		exporter = &dockerexporter.DockerExporter{
-			Name: img.Name,
+			Names: []string{img.Name},
 		}
 	case "oci":
 		exporter = &oci.V1Exporter{}
