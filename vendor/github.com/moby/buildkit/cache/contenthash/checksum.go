@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/locker"
 	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/golang-lru/simplelru"
@@ -47,8 +48,12 @@ func Checksum(ctx context.Context, ref cache.ImmutableRef, path string, followLi
 	return getDefaultManager().Checksum(ctx, ref, path, followLinks)
 }
 
-func GetCacheContext(ctx context.Context, md *metadata.StorageItem) (CacheContext, error) {
-	return getDefaultManager().GetCacheContext(ctx, md)
+func ChecksumWildcard(ctx context.Context, ref cache.ImmutableRef, path string, followLinks bool) (digest.Digest, error) {
+	return getDefaultManager().ChecksumWildcard(ctx, ref, path, followLinks)
+}
+
+func GetCacheContext(ctx context.Context, md *metadata.StorageItem, idmap *idtools.IdentityMapping) (CacheContext, error) {
+	return getDefaultManager().GetCacheContext(ctx, md, idmap)
 }
 
 func SetCacheContext(ctx context.Context, md *metadata.StorageItem, cc CacheContext) error {
@@ -77,23 +82,32 @@ type cacheManager struct {
 }
 
 func (cm *cacheManager) Checksum(ctx context.Context, ref cache.ImmutableRef, p string, followLinks bool) (digest.Digest, error) {
-	cc, err := cm.GetCacheContext(ctx, ensureOriginMetadata(ref.Metadata()))
+	cc, err := cm.GetCacheContext(ctx, ensureOriginMetadata(ref.Metadata()), ref.IdentityMapping())
 	if err != nil {
 		return "", nil
 	}
 	return cc.Checksum(ctx, ref, p, followLinks)
 }
 
-func (cm *cacheManager) GetCacheContext(ctx context.Context, md *metadata.StorageItem) (CacheContext, error) {
+func (cm *cacheManager) ChecksumWildcard(ctx context.Context, ref cache.ImmutableRef, p string, followLinks bool) (digest.Digest, error) {
+	cc, err := cm.GetCacheContext(ctx, ensureOriginMetadata(ref.Metadata()), ref.IdentityMapping())
+	if err != nil {
+		return "", nil
+	}
+	return cc.ChecksumWildcard(ctx, ref, p, followLinks)
+}
+
+func (cm *cacheManager) GetCacheContext(ctx context.Context, md *metadata.StorageItem, idmap *idtools.IdentityMapping) (CacheContext, error) {
 	cm.locker.Lock(md.ID())
 	cm.lruMu.Lock()
 	v, ok := cm.lru.Get(md.ID())
 	cm.lruMu.Unlock()
 	if ok {
 		cm.locker.Unlock(md.ID())
+		v.(*cacheContext).linkMap = map[string][][]byte{}
 		return v.(*cacheContext), nil
 	}
-	cc, err := newCacheContext(md)
+	cc, err := newCacheContext(md, idmap)
 	if err != nil {
 		cm.locker.Unlock(md.ID())
 		return nil, err
@@ -115,6 +129,7 @@ func (cm *cacheManager) SetCacheContext(ctx context.Context, md *metadata.Storag
 			md:       md,
 			tree:     cci.(*cacheContext).tree,
 			dirtyMap: map[string]struct{}{},
+			linkMap:  map[string][][]byte{},
 		}
 	} else {
 		if err := cc.save(); err != nil {
@@ -137,6 +152,8 @@ type cacheContext struct {
 	txn      *iradix.Txn
 	node     *iradix.Node
 	dirtyMap map[string]struct{}
+	linkMap  map[string][][]byte
+	idmap    *idtools.IdentityMapping
 }
 
 type mount struct {
@@ -176,11 +193,13 @@ func (m *mount) clean() error {
 	return nil
 }
 
-func newCacheContext(md *metadata.StorageItem) (*cacheContext, error) {
+func newCacheContext(md *metadata.StorageItem, idmap *idtools.IdentityMapping) (*cacheContext, error) {
 	cc := &cacheContext{
 		md:       md,
 		tree:     iradix.New(),
 		dirtyMap: map[string]struct{}{},
+		linkMap:  map[string][][]byte{},
+		idmap:    idmap,
 	}
 	if err := cc.load(); err != nil {
 		return nil, err
@@ -313,7 +332,35 @@ func (cc *cacheContext) HandleChange(kind fsutil.ChangeKind, p string, fi os.Fil
 		p += "/"
 	}
 	cr.Digest = h.Digest()
+
+	// if we receive a hardlink just use the digest of the source
+	// note that the source may be called later because data writing is async
+	if fi.Mode()&os.ModeSymlink == 0 && stat.Linkname != "" {
+		ln := path.Join("/", filepath.ToSlash(stat.Linkname))
+		v, ok := cc.txn.Get(convertPathToKey([]byte(ln)))
+		if ok {
+			cp := *v.(*CacheRecord)
+			cr = &cp
+		}
+		cc.linkMap[ln] = append(cc.linkMap[ln], k)
+	}
+
 	cc.txn.Insert(k, cr)
+	if !fi.IsDir() {
+		if links, ok := cc.linkMap[p]; ok {
+			for _, l := range links {
+				pp := convertKeyToPath(l)
+				cc.txn.Insert(l, cr)
+				d := path.Dir(string(pp))
+				if d == "/" {
+					d = ""
+				}
+				cc.dirtyMap[d] = struct{}{}
+			}
+			delete(cc.linkMap, p)
+		}
+	}
+
 	d := path.Dir(p)
 	if d == "/" {
 		d = ""
@@ -342,6 +389,9 @@ func (cc *cacheContext) ChecksumWildcard(ctx context.Context, mountable cache.Mo
 				wildcards[i].Record = &CacheRecord{Digest: dgst}
 			}
 		}
+	}
+	if len(wildcards) == 0 {
+		return digest.FromBytes([]byte{}), nil
 	}
 
 	if len(wildcards) > 1 {
@@ -543,12 +593,13 @@ func (cc *cacheContext) lazyChecksum(ctx context.Context, m *mount, p string) (*
 }
 
 func (cc *cacheContext) checksum(ctx context.Context, root *iradix.Node, txn *iradix.Txn, m *mount, k []byte, follow bool) (*CacheRecord, bool, error) {
+	origk := k
 	k, cr, err := getFollowLinks(root, k, follow)
 	if err != nil {
 		return nil, false, err
 	}
 	if cr == nil {
-		return nil, false, errors.Wrapf(errNotFound, "%s not found", convertKeyToPath(k))
+		return nil, false, errors.Wrapf(errNotFound, "%q not found", convertKeyToPath(origk))
 	}
 	if cr.Digest != "" {
 		return cr, false, nil

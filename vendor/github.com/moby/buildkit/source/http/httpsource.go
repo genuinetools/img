@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/locker"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/metadata"
@@ -34,10 +35,10 @@ type Opt struct {
 }
 
 type httpSource struct {
-	md     *metadata.Store
-	cache  cache.Accessor
-	locker *locker.Locker
-	client *http.Client
+	md        *metadata.Store
+	cache     cache.Accessor
+	locker    *locker.Locker
+	transport http.RoundTripper
 }
 
 func NewSource(opt Opt) (source.Source, error) {
@@ -46,12 +47,10 @@ func NewSource(opt Opt) (source.Source, error) {
 		transport = tracing.DefaultTransport
 	}
 	hs := &httpSource{
-		md:     opt.MetadataStore,
-		cache:  opt.CacheAccessor,
-		locker: locker.New(),
-		client: &http.Client{
-			Transport: transport,
-		},
+		md:        opt.MetadataStore,
+		cache:     opt.CacheAccessor,
+		locker:    locker.New(),
+		transport: transport,
 	}
 	return hs, nil
 }
@@ -65,17 +64,21 @@ type httpSourceHandler struct {
 	src      source.HttpIdentifier
 	refID    string
 	cacheKey digest.Digest
+	client   *http.Client
 }
 
-func (hs *httpSource) Resolve(ctx context.Context, id source.Identifier, _ *session.Manager) (source.SourceInstance, error) {
+func (hs *httpSource) Resolve(ctx context.Context, id source.Identifier, sm *session.Manager) (source.SourceInstance, error) {
 	httpIdentifier, ok := id.(*source.HttpIdentifier)
 	if !ok {
 		return nil, errors.Errorf("invalid http identifier %v", id)
 	}
 
+	sessionID := session.FromContext(ctx)
+
 	return &httpSourceHandler{
 		src:        *httpIdentifier,
 		httpSource: hs,
+		client:     &http.Client{Transport: newTransport(hs.transport, sm, sessionID)},
 	}, nil
 }
 
@@ -278,8 +281,22 @@ func (hs *httpSourceHandler) save(ctx context.Context, resp *http.Response) (ref
 	}
 	f = nil
 
-	if hs.src.UID != 0 || hs.src.GID != 0 {
-		if err := os.Chown(fp, hs.src.UID, hs.src.GID); err != nil {
+	uid := hs.src.UID
+	gid := hs.src.GID
+	if idmap := mount.IdentityMapping(); idmap != nil {
+		identity, err := idmap.ToHost(idtools.Identity{
+			UID: int(uid),
+			GID: int(gid),
+		})
+		if err != nil {
+			return nil, "", err
+		}
+		uid = identity.UID
+		gid = identity.GID
+	}
+
+	if gid != 0 || uid != 0 {
+		if err := os.Chown(fp, uid, gid); err != nil {
 			return nil, "", err
 		}
 	}

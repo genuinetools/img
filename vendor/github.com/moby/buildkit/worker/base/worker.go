@@ -14,6 +14,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/rootfs"
 	cdsnapshot "github.com/containerd/containerd/snapshots"
+	"github.com/docker/docker/pkg/idtools"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/cache/metadata"
@@ -23,6 +24,7 @@ import (
 	imageexporter "github.com/moby/buildkit/exporter/containerimage"
 	localexporter "github.com/moby/buildkit/exporter/local"
 	ociexporter "github.com/moby/buildkit/exporter/oci"
+	tarexporter "github.com/moby/buildkit/exporter/tar"
 	"github.com/moby/buildkit/frontend"
 	gw "github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/identity"
@@ -69,6 +71,7 @@ type WorkerOpt struct {
 	Differ             diff.Comparer
 	ImageStore         images.Store // optional
 	ResolveOptionsFunc resolver.ResolveOptionsFunc
+	IdentityMapping    *idtools.IdentityMapping
 }
 
 // Worker is a local worker instance with dedicated snapshotter, cache, and so on.
@@ -152,6 +155,7 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 	iw, err := imageexporter.NewImageWriter(imageexporter.WriterOpt{
 		Snapshotter:  opt.Snapshotter,
 		ContentStore: opt.ContentStore,
+		Applier:      opt.Applier,
 		Differ:       opt.Differ,
 	})
 	if err != nil {
@@ -198,8 +202,12 @@ func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge, sm *se
 			return ops.NewSourceOp(v, op, baseOp.Platform, w.SourceManager, sm, w)
 		case *pb.Op_Exec:
 			return ops.NewExecOp(v, op, baseOp.Platform, w.CacheManager, sm, w.MetadataStore, w.Executor, w)
+		case *pb.Op_File:
+			return ops.NewFileOp(v, op, w.CacheManager, w.MetadataStore, w)
 		case *pb.Op_Build:
 			return ops.NewBuildOp(v, op, s, w)
+		default:
+			return nil, errors.Errorf("no support for %T", op)
 		}
 	}
 	return nil, errors.Errorf("could not resolve %v", v)
@@ -246,6 +254,10 @@ func (w *Worker) Exporter(name string, sm *session.Manager) (exporter.Exporter, 
 		})
 	case client.ExporterLocal:
 		return localexporter.New(localexporter.Opt{
+			SessionManager: sm,
+		})
+	case client.ExporterTar:
+		return tarexporter.New(tarexporter.Opt{
 			SessionManager: sm,
 		})
 	case client.ExporterOCI:

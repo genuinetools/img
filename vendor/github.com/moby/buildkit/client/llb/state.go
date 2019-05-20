@@ -214,6 +214,7 @@ func (s State) Run(ro ...RunOption) ExecState {
 		ProxyEnv:   ei.ProxyEnv,
 		ExtraHosts: getExtraHosts(ei.State),
 		Network:    getNetwork(ei.State),
+		Security:   getSecurity(ei.State),
 	}
 
 	exec := NewExecOp(s.Output(), meta, ei.ReadonlyRootFS, ei.Constraints)
@@ -227,6 +228,15 @@ func (s State) Run(ro ...RunOption) ExecState {
 		State: s.WithOutput(exec.Output()),
 		exec:  exec,
 	}
+}
+
+func (s State) File(a *FileAction, opts ...ConstraintsOpt) State {
+	var c Constraints
+	for _, o := range opts {
+		o.SetConstraintsOption(&c)
+	}
+
+	return s.WithOutput(NewFileOp(s, a, c).Output())
 }
 
 func (s State) AddEnv(key, value string) State {
@@ -283,6 +293,13 @@ func (s State) Network(n pb.NetMode) State {
 func (s State) GetNetwork() pb.NetMode {
 	return getNetwork(s)
 }
+func (s State) Security(n pb.SecurityMode) State {
+	return security(n)(s)
+}
+
+func (s State) GetSecurity() pb.SecurityMode {
+	return getSecurity(s)
+}
 
 func (s State) With(so ...StateOption) State {
 	for _, o := range so {
@@ -294,6 +311,8 @@ func (s State) With(so ...StateOption) State {
 func (s State) AddExtraHost(host string, ip net.IP) State {
 	return extraHost(host, ip)(s)
 }
+
+func (s State) isFileOpCopyInput() {}
 
 type output struct {
 	vertex   Vertex

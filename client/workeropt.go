@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/moby/buildkit/util/binfmt_misc"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -23,6 +22,7 @@ import (
 	executoroci "github.com/moby/buildkit/executor/oci"
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
+	"github.com/moby/buildkit/util/binfmt_misc"
 	"github.com/moby/buildkit/util/network"
 	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/util/throttle"
@@ -133,7 +133,7 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 		Labels:             xlabels,
 		MetadataStore:      md,
 		Executor:           exe,
-		Snapshotter:        containerdsnapshot.NewSnapshotter(mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc),
+		Snapshotter:        containerdsnapshot.NewSnapshotter(c.backend, mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc, nil),
 		ContentStore:       contentStore,
 		Applier:            apply.NewFileSystemApplier(contentStore),
 		Differ:             walking.NewWalkingDiff(contentStore),
