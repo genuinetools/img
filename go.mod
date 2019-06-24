@@ -15,6 +15,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.3.3
 	github.com/genuinetools/reg v0.16.0
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/gogo/googleapis v1.1.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/mitchellh/hashstructure v1.0.0 // indirect

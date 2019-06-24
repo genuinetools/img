@@ -121,6 +121,16 @@ func main() {
 			return fmt.Errorf("%s is not a valid snapshots backend", backend)
 		}
 
+		// check that runc is available
+		b := binutils.BinaryAvailabilityCheck{
+			StateDir:            stateDir,
+			DisableEmbeddedRunc: len(os.Getenv("IMG_DISABLE_EMBEDDED_RUNC")) > 0,
+		}
+		err := b.EnsureRuncIsAvailable()
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 
@@ -142,24 +152,4 @@ func defaultStateDirectory() string {
 		return filepath.Join(home, ".local", "share", "img")
 	}
 	return "/tmp/img"
-}
-
-// If the command requires runc and we do not have it installed,
-// install it from the embedded asset.
-func installRuncIfDNE() error {
-	if binutils.RuncBinaryExists() {
-		// return early.
-		return nil
-	}
-
-	if len(os.Getenv("IMG_DISABLE_EMBEDDED_RUNC")) > 0 {
-		// Fail early with the error to install runc.
-		return fmt.Errorf("please install `runc`")
-	}
-
-	if _, err := binutils.InstallRuncBinary(); err != nil {
-		return fmt.Errorf("installing embedded runc binary failed: %v", err)
-	}
-
-	return nil
 }

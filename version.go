@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/genuinetools/img/internal/binutils"
 	"github.com/genuinetools/img/version"
 	"github.com/spf13/cobra"
 	"runtime"
@@ -32,6 +33,13 @@ func newVersionCommand() *cobra.Command {
 type versionCommand struct{}
 
 func (cmd *versionCommand) Run(args []string) error {
+	printImgVersion()
+	printRuncVersion()
+
+	return nil
+}
+
+func printImgVersion() {
 	fmt.Printf(`%s:
  version     : %s
  git hash    : %s
@@ -40,5 +48,21 @@ func (cmd *versionCommand) Run(args []string) error {
  platform    : %s/%s
 `, "img", version.VERSION, version.GITCOMMIT,
 		runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
-	return nil
+}
+
+func printRuncVersion() {
+	v, err := binutils.GetRuncVersion()
+	if err != nil {
+		fmt.Printf(`runc: 
+ error: %s
+`, err)
+		return
+	}
+
+	fmt.Printf(`%s:
+ version     : %s
+ commit      : %s
+ spec        : %s
+`, "runc", v.Runc, v.Commit,
+		v.Spec)
 }

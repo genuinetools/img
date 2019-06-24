@@ -13,8 +13,7 @@ addons:
 before_install:
   - go get golang.org/x/lint/golint
   - go get honnef.co/go/tools/cmd/staticcheck
-  - go get -u github.com/jteeuwen/go-bindata/...
-  - make runc-install
+  - go get -u github.com/go-bindata/go-bindata/...
 jobs:
   include:
     - script: make all

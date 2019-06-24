@@ -90,6 +90,8 @@ github.com/genuinetools/pkg v0.0.0-20180910213200-1c141f661797 h1:SGpZXDd/CFeDIY
 github.com/genuinetools/pkg v0.0.0-20180910213200-1c141f661797/go.mod h1:XTcrCYlXPxnxL2UpnwuRn7tcaTn9HAhxFoFJucootk8=
 github.com/genuinetools/reg v0.16.0 h1:ZhLZPT+aUGHLfy45Ub5FLWik+3Dij1iwaj8A/GyAZBw=
 github.com/genuinetools/reg v0.16.0/go.mod h1:12Fe9EIvK3dG/qWhNk5e9O96I8SGmCKLsJ8GsXUbk+Y=
+github.com/go-bindata/go-bindata v3.1.2+incompatible h1:5vjJMVhowQdPzjE1LdxyFF7YFTXg5IgGVW4gBr5IbvE=
+github.com/go-bindata/go-bindata v3.1.2+incompatible/go.mod h1:xK8Dsgwmeed+BBsSy2XTopBn/8uK2HWuGSnA11C3Joo=
 github.com/godbus/dbus v4.1.0+incompatible h1:WqqLRTsQic3apZUK9qC5sGNfXthmPXzUZ7nQPrNITa4=
 github.com/godbus/dbus v4.1.0+incompatible/go.mod h1:/YcGZj5zSblfDWMMoOzV4fas9FZnQYTkDnsGvmh2Grw=
 github.com/gofrs/flock v0.7.0 h1:pGFUjl501gafK9HBt1VGL1KCOd/YhIooID+xgyJCf3g=

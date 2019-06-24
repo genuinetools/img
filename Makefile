@@ -16,14 +16,17 @@ RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
 RUNCCOMMIT=7cb3cde1f49eae53fb8fff5012c0750a64eb928b
 $(RUNCBUILDDIR):
 	git clone https://github.com/opencontainers/runc.git "$@"
-	( cd "$@" ; git checkout $(RUNCCOMMIT) )
+	
 
-$(RUNCBUILDDIR)/runc: $(RUNCBUILDDIR)
+$(BUILDDIR)/bin/runc: $(RUNCBUILDDIR)
+	( cd $(RUNCBUILDDIR) ; git checkout $(RUNCCOMMIT) )
 	GOPATH=$(BUILDDIR) $(MAKE) -C "$(RUNCBUILDDIR)" static BUILDTAGS="seccomp apparmor"
+	mkdir -p $(BUILDDIR)/bin
+	mv $(RUNCBUILDDIR)/runc $(BUILDDIR)/bin/runc
 
-internal/binutils/runc.go: $(RUNCBUILDDIR)/runc
-	@$(GO) get -u github.com/jteeuwen/go-bindata/... # update go-bindata tool
-	go-bindata -tags \!noembed -pkg binutils -prefix "$(RUNCBUILDDIR)" -o $(CURDIR)/internal/binutils/runc.go $(RUNCBUILDDIR)/runc
+internal/binutils/runc.go: $(BUILDDIR)/bin/runc
+	@$(GO) get -u github.com/go-bindata/go-bindata # update go-bindata tool
+	go-bindata -tags \!noembed -pkg binutils -prefix "$(BUILDDIR)/bin" -o $(CURDIR)/internal/binutils/runc.go $(BUILDDIR)/bin
 	gofmt -s -w $(CURDIR)/internal/binutils/runc.go
 
 .PHONY: runc
