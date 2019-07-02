@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/genuinetools/img/client"
@@ -12,16 +11,30 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const pushHelp = `Push an image or a repository to a registry.`
+const pushUsageShortHelp = `Push an image or a repository to a registry.`
+const pushUsageLongHelp = `Push an image or a repository to a registry.`
 
-func (cmd *pushCommand) Name() string      { return "push" }
-func (cmd *pushCommand) Args() string      { return "[OPTIONS] NAME[:TAG]" }
-func (cmd *pushCommand) ShortHelp() string { return pushHelp }
-func (cmd *pushCommand) LongHelp() string  { return pushHelp }
-func (cmd *pushCommand) Hidden() bool      { return false }
+func newPushCommand() *cobra.Command {
 
-func (cmd *pushCommand) Register(fs *flag.FlagSet) {
-	fs.BoolVar(&cmd.insecure, "insecure-registry", false, "Push to insecure registry")
+	push := &pushCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "push [OPTIONS] NAME[:TAG]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 pushUsageShortHelp,
+		Long:                  pushUsageLongHelp,
+		Args:                  push.ValidateArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return push.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.BoolVar(&push.insecure, "insecure-registry", false, "Push to insecure registry")
+
+	return cmd
 }
 
 type pushCommand struct {
@@ -29,11 +42,15 @@ type pushCommand struct {
 	insecure bool
 }
 
-func (cmd *pushCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *pushCommand) ValidateArgs(c *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("must pass an image or repository to push")
 	}
 
+	return nil
+}
+
+func (cmd *pushCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Get the specified image.
@@ -49,7 +66,7 @@ func (cmd *pushCommand) Run(ctx context.Context, args []string) (err error) {
 	fmt.Printf("Pushing %s...\n", cmd.image)
 
 	// Create the context.
-	ctx = appcontext.Context()
+	ctx := appcontext.Context()
 	sess, sessDialer, err := c.Session(ctx)
 	if err != nil {
 		return err

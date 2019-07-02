@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/genuinetools/img/client"
@@ -11,28 +11,42 @@ import (
 	"github.com/moby/buildkit/session"
 )
 
-const tagHelp = `Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.`
+const tagUsageShortHelp = `Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.`
+const tagUsageLongHelp = `Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.`
 
-func (cmd *tagCommand) Name() string       { return "tag" }
-func (cmd *tagCommand) Args() string       { return "SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]" }
-func (cmd *tagCommand) ShortHelp() string  { return tagHelp }
-func (cmd *tagCommand) LongHelp() string   { return tagHelp }
-func (cmd *tagCommand) Hidden() bool       { return false }
-func (cmd *tagCommand) DoReexec() bool     { return true }
-func (cmd *tagCommand) RequiresRunc() bool { return false }
+func newTagCommand() *cobra.Command {
 
-func (cmd *tagCommand) Register(fs *flag.FlagSet) {}
+	tag := &tagCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 tagUsageShortHelp,
+		Long:                  tagUsageLongHelp,
+		Args:                  tag.ValidateArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return tag.Run(args)
+		},
+	}
+
+	return cmd
+}
 
 type tagCommand struct {
 	image  string
 	target string
 }
 
-func (cmd *tagCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *tagCommand) ValidateArgs(c *cobra.Command, args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("must pass an image or repository and target to tag")
 	}
 
+	return nil
+}
+
+func (cmd *tagCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Get the specified image and target.
@@ -41,7 +55,7 @@ func (cmd *tagCommand) Run(ctx context.Context, args []string) (err error) {
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.

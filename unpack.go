@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 
@@ -13,19 +13,38 @@ import (
 	"github.com/moby/buildkit/session"
 )
 
-const unpackHelp = `Unpack an image to a rootfs directory.`
+const unpackUsageShortHelp = `Unpack an image to a rootfs directory.`
+const unpackUsageLongHelp = `Unpack an image to a rootfs directory.`
 
-func (cmd *unpackCommand) Name() string       { return "unpack" }
-func (cmd *unpackCommand) Args() string       { return "[OPTIONS] IMAGE" }
-func (cmd *unpackCommand) ShortHelp() string  { return unpackHelp }
-func (cmd *unpackCommand) LongHelp() string   { return unpackHelp }
-func (cmd *unpackCommand) Hidden() bool       { return false }
-func (cmd *unpackCommand) DoReexec() bool     { return true }
-func (cmd *unpackCommand) RequiresRunc() bool { return false }
+func newUnpackCommand() *cobra.Command {
 
-func (cmd *unpackCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.output, "output", "", "Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)")
-	fs.StringVar(&cmd.output, "o", "", "Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)")
+	unpack := &unpackCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "unpack [OPTIONS] IMAGE",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 unpackUsageShortHelp,
+		Long:                  unpackUsageLongHelp,
+		Args:                  validateUnpackImageArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return unpack.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.StringVarP(&unpack.output, "output", "o", "", "Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)")
+
+	return cmd
+}
+
+func validateUnpackImageArgs(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("must pass an image to unpack as a rootfs")
+	}
+
+	return nil
 }
 
 type unpackCommand struct {
@@ -33,11 +52,7 @@ type unpackCommand struct {
 	output string
 }
 
-func (cmd *unpackCommand) Run(ctx context.Context, args []string) (err error) {
-	if len(args) < 1 {
-		return fmt.Errorf("must pass an image to unpack as a rootfs")
-	}
-
+func (cmd *unpackCommand) Run(args []string) (err error) {
 	reexec()
 
 	cmd.image = args[0]
@@ -52,7 +67,7 @@ func (cmd *unpackCommand) Run(ctx context.Context, args []string) (err error) {
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.

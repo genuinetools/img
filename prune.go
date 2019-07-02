@@ -2,36 +2,47 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"text/tabwriter"
 
 	"github.com/containerd/containerd/namespaces"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 )
 
-const pruneHelp = `Prune and clean up the build cache.`
+const pruneUsageShortHelp = `Prune and clean up the build cache.`
+const pruneUsageLongHelp = `Prune and clean up the build cache.`
 
-func (cmd *pruneCommand) Name() string      { return "prune" }
-func (cmd *pruneCommand) Args() string      { return "[OPTIONS]" }
-func (cmd *pruneCommand) ShortHelp() string { return pruneHelp }
-func (cmd *pruneCommand) LongHelp() string  { return pruneHelp }
-func (cmd *pruneCommand) Hidden() bool      { return false }
+func newPruneCommand() *cobra.Command {
+	prune := &pruneCommand{}
 
-func (cmd *pruneCommand) Register(fs *flag.FlagSet) {}
+	cmd := &cobra.Command{
+		Use:                   "prune [OPTIONS]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 pruneUsageShortHelp,
+		Long:                  pruneUsageLongHelp,
+		Args:                  validateHasNoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return prune.Run(args)
+		},
+	}
+
+	return cmd
+}
 
 type pruneCommand struct{}
 
-func (cmd *pruneCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *pruneCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.

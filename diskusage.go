@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"text/tabwriter"
 
 	"github.com/containerd/containerd/namespaces"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/genuinetools/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/buildkit/identity"
@@ -20,28 +20,40 @@ const diskUsageShortHelp = `Show image disk usage.`
 // TODO: make the long help actually useful
 const diskUsageLongHelp = `Show image disk usage.`
 
-func (cmd *diskUsageCommand) Name() string       { return "du" }
-func (cmd *diskUsageCommand) Args() string       { return "[OPTIONS]" }
-func (cmd *diskUsageCommand) ShortHelp() string  { return diskUsageShortHelp }
-func (cmd *diskUsageCommand) LongHelp() string   { return diskUsageLongHelp }
-func (cmd *diskUsageCommand) Hidden() bool       { return false }
-func (cmd *diskUsageCommand) RequiresRunc() bool { return true }
+func newDiskUsageCommand() *cobra.Command {
+	diskUsage := &diskUsageCommand{
+		filters: newListValue(),
+	}
 
-func (cmd *diskUsageCommand) Register(fs *flag.FlagSet) {
-	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
-	fs.Var(&cmd.filters, "filter", "Filter output based on conditions provided")
+	cmd := &cobra.Command{
+		Use:                   "du [OPTIONS]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 diskUsageShortHelp,
+		Long:                  diskUsageLongHelp,
+		Args:                  validateHasNoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return diskUsage.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.VarP(diskUsage.filters, "filter", "f", "Filter output based on conditions provided")
+
+	return cmd
 }
 
 type diskUsageCommand struct {
-	filters stringSlice
+	filters *listValue
 }
 
-func (cmd *diskUsageCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *diskUsageCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.
@@ -51,7 +63,7 @@ func (cmd *diskUsageCommand) Run(ctx context.Context, args []string) (err error)
 	}
 	defer c.Close()
 
-	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filters})
+	resp, err := c.DiskUsage(ctx, &controlapi.DiskUsageRequest{Filter: cmd.filters.GetAll()})
 	if err != nil {
 		return err
 	}
@@ -78,7 +90,7 @@ func (cmd *diskUsageCommand) Run(ctx context.Context, args []string) (err error)
 		tw.Flush()
 	}
 
-	if len(cmd.filters) < 1 {
+	if cmd.filters.Len() < 1 {
 		total := int64(0)
 		reclaimable := int64(0)
 

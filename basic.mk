@@ -66,7 +66,7 @@ fmt: ## Verifies all files have been `gofmt`ed.
 .PHONY: lint
 lint: ## Verifies `golint` passes.
 	@echo "+ $@"
-	@if [[ ! -z "$(shell golint ./... | grep -v '.pb.go:' | grep -v '.twirp.go:' | grep -v vendor | tee /dev/stderr)" ]]; then \
+	@if [[ ! -z "$(shell golint ./... | grep -v '.pb.go:' | grep -v '.twirp.go:' | grep -v vendor | grep -v internal/binutils/runc.go | tee /dev/stderr)" ]]; then \
 		exit 1; \
 	fi
 

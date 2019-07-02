@@ -2,10 +2,9 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"errors"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
 	"os"
@@ -21,24 +20,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const loginShortHelp = `Log in to a Docker registry.`
+const loginUsageShortHelp = `Log in to a Docker registry.`
 
-var loginLongHelp = loginShortHelp + fmt.Sprintf("\n\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
+var loginUsageLongHelp = loginUsageShortHelp + fmt.Sprintf("\n\nIf no server is specified, the default (%s) is used.", defaultDockerRegistry)
 
-func (cmd *loginCommand) Name() string       { return "login" }
-func (cmd *loginCommand) Args() string       { return "[OPTIONS] [SERVER]" }
-func (cmd *loginCommand) ShortHelp() string  { return loginShortHelp }
-func (cmd *loginCommand) LongHelp() string   { return loginLongHelp }
-func (cmd *loginCommand) Hidden() bool       { return false }
-func (cmd *loginCommand) DoReexec() bool     { return false }
-func (cmd *loginCommand) RequiresRunc() bool { return false }
+func newLoginCommand() *cobra.Command {
 
-func (cmd *loginCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.user, "u", "", "Username")
-	fs.StringVar(&cmd.user, "username", "", "Username")
-	fs.StringVar(&cmd.password, "p", "", "Password")
-	fs.StringVar(&cmd.password, "password", "", "Password")
-	fs.BoolVar(&cmd.passwordStdin, "password-stdin", false, "Take the password from stdin")
+	login := &loginCommand{}
+
+	cmd := &cobra.Command{
+		Use:                   "login [OPTIONS] [SERVER]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 loginUsageShortHelp,
+		Long:                  loginUsageLongHelp,
+		Args:                  login.ValidateArgs(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return login.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.StringVarP(&login.user, "user", "u", "", "Username")
+	fs.StringVarP(&login.password, "password", "p", "", "Password")
+	fs.BoolVar(&login.passwordStdin, "password-stdin", false, "Take the password from stdin")
+
+	return cmd
 }
 
 type loginCommand struct {
@@ -49,38 +57,45 @@ type loginCommand struct {
 	serverAddress string
 }
 
-func (cmd *loginCommand) Run(ctx context.Context, args []string) error {
-	if cmd.password != "" {
-		logrus.Warnf("WARNING! Using --password via the CLI is insecure. Use --password-stdin.")
+func (cmd *loginCommand) ValidateArgs() cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		if cmd.password != "" {
+			logrus.Warnf("WARNING! Using --password via the CLI is insecure. Use --password-stdin.")
+			if cmd.passwordStdin {
+				return errors.New("--password and --password-stdin are mutually exclusive")
+			}
+		}
+
+		// Handle when the password is coming over stdin.
 		if cmd.passwordStdin {
-			return errors.New("--password and --password-stdin are mutually exclusive")
-		}
-	}
+			if cmd.user == "" {
+				return errors.New("must provide --username with --password-stdin")
+			}
 
-	// Handle when the password is coming over stdin.
-	if cmd.passwordStdin {
-		if cmd.user == "" {
-			return errors.New("must provide --username with --password-stdin")
-		}
+			// Read from stadin.
+			contents, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
 
-		// Read from stadin.
-		contents, err := ioutil.ReadAll(os.Stdin)
-		if err != nil {
-			return err
+			cmd.password = strings.TrimSuffix(string(contents), "\n")
+			cmd.password = strings.TrimSuffix(cmd.password, "\r")
 		}
 
-		cmd.password = strings.TrimSuffix(string(contents), "\n")
-		cmd.password = strings.TrimSuffix(cmd.password, "\r")
-	}
+		if len(args) > 0 {
+			cmd.serverAddress = args[0]
+		}
 
-	if len(args) > 0 {
-		cmd.serverAddress = args[0]
-	}
+		// Set the default registry server address.
+		if cmd.serverAddress == "" {
+			cmd.serverAddress = defaultDockerRegistry
+		}
 
-	// Set the default registry server address.
-	if cmd.serverAddress == "" {
-		cmd.serverAddress = defaultDockerRegistry
+		return nil
 	}
+}
+
+func (cmd *loginCommand) Run(args []string) error {
 
 	// Get the auth config.
 	dcfg, authConfig, err := configureAuth(cmd.user, cmd.password, cmd.serverAddress)

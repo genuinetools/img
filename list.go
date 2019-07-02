@@ -2,42 +2,57 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"text/tabwriter"
 	"time"
 
 	"github.com/containerd/containerd/namespaces"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/genuinetools/img/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 )
 
-const listHelp = `List images and digests.`
+const listUsageShortHelp = `List images and digests.`
+const listUsageLongHelp = `List images and digests.`
 
-func (cmd *listCommand) Name() string      { return "ls" }
-func (cmd *listCommand) Args() string      { return "[OPTIONS]" }
-func (cmd *listCommand) ShortHelp() string { return listHelp }
-func (cmd *listCommand) LongHelp() string  { return listHelp }
-func (cmd *listCommand) Hidden() bool      { return false }
+func newListCommand() *cobra.Command {
 
-func (cmd *listCommand) Register(fs *flag.FlagSet) {
-	fs.Var(&cmd.filters, "f", "Filter output based on conditions provided")
-	fs.Var(&cmd.filters, "filter", "Filter output based on conditions provided")
+	list := &listCommand{
+		filters: newListValue(),
+	}
+
+	cmd := &cobra.Command{
+		Use:                   "ls [OPTIONS]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 listUsageShortHelp,
+		Long:                  listUsageLongHelp,
+		Args:                  validateHasNoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return list.Run(args)
+		},
+	}
+
+	fs := cmd.Flags()
+
+	fs.VarP(list.filters, "filter", "f", "Filter output based on conditions provided")
+
+	return cmd
 }
 
 type listCommand struct {
-	filters stringSlice
+	filters *listValue
 }
 
-func (cmd *listCommand) Run(ctx context.Context, args []string) (err error) {
+func (cmd *listCommand) Run(args []string) (err error) {
 	reexec()
 
 	// Create the context.
 	id := identity.NewID()
-	ctx = session.NewContext(ctx, id)
+	ctx := session.NewContext(context.Background(), id)
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 
 	// Create the client.
@@ -47,7 +62,7 @@ func (cmd *listCommand) Run(ctx context.Context, args []string) (err error) {
 	}
 	defer c.Close()
 
-	images, err := c.ListImages(ctx, cmd.filters...)
+	images, err := c.ListImages(ctx, cmd.filters.GetAll()...)
 	if err != nil {
 		return err
 	}
