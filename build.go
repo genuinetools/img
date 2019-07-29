@@ -220,6 +220,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// prepare the exporter
 	out := cmd.bkoutput
+	stdoutUsed := false
 	// -t was used, output an image
 	if out == nil || out.Type == "" {
 		out = &imageBuildOutput{
@@ -251,6 +252,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 				if _, err := console.ConsoleFromFile(os.Stdout); err == nil {
 					return fmt.Errorf("refusing to write output to console")
 				}
+				stdoutUsed = true
 				w = os.Stdout
 			} else {
 				f, err := os.Create(outFile)
@@ -294,7 +296,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		}, ch)
 	})
 	eg.Go(func() error {
-		return showProgress(ch, cmd.noConsole)
+		return showProgress(ch, cmd.noConsole, stdoutUsed)
 	})
 	if err := eg.Wait(); err != nil {
 		return err
@@ -450,7 +452,7 @@ func (cmd *buildCommand) getLocalDirs() map[string]string {
 	}
 }
 
-func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
+func showProgress(ch chan *controlapi.StatusResponse, noConsole, stdoutUsed bool) error {
 	displayCh := make(chan *bkclient.SolveStatus)
 	go func() {
 		for resp := range ch {
@@ -496,7 +498,11 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 			c = cf
 		}
 	}
-	return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, displayCh)
+	out := os.Stdout
+	if stdoutUsed {
+		out = os.Stderr
+	}
+	return progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
 }
 
 // ImageBuildOutput defines configuration for exporting a build result
