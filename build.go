@@ -113,11 +113,11 @@ func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 			return err
 		}
 		if name, ok := out[0].Attrs["name"]; ok && name != "" {
-			if validated, err := validateTag(name); err != nil {
+			validated, err := validateTag(name)
+			if err != nil {
 				return err
-			} else {
-				out[0].Attrs["name"] = validated
 			}
+			out[0].Attrs["name"] = validated
 		}
 		cmd.bkoutput = out[0]
 	} else if cmd.tags.Len() < 1 {
