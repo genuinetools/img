@@ -235,12 +235,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 
 	// prepare the exporter
 	out := cmd.bkoutput
-	stdoutUsed := false
 	if out.Type != "" {
 		if out.Output != nil {
-			if out.Output == os.Stdout {
-				stdoutUsed = true
-			}
 			sess.Allow(filesync.NewFSSyncTarget(out.Output))
 		}
 		if out.OutputDir != "" {
@@ -272,7 +268,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		}, ch)
 	})
 	eg.Go(func() error {
-		return showProgress(ch, cmd.noConsole, stdoutUsed)
+		return showProgress(ch, cmd.noConsole)
 	})
 	if err := eg.Wait(); err != nil {
 		return err
@@ -428,7 +424,7 @@ func (cmd *buildCommand) getLocalDirs() map[string]string {
 	}
 }
 
-func showProgress(ch chan *controlapi.StatusResponse, noConsole, stdoutUsed bool) error {
+func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 	displayCh := make(chan *bkclient.SolveStatus)
 	go func() {
 		for resp := range ch {
@@ -474,9 +470,5 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole, stdoutUsed bool
 			c = cf
 		}
 	}
-	out := os.Stdout
-	if stdoutUsed {
-		out = os.Stderr
-	}
-	return progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
+	return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stderr, displayCh)
 }
