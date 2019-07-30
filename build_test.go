@@ -247,7 +247,7 @@ func TestBuildOutputOCI(t *testing.T) {
 
 func TestBuildOutputTarStdout(t *testing.T) {
 
-	args := []string{"build", "-", "-o", "-"}
+	args := []string{"build", "-", "-o", "type=tar"}
 
 	// modified doRun() function to capture stdout seperately
 	doRunStdout := func(args []string, stdin io.Reader) ([]byte, error) {

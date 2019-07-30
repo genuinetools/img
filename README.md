@@ -337,17 +337,15 @@ of valid output specifications includes:
 | flag | description |
 |------------|-------------|
 | `-o type=tar,dest=rootfs.tar` | export rootfs of target image to a tar archive |
-| `-o -` | output a rootfs tar to stdout, for use in piped commands |
-| `-o type=local,dest=rootfs/` | export the target image to this directory |
-| `-o output/` | shorthand form for the `local` exporter |
-| `-o type=image,name=r.j3ss.co/img` | build and tag an image and store it locally
+| `-o type=tar` | output a rootfs tar to stdout, for use in piped commands |
 | `-o type=docker,dest=image.tar` | save a Docker-type bundle of the image |
 | `-o type=oci,dest=image.tar` | save an OCI-type bundle of the image |
+| `-o type=local,dest=rootfs/` | export the target image to this directory |
+| `-o type=image,name=r.j3ss.co/img` | build and tag an image and store it locally
 
 When used in conjunction with a Dockerfile which has a final `FROM scratch` stage and
 only copies files of interest from earlier stages with `COPY --from=...`, this can be
-utilized to output arbitrary build artifacts from a containerized build process for
-example.
+utilized to output arbitrary build artifacts for example.
 
 ### List Image Layers
 

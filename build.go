@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/csv"
 	"errors"
 
 	"fmt"
@@ -26,6 +25,7 @@ import (
 	"github.com/genuinetools/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	bkclient "github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/filesync"
@@ -82,7 +82,7 @@ type buildCommand struct {
 	tags           *listValue
 	platforms      *listValue
 	output         string
-	bkoutput       *imageBuildOutput
+	bkoutput       bkclient.ExportEntry
 
 	contextDir string
 	noConsole  bool
@@ -108,14 +108,22 @@ func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 	}
 
 	if c.Flag("output").Changed {
-		out, err := parseOutput(cmd.output)
-		if err != nil {
-			return fmt.Errorf("failed to parse output: %s", err)
+		out, err := build.ParseOutput([]string{cmd.output})
+		if err != nil || len(out) != 1 {
+			return err
 		}
-		cmd.bkoutput = out
+		if name, ok := out[0].Attrs["name"]; ok && name != "" {
+			if validated, err := validateTag(name); err != nil {
+				return err
+			} else {
+				out[0].Attrs["name"] = validated
+			}
+		}
+		cmd.bkoutput = out[0]
 	} else if cmd.tags.Len() < 1 {
 		return errors.New("please specify an image tag with `-t` or an output spec with `-o`")
 	}
+
 	return nil
 }
 
@@ -148,9 +156,16 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		defer os.RemoveAll(cmd.contextDir)
 	}
 
+	// get the tag or output image name
 	initialTag := "image"
-	if tags := cmd.tags.GetAll(); len(tags) > 0 {
-		initialTag = tags[0]
+	if cmd.bkoutput.Type == "" {
+		if tags := cmd.tags.GetAll(); len(tags) > 0 {
+			initialTag = tags[0]
+		}
+	} else {
+		if name, ok := cmd.bkoutput.Attrs["name"]; ok {
+			initialTag = name
+		}
 	}
 
 	// Set the dockerfile path as the default if one was not given.
@@ -221,61 +236,22 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	// prepare the exporter
 	out := cmd.bkoutput
 	stdoutUsed := false
-	// -t was used, output an image
-	if out == nil || out.Type == "" {
-		out = &imageBuildOutput{
+	if out.Type != "" {
+		if out.Output != nil {
+			if out.Output == os.Stdout {
+				stdoutUsed = true
+			}
+			sess.Allow(filesync.NewFSSyncTarget(out.Output))
+		}
+		if out.OutputDir != "" {
+			sess.Allow(filesync.NewFSSyncTargetDir(out.OutputDir))
+		}
+	} else {
+		out = bkclient.ExportEntry{
 			Type: bkclient.ExporterImage,
 			Attrs: map[string]string{
 				"name": strings.Join(cmd.tags.GetAll(), ","),
 			},
-		}
-	} else {
-		switch out.Type {
-		// output to directory
-		case bkclient.ExporterLocal:
-			// dest is handled on client side for local exporter
-			outDir, ok := out.Attrs["dest"]
-			if !ok {
-				return fmt.Errorf("dest is required for %s output", out.Type)
-			}
-			delete(out.Attrs, "dest")
-			sess.Allow(filesync.NewFSSyncTargetDir(outDir))
-		// output a tar archive
-		case bkclient.ExporterTar, bkclient.ExporterDocker, bkclient.ExporterOCI:
-			// dest is handled on client side for tar exporters
-			outFile, ok := out.Attrs["dest"]
-			if !ok {
-				return fmt.Errorf("dest is required for %s output", out.Type)
-			}
-			var w io.WriteCloser
-			if outFile == "-" {
-				if _, err := console.ConsoleFromFile(os.Stdout); err == nil {
-					return fmt.Errorf("refusing to write output to console")
-				}
-				stdoutUsed = true
-				w = os.Stdout
-			} else {
-				f, err := os.Create(outFile)
-				if err != nil {
-					return fmt.Errorf("failed to open %s: %s", outFile, err)
-				}
-				w = f
-			}
-			sess.Allow(filesync.NewFSSyncTarget(w))
-		// output an image
-		case bkclient.ExporterImage:
-			name, ok := out.Attrs["name"]
-			if !ok {
-				return fmt.Errorf("name is required for %s output", out.Type)
-			}
-			name, err := validateTag(name)
-			if err != nil {
-				return fmt.Errorf("invalid name for %s output: %s", out.Type, err)
-			}
-			out.Attrs["name"] = name
-			initialTag = name
-		default:
-			return fmt.Errorf("unknown exporter type: %s", out.Type)
 		}
 	}
 
@@ -503,63 +479,4 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole, stdoutUsed bool
 		out = os.Stderr
 	}
 	return progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
-}
-
-// ImageBuildOutput defines configuration for exporting a build result
-type imageBuildOutput struct {
-	Type  string
-	Attrs map[string]string
-}
-
-// parseOutput parses the argument for an --output flag
-// modified from docker/cli: parseOutputs to handle a single string
-func parseOutput(s string) (out *imageBuildOutput, err error) {
-	// parse comma-seperated fields
-	csvReader := csv.NewReader(strings.NewReader((s)))
-	fields, err := csvReader.Read()
-	if err != nil {
-		return nil, err
-	}
-	// a single field which does not specify a type
-	if len(fields) == 1 && fields[0] == s && !strings.HasPrefix(s, "type=") {
-		if s == "-" { // tar to stdout
-			out = &imageBuildOutput{
-				Type: "tar",
-				Attrs: map[string]string{
-					"dest": s,
-				},
-			}
-		} else { // directory name
-			out = &imageBuildOutput{
-				Type: "local",
-				Attrs: map[string]string{
-					"dest": s,
-				},
-			}
-		}
-		return out, nil
-	}
-	// otherwise parse the fields as attrs
-	out = &imageBuildOutput{
-		Attrs: map[string]string{},
-	}
-	for _, field := range fields {
-		// split key=value
-		parts := strings.SplitN(field, "=", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid value %s", field)
-		}
-		key := strings.ToLower(parts[0])
-		value := parts[1]
-		switch key {
-		case "type":
-			out.Type = value
-		default:
-			out.Attrs[key] = value
-		}
-	}
-	if out.Type == "" {
-		return nil, fmt.Errorf("type is required for output")
-	}
-	return out, nil
 }
