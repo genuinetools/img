@@ -31,7 +31,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
 - [Usage](#usage)
   * [Build an Image](#build-an-image)
     + [Cross Platform](#cross-platform)
-    * [Exporter Types](#exporter-types)
+    + [Exporter Types](#exporter-types)
   * [List Image Layers](#list-image-layers)
   * [Pull an Image](#pull-an-image)
   * [Push an Image](#push-an-image)
