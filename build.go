@@ -9,12 +9,13 @@ import (
 	"errors"
 
 	"fmt"
-	"github.com/containerd/containerd/platforms"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/containerd/containerd/platforms"
 
 	"github.com/containerd/console"
 	"github.com/containerd/containerd/namespaces"
@@ -24,8 +25,10 @@ import (
 	"github.com/genuinetools/img/client"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	bkclient "github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/util/appcontext"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/spf13/cobra"
@@ -66,6 +69,7 @@ func newBuildCommand() *cobra.Command {
 	fs.Var(build.labels, "label", "Set metadata for an image")
 	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
+	fs.StringVarP(&build.output, "output", "o", "", "BuildKit output specification (e.g. type=tar,dest=build.tar)")
 
 	return cmd
 }
@@ -77,6 +81,8 @@ type buildCommand struct {
 	target         string
 	tags           *listValue
 	platforms      *listValue
+	output         string
+	bkoutput       bkclient.ExportEntry
 
 	contextDir string
 	noConsole  bool
@@ -101,9 +107,23 @@ func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 		return fmt.Errorf("must pass a path to build")
 	}
 
-	if cmd.tags.Len() < 1 {
-		return errors.New("please specify an image tag with `-t`")
+	if c.Flag("output").Changed {
+		out, err := build.ParseOutput([]string{cmd.output})
+		if err != nil || len(out) != 1 {
+			return err
+		}
+		if name, ok := out[0].Attrs["name"]; ok && name != "" {
+			validated, err := validateTag(name)
+			if err != nil {
+				return err
+			}
+			out[0].Attrs["name"] = validated
+		}
+		cmd.bkoutput = out[0]
+	} else if cmd.tags.Len() < 1 {
+		return errors.New("please specify an image tag with `-t` or an output spec with `-o`")
 	}
+
 	return nil
 }
 
@@ -136,7 +156,17 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		defer os.RemoveAll(cmd.contextDir)
 	}
 
-	initialTag := cmd.tags.GetAll()[0]
+	// get the tag or output image name
+	initialTag := "image"
+	if cmd.bkoutput.Type == "" {
+		if tags := cmd.tags.GetAll(); len(tags) > 0 {
+			initialTag = tags[0]
+		}
+	} else {
+		if name, ok := cmd.bkoutput.Attrs["name"]; ok {
+			initialTag = name
+		}
+	}
 
 	// Set the dockerfile path as the default if one was not given.
 	if cmd.dockerfilePath == "" {
@@ -189,8 +219,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		frontendAttrs["label:"+kv[0]] = kv[1]
 	}
 
-	fmt.Printf("Building %s\n", initialTag)
-	fmt.Println("Setting up the rootfs... this may take a bit.")
+	fmt.Fprintf(os.Stderr, "Building %s\n", initialTag)
+	fmt.Fprintln(os.Stderr, "Setting up the rootfs... this may take a bit.")
 
 	// Create the context.
 	ctx := appcontext.Context()
@@ -203,6 +233,24 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	ctx = namespaces.WithNamespace(ctx, "buildkit")
 	eg, ctx := errgroup.WithContext(ctx)
 
+	// prepare the exporter
+	out := cmd.bkoutput
+	if out.Type != "" {
+		if out.Output != nil {
+			sess.Allow(filesync.NewFSSyncTarget(out.Output))
+		}
+		if out.OutputDir != "" {
+			sess.Allow(filesync.NewFSSyncTargetDir(out.OutputDir))
+		}
+	} else {
+		out = bkclient.ExportEntry{
+			Type: bkclient.ExporterImage,
+			Attrs: map[string]string{
+				"name": strings.Join(cmd.tags.GetAll(), ","),
+			},
+		}
+	}
+
 	ch := make(chan *controlapi.StatusResponse)
 	eg.Go(func() error {
 		return sess.Run(ctx, sessDialer)
@@ -211,12 +259,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	eg.Go(func() error {
 		defer sess.Close()
 		return c.Solve(ctx, &controlapi.SolveRequest{
-			Ref:      id,
-			Session:  sess.ID(),
-			Exporter: "image",
-			ExporterAttrs: map[string]string{
-				"name": strings.Join(cmd.tags.GetAll(), ","),
-			},
+			Ref:           id,
+			Session:       sess.ID(),
+			Exporter:      out.Type,
+			ExporterAttrs: out.Attrs,
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,
 		}, ch)
@@ -227,7 +273,7 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	if err := eg.Wait(); err != nil {
 		return err
 	}
-	fmt.Printf("Successfully built %s\n", initialTag)
+	fmt.Fprintf(os.Stderr, "Successfully built %s\n", initialTag)
 
 	return nil
 }
@@ -424,5 +470,5 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 			c = cf
 		}
 	}
-	return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, displayCh)
+	return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stderr, displayCh)
 }

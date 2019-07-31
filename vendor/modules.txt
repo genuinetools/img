@@ -202,8 +202,10 @@ github.com/mitchellh/hashstructure
 # github.com/moby/buildkit v0.5.1
 github.com/moby/buildkit/api/services/control
 github.com/moby/buildkit/client
+github.com/moby/buildkit/cmd/buildctl/build
 github.com/moby/buildkit/identity
 github.com/moby/buildkit/session
+github.com/moby/buildkit/session/filesync
 github.com/moby/buildkit/util/appcontext
 github.com/moby/buildkit/util/progress/progressui
 github.com/moby/buildkit/cache
@@ -219,7 +221,6 @@ github.com/moby/buildkit/frontend/dockerfile/builder
 github.com/moby/buildkit/frontend/gateway
 github.com/moby/buildkit/frontend/gateway/forwarder
 github.com/moby/buildkit/session/auth/authprovider
-github.com/moby/buildkit/session/filesync
 github.com/moby/buildkit/session/testutil
 github.com/moby/buildkit/snapshot/containerd
 github.com/moby/buildkit/solver/bboltcachestorage
@@ -247,6 +248,8 @@ github.com/moby/buildkit/session/content
 github.com/moby/buildkit/session/grpchijack
 github.com/moby/buildkit/util/apicaps
 github.com/moby/buildkit/util/appdefaults
+github.com/moby/buildkit/session/secrets/secretsprovider
+github.com/moby/buildkit/session/sshforward/sshprovider
 github.com/moby/buildkit/snapshot
 github.com/moby/buildkit/util/flightcontrol
 github.com/moby/buildkit/cache/remotecache
@@ -276,6 +279,8 @@ github.com/moby/buildkit/source/http
 github.com/moby/buildkit/source/local
 github.com/moby/buildkit/util/contentutil
 github.com/moby/buildkit/util/apicaps/pb
+github.com/moby/buildkit/session/secrets
+github.com/moby/buildkit/session/sshforward
 github.com/moby/buildkit/cache/remotecache/v1
 github.com/moby/buildkit/solver/internal/pipe
 github.com/moby/buildkit/util/cond
@@ -284,8 +289,6 @@ github.com/moby/buildkit/client/llb/imagemetaresolver
 github.com/moby/buildkit/frontend/dockerfile/instructions
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
-github.com/moby/buildkit/session/secrets
-github.com/moby/buildkit/session/sshforward
 github.com/moby/buildkit/solver/llbsolver/file
 github.com/moby/buildkit/solver/llbsolver/ops/fileoptypes
 github.com/moby/buildkit/util/progress/logs
@@ -347,6 +350,14 @@ github.com/tonistiigi/units
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20190129210102-ccddf3741a0c
 golang.org/x/crypto/ssh/terminal
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/agent
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/internal/chacha20
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/internal/subtle
 # golang.org/x/net v0.0.0-20180925072008-f04abc6bdfa7
 golang.org/x/net/context
 golang.org/x/net/http2

@@ -31,6 +31,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
 - [Usage](#usage)
   * [Build an Image](#build-an-image)
     + [Cross Platform](#cross-platform)
+    * [Exporter Types](#exporter-types)
   * [List Image Layers](#list-image-layers)
   * [Pull an Image](#pull-an-image)
   * [Push an Image](#push-an-image)
@@ -238,6 +239,7 @@ Flags:
       --label list       Set metadata for an image
       --no-cache         Do not use cache when building the image
       --no-console       Use non-console progress UI
+  -o, --output string    BuildKit output specification (e.g. type=tar,dest=build.tar)
       --platform list    Set platforms for which the image should be built
   -t, --tag list         Name and optionally a tag in the 'name:tag' format
       --target string    Set the target build stage to build
@@ -320,6 +322,30 @@ flags: OCF
 On Debian/Ubuntu the above should be available with the `qemu-user-static` package >= `1:2.12+dfsg-3`
 
 NOTE: cross-OS builds are slightly more complicated to get `RUN` commands working, but follow from the same principle.
+
+#### Exporter Types
+
+[bkoutputs]: https://github.com/moby/buildkit/blob/master/README.md#output
+
+`img` can also use buildkit's [exporter types][bkoutputs] directly to output the
+resulting image to a Docker-type bundle or a rootfs tar without saving the image
+itself locally. Builds will still benefit from caching.
+
+The output type and destination are specified with the `--output` flag. The list
+of valid output specifications includes:
+
+| flag | description |
+|------------|-------------|
+| `-o type=tar,dest=rootfs.tar` | export rootfs of target image to a tar archive |
+| `-o type=tar` | output a rootfs tar to stdout, for use in piped commands |
+| `-o type=docker,dest=image.tar` | save a Docker-type bundle of the image |
+| `-o type=oci,dest=image.tar` | save an OCI-type bundle of the image |
+| `-o type=local,dest=rootfs/` | export the target image to this directory |
+| `-o type=image,name=r.j3ss.co/img` | build and tag an image and store it locally
+
+When used in conjunction with a Dockerfile which has a final `FROM scratch` stage and
+only copies files of interest from earlier stages with `COPY --from=...`, this can be
+utilized to output arbitrary build artifacts for example.
 
 ### List Image Layers
 
