@@ -2,9 +2,12 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
@@ -14,7 +17,7 @@ import (
 )
 
 // Pull retrieves an image from a remote registry.
-func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
+func (c *Client) Pull(ctx context.Context, image string, insecure bool) (*ListedImage, error) {
 	sm, err := c.getSessionManager()
 	if err != nil {
 		return nil, err
@@ -56,10 +59,25 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 		CacheAccessor: cm,
 		ImageStore:    opt.ImageStore,
 	}
+	srcOpt.ResolverOpt = func(string) docker.ResolverOptions {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		
+		return docker.ResolverOptions{
+			Client:    &http.Client{
+				Transport: transport
+			},
+			PlainHTTP: insecure,
+		}
+	}
 	src, err := containerimage.NewSource(srcOpt)
 	if err != nil {
 		return nil, err
 	}
+
 	s, err := src.Resolve(ctx, identifier, sm)
 	if err != nil {
 		return nil, err
@@ -86,14 +104,13 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 	if err != nil {
 		return nil, err
 	}
-	e, err := exp.Resolve(ctx, map[string]string{"name": image})
+	e, err := exp.Resolve(ctx, map[string]string{"name": image, "registry.insecure": "true"})
 	if err != nil {
 		return nil, err
 	}
 	if _, err := e.Export(ctx, exporter.Source{Ref: ref}); err != nil {
 		return nil, err
 	}
-
 	// Get the image.
 	img, err := opt.ImageStore.Get(ctx, image)
 	if err != nil {

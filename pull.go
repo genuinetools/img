@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/containerd/containerd/namespaces"
@@ -20,7 +21,7 @@ func newPullCommand() *cobra.Command {
 	pull := &pullCommand{}
 
 	cmd := &cobra.Command{
-		Use:                   "pull [OPTIONS] NAME[:TAG|@DIGEST]",
+		Use: "pull [OPTIONS] NAME[:TAG|@DIGEST]",
 		DisableFlagsInUseLine: true,
 		SilenceUsage:          true,
 		Short:                 pullUsageShortHelp,
@@ -30,7 +31,8 @@ func newPullCommand() *cobra.Command {
 			return pull.Run(args)
 		},
 	}
-
+	fs := cmd.Flags()
+	fs.BoolVar(&pull.insecure, "insecure-registry", false, "pull from insecure registry")
 	return cmd
 }
 
@@ -43,7 +45,8 @@ func validatePullImageArgs(cmd *cobra.Command, args []string) error {
 }
 
 type pullCommand struct {
-	image string
+	image    string
+	insecure bool
 }
 
 func (cmd *pullCommand) Run(args []string) (err error) {
@@ -78,7 +81,7 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	eg.Go(func() error {
 		defer sess.Close()
 		var err error
-		listedImage, err = c.Pull(ctx, cmd.image)
+		listedImage, err = c.Pull(ctx, cmd.image, cmd.insecure)
 		return err
 	})
 	if err := eg.Wait(); err != nil {

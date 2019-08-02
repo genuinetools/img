@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
@@ -29,7 +30,7 @@ func newLoginCommand() *cobra.Command {
 	login := &loginCommand{}
 
 	cmd := &cobra.Command{
-		Use:                   "login [OPTIONS] [SERVER]",
+		Use: "login [OPTIONS] [SERVER]",
 		DisableFlagsInUseLine: true,
 		SilenceUsage:          true,
 		Short:                 loginUsageShortHelp,
@@ -45,7 +46,7 @@ func newLoginCommand() *cobra.Command {
 	fs.StringVarP(&login.user, "user", "u", "", "Username")
 	fs.StringVarP(&login.password, "password", "p", "", "Password")
 	fs.BoolVar(&login.passwordStdin, "password-stdin", false, "Take the password from stdin")
-
+	fs.BoolVar(&login.insecure, "insecure-registry", false, "login from insecure registry")
 	return cmd
 }
 
@@ -53,6 +54,7 @@ type loginCommand struct {
 	user          string
 	password      string
 	passwordStdin bool
+	insecure      bool
 
 	serverAddress string
 }
@@ -104,7 +106,7 @@ func (cmd *loginCommand) Run(args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	r, err := registryapi.New(cliconfigtypes2dockerapitypes(authConfig), registryapi.Opt{Debug: debug})
+	r, err := registryapi.New(cliconfigtypes2dockerapitypes(authConfig), registryapi.Opt{Debug: debug, NonSSL: cmd.insecure, Insecure: cmd.insecure})
 	if err != nil {
 		return fmt.Errorf("creating registry client failed: %v", err)
 	}
