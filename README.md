@@ -182,7 +182,13 @@ See [docker/cli patch](#upstream-patches) for how to allow mounting `/proc` with
 
 Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
 
-However, to enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
+However the following security annotations are needed:
+```
+container.apparmor.security.beta.kubernetes.io/img: unconfined
+container.seccomp.security.alpha.kubernetes.io/img: unconfined
+```
+
+To enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
 `securityContext.privileged` to `true`).
 `securityContext.procMount` is available since Kubernetes 1.12 with Docker 18.06/containerd 1.2/CRI-O 1.12.
 
