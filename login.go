@@ -139,7 +139,6 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 	if err != nil {
 		return dcfg, types.AuthConfig{}, fmt.Errorf("loading config file failed: %v", err)
 	}
-
 	authConfig, err := dcfg.GetAuthConfig(serverAddress)
 	if err != nil {
 		return dcfg, authConfig, fmt.Errorf("getting auth config for %s failed: %v", serverAddress, err)
@@ -154,7 +153,9 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 	if flPassword == "" && !isTerminal {
 		return dcfg, authConfig, errors.New("cannot perform an interactive login from a non TTY device")
 	}
+
 	authConfig.Username = strings.TrimSpace(authConfig.Username)
+
 	if flUser = strings.TrimSpace(flUser); flUser == "" {
 		if serverAddress == defaultDockerRegistry {
 			// if this is a default registry (docker hub), then display the following message.
