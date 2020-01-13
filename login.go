@@ -144,7 +144,7 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 		return dcfg, authConfig, fmt.Errorf("getting auth config for %s failed: %v", serverAddress, err)
 	}
 
-	// A credential helper is being used to populate authentication
+	// A credential helper is being used to populate authentication.
 	if dcfg.CredentialHelpers[serverAddress] != "" && authConfig.Password != "" && authConfig.Username != "" && flUser == "" && flPassword == "" {
 		return dcfg, authConfig, nil
 	}
