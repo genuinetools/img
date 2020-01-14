@@ -95,7 +95,7 @@ func main() {
 	flags := cmd.PersistentFlags()
 	flags.BoolVarP(&debug, "debug", "d", false, "enable debug logging")
 	flags.StringVarP(&backend, "backend", "b", defaultBackend, fmt.Sprintf("backend for snapshots (%v)", validBackends))
-	flags.StringVarP(&stateDir, "state", "s", defaultStateDir, fmt.Sprintf("directory to hold the global state"))
+	flags.StringVarP(&stateDir, "state", "s", defaultStateDir, "directory to hold the global state")
 
 	// Set the before function.
 	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {

@@ -144,6 +144,11 @@ func configureAuth(flUser, flPassword, serverAddress string) (*configfile.Config
 		return dcfg, authConfig, fmt.Errorf("getting auth config for %s failed: %v", serverAddress, err)
 	}
 
+	// A credential helper is being used to populate authentication.
+	if dcfg.CredentialHelpers[serverAddress] != "" && authConfig.Password != "" && authConfig.Username != "" && flUser == "" && flPassword == "" {
+		return dcfg, authConfig, nil
+	}
+
 	_, isTerminal := term.GetFdInfo(os.Stdin)
 	if flPassword == "" && !isTerminal {
 		return dcfg, authConfig, errors.New("cannot perform an interactive login from a non TTY device")
