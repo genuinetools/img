@@ -45,6 +45,7 @@ func newBuildCommand() *cobra.Command {
 		buildArgs: newListValue(),
 		labels:    newListValue(),
 		platforms: newListValue(),
+		cacheFrom: newListValue(),
 	}
 
 	cmd := &cobra.Command{
@@ -70,7 +71,7 @@ func newBuildCommand() *cobra.Command {
 	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
 	fs.StringVarP(&build.output, "output", "o", "", "BuildKit output specification (e.g. type=tar,dest=build.tar)")
-
+	fs.Var(build.cacheFrom, "cache-from", "Images to consider as cache sources")
 	return cmd
 }
 
@@ -82,6 +83,7 @@ type buildCommand struct {
 	tags           *listValue
 	platforms      *listValue
 	output         string
+	cacheFrom      *listValue
 	bkoutput       bkclient.ExportEntry
 
 	contextDir string
@@ -255,6 +257,26 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 	eg.Go(func() error {
 		return sess.Run(ctx, sessDialer)
 	})
+
+	var cacheExports []*controlapi.CacheOptionsEntry
+	cacheExports = append(cacheExports, &controlapi.CacheOptionsEntry{
+		Type: "inline",
+	})
+
+	var cacheImports []*controlapi.CacheOptionsEntry
+	for _, cacheTarget := range cmd.cacheFrom.GetAll() {
+		cacheImports = append(cacheImports, &controlapi.CacheOptionsEntry{
+			Type: "registry",
+			Attrs: map[string]string{
+				"ref": cacheTarget,
+			},
+		})
+	}
+
+	if cmd.cacheFrom.Len() > 0 {
+		frontendAttrs["cache-from"] = strings.Join(cmd.cacheFrom.GetAll(), ",")
+	}
+
 	// Solve the dockerfile.
 	eg.Go(func() error {
 		defer sess.Close()
@@ -265,6 +287,10 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 			ExporterAttrs: out.Attrs,
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,
+			Cache: controlapi.CacheOptions{
+				Exports: cacheExports,
+				Imports: cacheImports,
+			},
 		}, ch)
 	})
 	eg.Go(func() error {

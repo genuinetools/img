@@ -2,16 +2,19 @@ package client
 
 import (
 	"fmt"
-	"path/filepath"
-
+	"github.com/moby/buildkit/cache/remotecache"
+	inlineremotecache "github.com/moby/buildkit/cache/remotecache/inline"
+	registryremotecache "github.com/moby/buildkit/cache/remotecache/registry"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
 	"github.com/moby/buildkit/frontend/dockerfile/builder"
 	"github.com/moby/buildkit/frontend/gateway"
 	"github.com/moby/buildkit/frontend/gateway/forwarder"
 	"github.com/moby/buildkit/solver/bboltcachestorage"
+	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
+	"path/filepath"
 )
 
 func (c *Client) createController() error {
@@ -48,12 +51,23 @@ func (c *Client) createController() error {
 		return err
 	}
 
+	resolverFn := resolverFunc()
+
+	remoteCacheExporterFuncs := map[string]remotecache.ResolveCacheExporterFunc{
+		"inline": inlineremotecache.ResolveCacheExporterFunc(),
+	}
+	remoteCacheImporterFuncs := map[string]remotecache.ResolveCacheImporterFunc{
+		"registry": registryremotecache.ResolveCacheImporterFunc(sm, resolverFn),
+	}
+
 	// Create the controller.
 	controller, err := control.NewController(control.Opt{
-		SessionManager:   sm,
-		WorkerController: wc,
-		Frontends:        frontends,
-		CacheKeyStorage:  cacheStorage,
+		SessionManager:            sm,
+		WorkerController:          wc,
+		Frontends:                 frontends,
+		ResolveCacheExporterFuncs: remoteCacheExporterFuncs,
+		ResolveCacheImporterFuncs: remoteCacheImporterFuncs,
+		CacheKeyStorage:           cacheStorage,
 		// No cache importer/exporter
 	})
 	if err != nil {
@@ -64,4 +78,9 @@ func (c *Client) createController() error {
 	c.controller = controller
 
 	return nil
+}
+
+func resolverFunc() resolver.ResolveOptionsFunc {
+	m := map[string]resolver.RegistryConf{}
+	return resolver.NewResolveOptionsFunc(m)
 }
