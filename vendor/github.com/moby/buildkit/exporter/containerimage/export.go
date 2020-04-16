@@ -10,13 +10,16 @@ import (
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/rootfs"
+	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
+	"github.com/moby/buildkit/util/leaseutil"
 	"github.com/moby/buildkit/util/push"
-	"github.com/moby/buildkit/util/resolver"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -24,19 +27,23 @@ import (
 )
 
 const (
-	keyImageName    = "name"
-	keyPush         = "push"
-	keyPushByDigest = "push-by-digest"
-	keyInsecure     = "registry.insecure"
-	keyUnpack       = "unpack"
-	ociTypes        = "oci-mediatypes"
+	keyImageName        = "name"
+	keyPush             = "push"
+	keyPushByDigest     = "push-by-digest"
+	keyInsecure         = "registry.insecure"
+	keyUnpack           = "unpack"
+	keyDanglingPrefix   = "dangling-name-prefix"
+	keyNameCanonical    = "name-canonical"
+	keyLayerCompression = "compression"
+	ociTypes            = "oci-mediatypes"
 )
 
 type Opt struct {
 	SessionManager *session.Manager
 	ImageWriter    *ImageWriter
 	Images         images.Store
-	ResolverOpt    resolver.ResolveOptionsFunc
+	RegistryHosts  docker.RegistryHosts
+	LeaseManager   leases.Manager
 }
 
 type imageExporter struct {
@@ -53,7 +60,11 @@ func New(opt Opt) (exporter.Exporter, error) {
 }
 
 func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exporter.ExporterInstance, error) {
-	i := &imageExporterInstance{imageExporter: e}
+	i := &imageExporterInstance{
+		imageExporter:    e,
+		layerCompression: blobs.DefaultCompression,
+	}
+
 	for k, v := range opt {
 		switch k {
 		case keyImageName:
@@ -108,6 +119,27 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
 			}
 			i.ociTypes = b
+		case keyDanglingPrefix:
+			i.danglingPrefix = v
+		case keyNameCanonical:
+			if v == "" {
+				i.nameCanonical = true
+				continue
+			}
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
+			}
+			i.nameCanonical = b
+		case keyLayerCompression:
+			switch v {
+			case "gzip":
+				i.layerCompression = blobs.Gzip
+			case "uncompressed":
+				i.layerCompression = blobs.Uncompressed
+			default:
+				return nil, errors.Errorf("unsupported layer compression type: %v", v)
+			}
 		default:
 			if i.meta == nil {
 				i.meta = make(map[string][]byte)
@@ -120,13 +152,16 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 
 type imageExporterInstance struct {
 	*imageExporter
-	targetName   string
-	push         bool
-	pushByDigest bool
-	unpack       bool
-	insecure     bool
-	ociTypes     bool
-	meta         map[string][]byte
+	targetName       string
+	push             bool
+	pushByDigest     bool
+	unpack           bool
+	insecure         bool
+	ociTypes         bool
+	nameCanonical    bool
+	danglingPrefix   string
+	layerCompression blobs.CompressionType
+	meta             map[string][]byte
 }
 
 func (e *imageExporterInstance) Name() string {
@@ -140,7 +175,14 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 	for k, v := range e.meta {
 		src.Metadata[k] = v
 	}
-	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes)
+
+	ctx, done, err := leaseutil.WithLease(ctx, e.opt.LeaseManager, leaseutil.MakeTemporary)
+	if err != nil {
+		return nil, err
+	}
+	defer done(context.TODO())
+
+	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes, e.layerCompression)
 	if err != nil {
 		return nil, err
 	}
@@ -155,24 +197,35 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 		e.targetName = string(n)
 	}
 
+	nameCanonical := e.nameCanonical
+	if e.targetName == "" && e.danglingPrefix != "" {
+		e.targetName = e.danglingPrefix + "@" + desc.Digest.String()
+		nameCanonical = false
+	}
+
 	if e.targetName != "" {
 		targetNames := strings.Split(e.targetName, ",")
 		for _, targetName := range targetNames {
 			if e.opt.Images != nil {
 				tagDone := oneOffProgress(ctx, "naming to "+targetName)
 				img := images.Image{
-					Name:      targetName,
 					Target:    *desc,
 					CreatedAt: time.Now(),
 				}
+				sfx := []string{""}
+				if nameCanonical {
+					sfx = append(sfx, "@"+desc.Digest.String())
+				}
+				for _, sfx := range sfx {
+					img.Name = targetName + sfx
+					if _, err := e.opt.Images.Update(ctx, img); err != nil {
+						if !errdefs.IsNotFound(err) {
+							return nil, tagDone(err)
+						}
 
-				if _, err := e.opt.Images.Update(ctx, img); err != nil {
-					if !errdefs.IsNotFound(err) {
-						return nil, tagDone(err)
-					}
-
-					if _, err := e.opt.Images.Create(ctx, img); err != nil {
-						return nil, tagDone(err)
+						if _, err := e.opt.Images.Create(ctx, img); err != nil {
+							return nil, tagDone(err)
+						}
 					}
 				}
 				tagDone(nil)
@@ -184,7 +237,7 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 				}
 			}
 			if e.push {
-				if err := push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, targetName, e.insecure, e.opt.ResolverOpt, e.pushByDigest); err != nil {
+				if err := push.Push(ctx, e.opt.SessionManager, e.opt.ImageWriter.ContentStore(), desc.Digest, targetName, e.insecure, e.opt.RegistryHosts, e.pushByDigest); err != nil {
 					return nil, err
 				}
 			}

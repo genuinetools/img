@@ -3,10 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/containerd/containerd/remotes/docker"
+	"github.com/moby/buildkit/util/leaseutil"
 	"os/exec"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/containerd/containerd/content/local"
 	"github.com/containerd/containerd/diff/apply"
@@ -23,9 +24,7 @@ import (
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/binfmt_misc"
-	"github.com/moby/buildkit/util/network"
-	"github.com/moby/buildkit/util/resolver"
-	"github.com/moby/buildkit/util/throttle"
+	"github.com/moby/buildkit/util/network/netproviders"
 	"github.com/moby/buildkit/worker/base"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -69,7 +68,13 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 			Rootless:    unprivileged,
 			ProcessMode: processMode(),
 		}
-		exe, err = runcexecutor.New(exeOpt, network.Default())
+
+		np, err := netproviders.Providers(netproviders.Opt{Mode: "auto"})
+		if err != nil {
+			return base.WorkerOpt{}, err
+		}
+
+		exe, err = runcexecutor.New(exeOpt, np)
 		if err != nil {
 			return opt, err
 		}
@@ -98,19 +103,7 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	// Create the image store.
 	imageStore := ctdmetadata.NewImageStore(mdb)
 
-	// Create the garbage collector.
-	throttledGC := throttle.Throttle(time.Second, func() {
-		if _, err := mdb.GarbageCollect(context.TODO()); err != nil {
-			logrus.Errorf("GC error: %+v", err)
-		}
-	})
-
-	gc := func(ctx context.Context) error {
-		throttledGC()
-		return nil
-	}
-
-	contentStore = containerdsnapshot.NewContentStore(mdb.ContentStore(), "buildkit", gc)
+	contentStore = containerdsnapshot.NewContentStore(mdb.ContentStore(), "buildkit")
 
 	id, err := base.ID(c.root)
 	if err != nil {
@@ -120,7 +113,7 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	xlabels := base.Labels("oci", c.backend)
 
 	var supportedPlatforms []specs.Platform
-	for _, p := range binfmt_misc.SupportedPlatforms() {
+	for _, p := range binfmt_misc.SupportedPlatforms(false) {
 		parsed, err := platforms.Parse(p)
 		if err != nil {
 			return opt, err
@@ -129,17 +122,19 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	}
 
 	opt = base.WorkerOpt{
-		ID:                 id,
-		Labels:             xlabels,
-		MetadataStore:      md,
-		Executor:           exe,
-		Snapshotter:        containerdsnapshot.NewSnapshotter(c.backend, mdb.Snapshotter(c.backend), contentStore, md, "buildkit", gc, nil),
-		ContentStore:       contentStore,
-		Applier:            apply.NewFileSystemApplier(contentStore),
-		Differ:             walking.NewWalkingDiff(contentStore),
-		ImageStore:         imageStore,
-		Platforms:          supportedPlatforms,
-		ResolveOptionsFunc: resolver.NewResolveOptionsFunc(nil),
+		ID:             id,
+		Labels:         xlabels,
+		MetadataStore:  md,
+		Executor:       exe,
+		Snapshotter:    containerdsnapshot.NewSnapshotter(c.backend, mdb.Snapshotter(c.backend), "buildkit", nil),
+		ContentStore:   contentStore,
+		Applier:        apply.NewFileSystemApplier(contentStore),
+		Differ:         walking.NewWalkingDiff(contentStore),
+		ImageStore:     imageStore,
+		Platforms:      supportedPlatforms,
+		RegistryHosts:  docker.ConfigureDefaultRegistries(),
+		LeaseManager:   leaseutil.WithNamespace(ctdmetadata.NewLeaseManager(mdb), "buildkit"),
+		GarbageCollect: mdb.GarbageCollect,
 	}
 
 	return opt, err

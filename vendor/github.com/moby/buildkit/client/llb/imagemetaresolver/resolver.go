@@ -10,7 +10,6 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/docker/pkg/locker"
 	"github.com/moby/buildkit/client/llb"
-	gw "github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/util/contentutil"
 	"github.com/moby/buildkit/util/imageutil"
 	digest "github.com/opencontainers/go-digest"
@@ -72,7 +71,7 @@ type resolveResult struct {
 	dgst   digest.Digest
 }
 
-func (imr *imageMetaResolver) ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt) (digest.Digest, []byte, error) {
+func (imr *imageMetaResolver) ResolveImageConfig(ctx context.Context, ref string, opt llb.ResolveImageConfigOpt) (digest.Digest, []byte, error) {
 	imr.locker.Lock(ref)
 	defer imr.locker.Unlock(ref)
 
@@ -87,7 +86,7 @@ func (imr *imageMetaResolver) ResolveImageConfig(ctx context.Context, ref string
 		return res.dgst, res.config, nil
 	}
 
-	dgst, config, err := imageutil.Config(ctx, ref, imr.resolver, imr.buffer, platform)
+	dgst, config, err := imageutil.Config(ctx, ref, imr.resolver, imr.buffer, nil, platform)
 	if err != nil {
 		return "", nil, err
 	}

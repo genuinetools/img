@@ -22,6 +22,7 @@ import (
 	digest "github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 const keyEntitlements = "llb.entitlements"
@@ -39,6 +40,7 @@ type Solver struct {
 	workerController          *worker.Controller
 	solver                    *solver.Solver
 	resolveWorker             ResolveWorkerFunc
+	eachWorker                func(func(worker.Worker) error) error
 	frontends                 map[string]frontend.Frontend
 	resolveCacheImporterFuncs map[string]remotecache.ResolveCacheImporterFunc
 	platforms                 []specs.Platform
@@ -51,6 +53,7 @@ func New(wc *worker.Controller, f map[string]frontend.Frontend, cache solver.Cac
 	s := &Solver{
 		workerController:          wc,
 		resolveWorker:             defaultResolver(wc),
+		eachWorker:                allWorkers(wc),
 		frontends:                 f,
 		resolveCacheImporterFuncs: resolveCI,
 		gatewayForwarder:          gatewayForwarder,
@@ -63,7 +66,7 @@ func New(wc *worker.Controller, f map[string]frontend.Frontend, cache solver.Cac
 	if err != nil {
 		return nil, err
 	}
-	s.platforms = w.Platforms()
+	s.platforms = w.Platforms(false)
 
 	s.solver = solver.NewSolver(solver.SolverOpt{
 		ResolveOpFunc: s.resolver(),
@@ -87,6 +90,7 @@ func (s *Solver) Bridge(b solver.Builder) frontend.FrontendLLBBridge {
 		builder:                   b,
 		frontends:                 s.frontends,
 		resolveWorker:             s.resolveWorker,
+		eachWorker:                s.eachWorker,
 		resolveCacheImporterFuncs: s.resolveCacheImporterFuncs,
 		cms:                       map[string]solver.CacheManager{},
 		platforms:                 s.platforms,
@@ -112,7 +116,7 @@ func (s *Solver) Solve(ctx context.Context, id string, req frontend.SolveRequest
 
 	var res *frontend.Result
 	if s.gatewayForwarder != nil && req.Definition == nil && req.Frontend == "" {
-		fwd := gateway.NewBridgeForwarder(ctx, s.Bridge(j), s.workerController)
+		fwd := gateway.NewBridgeForwarder(ctx, s.Bridge(j), s.workerController, req.FrontendInputs)
 		defer fwd.Discard()
 		if err := s.gatewayForwarder.RegisterBuild(ctx, id, fwd); err != nil {
 			return nil, err
@@ -137,11 +141,23 @@ func (s *Solver) Solve(ctx context.Context, id string, req frontend.SolveRequest
 	}
 
 	defer func() {
-		res.EachRef(func(ref solver.CachedResult) error {
+		res.EachRef(func(ref solver.ResultProxy) error {
 			go ref.Release(context.TODO())
 			return nil
 		})
 	}()
+
+	eg, ctx2 := errgroup.WithContext(ctx)
+	res.EachRef(func(ref solver.ResultProxy) error {
+		eg.Go(func() error {
+			_, err := ref.Result(ctx2)
+			return err
+		})
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
 
 	var exporterResponse map[string]string
 	if e := exp.Exporter; e != nil {
@@ -152,13 +168,17 @@ func (s *Solver) Solve(ctx context.Context, id string, req frontend.SolveRequest
 			inp.Metadata = make(map[string][]byte)
 		}
 		if res := res.Ref; res != nil {
-			workerRef, ok := res.Sys().(*worker.WorkerRef)
+			r, err := res.Result(ctx)
+			if err != nil {
+				return nil, err
+			}
+			workerRef, ok := r.Sys().(*worker.WorkerRef)
 			if !ok {
-				return nil, errors.Errorf("invalid reference: %T", res.Sys())
+				return nil, errors.Errorf("invalid reference: %T", r.Sys())
 			}
 			inp.Ref = workerRef.ImmutableRef
 
-			dt, err := inlineCache(ctx, exp.CacheExporter, res)
+			dt, err := inlineCache(ctx, exp.CacheExporter, r)
 			if err != nil {
 				return nil, err
 			}
@@ -172,13 +192,17 @@ func (s *Solver) Solve(ctx context.Context, id string, req frontend.SolveRequest
 				if res == nil {
 					m[k] = nil
 				} else {
-					workerRef, ok := res.Sys().(*worker.WorkerRef)
+					r, err := res.Result(ctx)
+					if err != nil {
+						return nil, err
+					}
+					workerRef, ok := r.Sys().(*worker.WorkerRef)
 					if !ok {
-						return nil, errors.Errorf("invalid reference: %T", res.Sys())
+						return nil, errors.Errorf("invalid reference: %T", r.Sys())
 					}
 					m[k] = workerRef.ImmutableRef
 
-					dt, err := inlineCache(ctx, exp.CacheExporter, res)
+					dt, err := inlineCache(ctx, exp.CacheExporter, r)
 					if err != nil {
 						return nil, err
 					}
@@ -202,9 +226,13 @@ func (s *Solver) Solve(ctx context.Context, id string, req frontend.SolveRequest
 	if e := exp.CacheExporter; e != nil {
 		if err := inVertexContext(j.Context(ctx), "exporting cache", "", func(ctx context.Context) error {
 			prepareDone := oneOffProgress(ctx, "preparing build cache for export")
-			if err := res.EachRef(func(res solver.CachedResult) error {
+			if err := res.EachRef(func(res solver.ResultProxy) error {
+				r, err := res.Result(ctx)
+				if err != nil {
+					return err
+				}
 				// all keys have same export chain so exporting others is not needed
-				_, err := res.CacheKeys()[0].Exporter.ExportTo(ctx, e, solver.CacheExportOpt{
+				_, err = r.CacheKeys()[0].Exporter.ExportTo(ctx, e, solver.CacheExportOpt{
 					Convert: workerRefConverter,
 					Mode:    exp.CacheExportMode,
 				})
@@ -283,6 +311,20 @@ func (s *Solver) Status(ctx context.Context, id string, statusChan chan *client.
 func defaultResolver(wc *worker.Controller) ResolveWorkerFunc {
 	return func() (worker.Worker, error) {
 		return wc.GetDefault()
+	}
+}
+func allWorkers(wc *worker.Controller) func(func(w worker.Worker) error) error {
+	return func(f func(worker.Worker) error) error {
+		all, err := wc.List()
+		if err != nil {
+			return err
+		}
+		for _, w := range all {
+			if err := f(w); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }
 

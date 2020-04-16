@@ -2,54 +2,61 @@ package pull
 
 import (
 	"context"
-	"net/http"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
+	distreference "github.com/docker/distribution/reference"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/resolver"
-	"github.com/moby/buildkit/util/tracing"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func NewResolver(ctx context.Context, rfn resolver.ResolveOptionsFunc, sm *session.Manager, imageStore images.Store, mode source.ResolveMode, ref string) remotes.Resolver {
-	opt := docker.ResolverOptions{
-		Client: http.DefaultClient,
-	}
-	if rfn != nil {
-		opt = rfn(ref)
-	}
-	opt.Credentials = getCredentialsFromSession(ctx, sm)
+var cache *resolverCache
 
-	r := docker.NewResolver(opt)
+func init() {
+	cache = newResolverCache()
+}
 
+func NewResolver(ctx context.Context, hosts docker.RegistryHosts, sm *session.Manager, imageStore images.Store, mode source.ResolveMode, ref string) remotes.Resolver {
+	if res := cache.Get(ctx, ref); res != nil {
+		return withLocal(res, imageStore, mode)
+	}
+
+	r := resolver.New(ctx, hosts, sm)
+	r = cache.Add(ctx, ref, r)
+
+	return withLocal(r, imageStore, mode)
+}
+
+func EnsureManifestRequested(ctx context.Context, res remotes.Resolver, ref string) {
+	rr := res
+	lr, ok := res.(withLocalResolver)
+	if ok {
+		if atomic.LoadInt64(&lr.counter) > 0 {
+			return
+		}
+		rr = lr.Resolver
+	}
+	cr, ok := rr.(*cachedResolver)
+	if !ok {
+		return
+	}
+	if atomic.LoadInt64(&cr.counter) == 0 {
+		res.Resolve(ctx, ref)
+	}
+}
+
+func withLocal(r remotes.Resolver, imageStore images.Store, mode source.ResolveMode) remotes.Resolver {
 	if imageStore == nil || mode == source.ResolveModeForcePull {
 		return r
 	}
 
-	return withLocalResolver{r, imageStore, mode}
-}
-
-func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(string) (string, string, error) {
-	id := session.FromContext(ctx)
-	if id == "" {
-		return nil
-	}
-	return func(host string) (string, string, error) {
-		timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		caller, err := sm.Get(timeoutCtx, id)
-		if err != nil {
-			return "", "", err
-		}
-
-		return auth.CredentialsFunc(tracing.ContextWithSpanFromContext(context.TODO(), ctx), caller)(host)
-	}
+	return withLocalResolver{Resolver: r, is: imageStore, mode: mode}
 }
 
 // A remotes.Resolver which checks the local image store if the real
@@ -65,6 +72,7 @@ func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(st
 // - Pusher wouldn't make sense to push locally, so just forward.
 
 type withLocalResolver struct {
+	counter int64 // needs to be 64bit aligned for 32bit systems
 	remotes.Resolver
 	is   images.Store
 	mode source.ResolveMode
@@ -73,6 +81,7 @@ type withLocalResolver struct {
 func (r withLocalResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
 	if r.mode == source.ResolveModePreferLocal {
 		if img, err := r.is.Get(ctx, ref); err == nil {
+			atomic.AddInt64(&r.counter, 1)
 			return ref, img.Target, nil
 		}
 	}
@@ -89,4 +98,81 @@ func (r withLocalResolver) Resolve(ctx context.Context, ref string) (string, oci
 	}
 
 	return "", ocispec.Descriptor{}, err
+}
+
+type resolverCache struct {
+	mu sync.Mutex
+	m  map[string]cachedResolver
+}
+
+type cachedResolver struct {
+	counter int64
+	timeout time.Time
+	remotes.Resolver
+}
+
+func (cr *cachedResolver) Resolve(ctx context.Context, ref string) (name string, desc ocispec.Descriptor, err error) {
+	atomic.AddInt64(&cr.counter, 1)
+	return cr.Resolver.Resolve(ctx, ref)
+}
+
+func (r *resolverCache) Add(ctx context.Context, ref string, resolver remotes.Resolver) remotes.Resolver {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ref = r.repo(ref) + "-" + session.FromContext(ctx)
+
+	cr, ok := r.m[ref]
+	cr.timeout = time.Now().Add(time.Minute)
+	if ok {
+		return &cr
+	}
+
+	cr.Resolver = resolver
+	r.m[ref] = cr
+	return &cr
+}
+
+func (r *resolverCache) repo(refStr string) string {
+	ref, err := distreference.ParseNormalizedNamed(refStr)
+	if err != nil {
+		return refStr
+	}
+	return ref.Name()
+}
+
+func (r *resolverCache) Get(ctx context.Context, ref string) remotes.Resolver {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ref = r.repo(ref) + "-" + session.FromContext(ctx)
+
+	cr, ok := r.m[ref]
+	if !ok {
+		return nil
+	}
+	return &cr
+}
+
+func (r *resolverCache) clean(now time.Time) {
+	r.mu.Lock()
+	for k, cr := range r.m {
+		if now.After(cr.timeout) {
+			delete(r.m, k)
+		}
+	}
+	r.mu.Unlock()
+}
+
+func newResolverCache() *resolverCache {
+	rc := &resolverCache{
+		m: map[string]cachedResolver{},
+	}
+	t := time.NewTicker(time.Minute)
+	go func() {
+		for {
+			rc.clean(<-t.C)
+		}
+	}()
+	return rc
 }

@@ -63,7 +63,9 @@ func (gwf *GatewayForwarder) lookupForwarder(ctx context.Context) (gateway.LLBBr
 
 	go func() {
 		<-ctx.Done()
+		gwf.mu.Lock()
 		gwf.updateCond.Broadcast()
+		gwf.mu.Unlock()
 	}()
 
 	gwf.mu.RLock()
@@ -123,6 +125,15 @@ func (gwf *GatewayForwarder) Return(ctx context.Context, req *gwapi.ReturnReques
 		return nil, errors.Wrap(err, "forwarding Return")
 	}
 	res, err := fwd.Return(ctx, req)
+	return res, err
+}
+
+func (gwf *GatewayForwarder) Inputs(ctx context.Context, req *gwapi.InputsRequest) (*gwapi.InputsResponse, error) {
+	fwd, err := gwf.lookupForwarder(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "forwarding Inputs")
+	}
+	res, err := fwd.Inputs(ctx, req)
 	return res, err
 }
 

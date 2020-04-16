@@ -60,6 +60,10 @@ func SetCacheContext(ctx context.Context, md *metadata.StorageItem, cc CacheCont
 	return getDefaultManager().SetCacheContext(ctx, md, cc)
 }
 
+func ClearCacheContext(md *metadata.StorageItem) {
+	getDefaultManager().clearCacheContext(md.ID())
+}
+
 type CacheContext interface {
 	Checksum(ctx context.Context, ref cache.Mountable, p string, followLinks bool) (digest.Digest, error)
 	ChecksumWildcard(ctx context.Context, ref cache.Mountable, p string, followLinks bool) (digest.Digest, error)
@@ -140,6 +144,12 @@ func (cm *cacheManager) SetCacheContext(ctx context.Context, md *metadata.Storag
 	cm.lru.Add(md.ID(), cc)
 	cm.lruMu.Unlock()
 	return nil
+}
+
+func (cm *cacheManager) clearCacheContext(id string) {
+	cm.lruMu.Lock()
+	cm.lru.Remove(id)
+	cm.lruMu.Unlock()
 }
 
 type cacheContext struct {
@@ -782,7 +792,7 @@ func getFollowLinksWalk(root *iradix.Node, k []byte, follow bool, linksWalked *i
 		return k, v.(*CacheRecord), nil
 	}
 	if !follow || len(k) == 0 {
-		return nil, nil, nil
+		return k, nil, nil
 	}
 
 	dir, file := splitKey(k)
@@ -807,14 +817,13 @@ func getFollowLinksWalk(root *iradix.Node, k []byte, follow bool, linksWalked *i
 			}
 			return getFollowLinksWalk(root, append(convertPathToKey([]byte(link)), file...), follow, linksWalked)
 		}
-
-		k = append(k, file...)
-		v, ok = root.Get(k)
-		if ok {
-			return k, v.(*CacheRecord), nil
-		}
 	}
-	return nil, nil, nil
+	k = append(k, file...)
+	v, ok = root.Get(k)
+	if ok {
+		return k, v.(*CacheRecord), nil
+	}
+	return k, nil, nil
 }
 
 func prepareDigest(fp, p string, fi os.FileInfo) (digest.Digest, error) {

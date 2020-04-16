@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/moby/buildkit/cache/remotecache"
 	inlineremotecache "github.com/moby/buildkit/cache/remotecache/inline"
 	registryremotecache "github.com/moby/buildkit/cache/remotecache/registry"
@@ -11,7 +12,6 @@ import (
 	"github.com/moby/buildkit/frontend/gateway"
 	"github.com/moby/buildkit/frontend/gateway/forwarder"
 	"github.com/moby/buildkit/solver/bboltcachestorage"
-	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
 	"path/filepath"
@@ -51,13 +51,11 @@ func (c *Client) createController() error {
 		return err
 	}
 
-	resolverFn := resolverFunc()
-
 	remoteCacheExporterFuncs := map[string]remotecache.ResolveCacheExporterFunc{
 		"inline": inlineremotecache.ResolveCacheExporterFunc(),
 	}
 	remoteCacheImporterFuncs := map[string]remotecache.ResolveCacheImporterFunc{
-		"registry": registryremotecache.ResolveCacheImporterFunc(sm, resolverFn),
+		"registry": registryremotecache.ResolveCacheImporterFunc(sm, opt.ContentStore, docker.ConfigureDefaultRegistries()),
 	}
 
 	// Create the controller.
@@ -78,9 +76,4 @@ func (c *Client) createController() error {
 	c.controller = controller
 
 	return nil
-}
-
-func resolverFunc() resolver.ResolveOptionsFunc {
-	m := map[string]resolver.RegistryConf{}
-	return resolver.NewResolveOptionsFunc(m)
 }

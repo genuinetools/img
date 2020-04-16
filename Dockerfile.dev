@@ -1,6 +1,6 @@
 
 
-FROM ubuntu:xenial AS base
+FROM ubuntu:bionic AS base
 
 # gcc for cgo
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,28 +14,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		curl \
 		ca-certificates \
 		libseccomp-dev \
+		uidmap \
 		parallel \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV GOLANG_VERSION 1.11.9
+ENV GOLANG_VERSION 1.14.2
 
 RUN set -eux; \
 	\
 # this "case" statement is generated via "update.sh"
 	dpkgArch="$(dpkg --print-architecture)"; \
 	case "${dpkgArch##*-}" in \
-		amd64) goRelArch='linux-amd64'; goRelSha256='e88aa3e39104e3ba6a95a4e05629348b4a1ec82791fb3c941a493ca349730608' ;; \
-		armhf) goRelArch='linux-armv6l'; goRelSha256='f0d7b039cae61efdc346669f3459460e3dc03b6c6de528ca107fc53970cba0d1' ;; \
-		arm64) goRelArch='linux-arm64'; goRelSha256='892ab6c2510c4caa5905b3b1b6a1d4c6f04e384841fec50881ca2be7e8accf05' ;; \
-		i386) goRelArch='linux-386'; goRelSha256='0fa4001fcf1ef0644e261bf6dde02fc9f10ae4df6d74fda61fc4d3c3cbef1d79' ;; \
-		ppc64el) goRelArch='linux-ppc64le'; goRelSha256='6a0a6a80997529543a434667f404ead2da88ac8fecc59bfba82f62bd2588e6c8' ;; \
-		s390x) goRelArch='linux-s390x'; goRelSha256='0dd7073469d0f414b264fbadc4f720f9582b13ff6a0a978a9ef23020f9e42ac1' ;; \
-		*) goRelArch='src'; goRelSha256='ee80684b352f8d6b49d804d4e615f015ae92da41c4096cfee89ed4783b2498e3'; \
+		amd64) goRelArch='linux-amd64'; goRelSha256='6272d6e940ecb71ea5636ddb5fab3933e087c1356173c61f4a803895e947ebb3' ;; \
+		armhf) goRelArch='linux-armv6l'; goRelSha256='eb4550ba741506c2a4057ea4d3a5ad7ed5a887de67c7232f1e4795464361c83c' ;; \
+		arm64) goRelArch='linux-arm64'; goRelSha256='bb6d22fe5806352c3d0826676654e09b6e41eb1af52e8d506d3fa85adf7f8d88' ;; \
+		i386) goRelArch='linux-386'; goRelSha256='cab5f51e6ffb616c6ee963c3d0650ca4e3c4108307c44f2baf233fcb8ff098f6' ;; \
+		ppc64el) goRelArch='linux-ppc64le'; goRelSha256='48c22268c81ced9084a43bbe2c1596d3e636b5560b30a32434a7f15e561de160' ;; \
+		s390x) goRelArch='linux-s390x'; goRelSha256='501cc919648c9d85b901963303c5061ea6814c80f0d35fda9e62980d3ff58cf4' ;; \
+		*) goRelArch='src'; goRelSha256='98de84e69726a66da7b4e58eac41b99cbe274d7e8906eeb8a5b7eb0aadee7f7c'; \
 			echo >&2; echo >&2 "warning: current architecture ($dpkgArch) does not have a corresponding Go binary release; will be building from source"; echo >&2 ;; \
 	esac; \
 	\
 	url="https://golang.org/dl/go${GOLANG_VERSION}.${goRelArch}.tar.gz"; \
-	curl -sSL -o go.tgz "$url"; \
+	wget -O go.tgz --quiet "$url"; \
 	echo "${goRelSha256} *go.tgz" | sha256sum -c -; \
 	tar -C /usr/local -xzf go.tgz; \
 	rm go.tgz; \
@@ -56,39 +57,11 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
-RUN go get -u github.com/jteeuwen/go-bindata/go-bindata \
-    && go get golang.org/x/lint/golint \
+RUN go get golang.org/x/lint/golint \
     && go get honnef.co/go/tools/cmd/staticcheck \
-    && go get -u github.com/jteeuwen/go-bindata/... 
+    && go get github.com/go-bindata/go-bindata/go-bindata \
+    && go get github.com/go-delve/delve/cmd/dlv
 
-# We don't use the xenial shadow pkg bacause:
-# 1. To allow running img in a container without CAP_SYS_ADMIN, we need to do either
-#     a) install newuidmap/newgidmap with file capabilities rather than SETUID (requires kernel >= 4.14)
-#     b) install newuidmap/newgidmap >= 20181125 (59c2dabb264ef7b3137f5edb52c0b31d5af0cf76)
-#    We choose b) until kernel >= 4.14 gets widely adopted.
-#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138 https://github.com/shadow-maint/shadow/pull/141
-FROM base AS idmap
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      autoconf \
-      automake \
-      autopoint \
-      byacc \
-      gettext \
-      libcap-dev \
-      libtool \
-      libxslt1-dev \
-	  && rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/shadow-maint/shadow.git /shadow
-WORKDIR /shadow
-RUN git checkout 59c2dabb264ef7b3137f5edb52c0b31d5af0cf76
-RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
-  && make \
-  && cp src/newuidmap src/newgidmap /usr/bin
-
-FROM base
-
-COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
-COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
 RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
   && useradd -u 1000 --home-dir /home/user user \
   && mkdir -p /run/user/1000 \

@@ -18,7 +18,7 @@ import (
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/solver/pb"
-	"github.com/moby/buildkit/util/entitlements"
+	"github.com/moby/buildkit/util/entitlements/security"
 	"github.com/moby/buildkit/util/network"
 	"github.com/moby/buildkit/util/system"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -26,18 +26,6 @@ import (
 )
 
 // Ideally we don't have to import whole containerd just for the default spec
-
-// ProcMode configures PID namespaces
-type ProcessMode int
-
-const (
-	// ProcessSandbox unshares pidns and mount procfs.
-	ProcessSandbox ProcessMode = iota
-	// NoProcessSandbox uses host pidns and bind-mount procfs.
-	// Note that NoProcessSandbox allows build containers to kill (and potentially ptrace) an arbitrary process in the BuildKit host namespace.
-	// NoProcessSandbox should be enabled only when the BuildKit is running in a container as an unprivileged user.
-	NoProcessSandbox
-)
 
 // GenerateSpec generates spec using containerd functionality.
 // opts are ignored for s.Process, s.Hostname, and s.Mounts .
@@ -50,7 +38,7 @@ func GenerateSpec(ctx context.Context, meta executor.Meta, mounts []executor.Mou
 		ctx = namespaces.WithNamespace(ctx, "buildkit")
 	}
 	if meta.SecurityMode == pb.SecurityMode_INSECURE {
-		opts = append(opts, entitlements.WithInsecureSpec())
+		opts = append(opts, security.WithInsecureSpec())
 	} else if system.SeccompSupported() && meta.SecurityMode == pb.SecurityMode_SANDBOX {
 		opts = append(opts, seccomp.WithDefaultProfile())
 	}
@@ -113,11 +101,11 @@ func GenerateSpec(ctx context.Context, meta executor.Meta, mounts []executor.Mou
 	}
 
 	if meta.SecurityMode == pb.SecurityMode_INSECURE {
-		//make sysfs rw mount for insecure mode.
-		for _, m := range s.Mounts {
-			if m.Type == "sysfs" {
-				m.Options = []string{"nosuid", "noexec", "nodev", "rw"}
-			}
+		if err = oci.WithWriteableCgroupfs(ctx, nil, c, s); err != nil {
+			return nil, nil, err
+		}
+		if err = oci.WithWriteableSysfs(ctx, nil, c, s); err != nil {
+			return nil, nil, err
 		}
 	}
 
@@ -148,12 +136,12 @@ func GenerateSpec(ctx context.Context, meta executor.Meta, mounts []executor.Mou
 			releaseAll()
 			return nil, nil, errors.Wrapf(err, "failed to mount %s", m.Dest)
 		}
-		mounts, err := mountable.Mount()
+		mounts, release, err := mountable.Mount()
 		if err != nil {
 			releaseAll()
 			return nil, nil, errors.WithStack(err)
 		}
-		releasers = append(releasers, mountable.Release)
+		releasers = append(releasers, release)
 		for _, mount := range mounts {
 			mount, err = sm.subMount(mount, m.Selector)
 			if err != nil {

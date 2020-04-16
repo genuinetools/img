@@ -50,7 +50,9 @@ $(NAME): $(wildcard *.go) $(wildcard */*.go) VERSION.txt
 .PHONY: static
 static: prebuild ## Builds a static executable.
 	@echo "+ $@"
+#	$(GO) mod vendor
 	CGO_ENABLED=$(CGO_ENABLED) $(GO) build \
+	            -mod=vendor \
 				-tags "$(BUILDTAGS) static_build" \
 				${GO_LDFLAGS_STATIC} -o $(NAME) .
 
