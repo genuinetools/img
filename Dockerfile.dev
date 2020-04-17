@@ -62,6 +62,34 @@ RUN go get golang.org/x/lint/golint \
     && go get github.com/go-bindata/go-bindata/go-bindata \
     && go get github.com/go-delve/delve/cmd/dlv
 
+# We don't use the bionic shadow pkg bacause:
+# 1. To allow running img in a container without CAP_SYS_ADMIN, we need to do either
+#     a) install newuidmap/newgidmap with file capabilities rather than SETUID (requires kernel >= 4.14)
+#     b) install newuidmap/newgidmap >= 20181125 (59c2dabb264ef7b3137f5edb52c0b31d5af0cf76)
+#    We choose b) until kernel >= 4.14 gets widely adopted.
+#    See https://github.com/shadow-maint/shadow/pull/132 https://github.com/shadow-maint/shadow/pull/138 https://github.com/shadow-maint/shadow/pull/141
+FROM base AS idmap
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      autoconf \
+      automake \
+      autopoint \
+      byacc \
+      gettext \
+      libcap-dev \
+      libtool \
+      libxslt1-dev \
+	  && rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/shadow-maint/shadow.git /shadow
+WORKDIR /shadow
+RUN git checkout 59c2dabb264ef7b3137f5edb52c0b31d5af0cf76
+RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
+  && make \
+  && cp src/newuidmap src/newgidmap /usr/bin
+
+FROM base
+
+COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
+COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
 RUN chmod u+s /usr/bin/newuidmap /usr/bin/newgidmap \
   && useradd -u 1000 --home-dir /home/user user \
   && mkdir -p /run/user/1000 \
