@@ -10,6 +10,7 @@ addons:
       - libseccomp-dev
       - parallel
       - uidmap
+      - pigz
 before_install:
   - pushd /
   - go get golang.org/x/lint/golint

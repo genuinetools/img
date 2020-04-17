@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libseccomp-dev \
 		uidmap \
 		parallel \
+		pigz \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV GOLANG_VERSION 1.14.2

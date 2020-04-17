@@ -33,7 +33,7 @@ RUN ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux -
 
 FROM alpine:3.11 AS base
 MAINTAINER Jessica Frazelle <jess@linux.com>
-RUN apk add --no-cache git shadow-uidmap
+RUN apk add --no-cache git shadow-uidmap pigz
 COPY --from=img /usr/bin/img /usr/bin/img
 COPY --from=idmap /usr/bin/newuidmap /usr/bin/newuidmap
 COPY --from=idmap /usr/bin/newgidmap /usr/bin/newgidmap
