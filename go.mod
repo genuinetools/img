@@ -1,6 +1,6 @@
 module github.com/genuinetools/img
 
-go 1.14
+go 1.13
 
 replace github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 

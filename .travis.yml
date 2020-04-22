@@ -3,7 +3,7 @@ dist: bionic
 notifications:
   email: true
 go:
-  - 1.14.x
+  - 1.13.x
 addons:
   apt:
     packages:

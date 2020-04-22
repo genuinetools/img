@@ -1,4 +1,4 @@
-FROM golang:1.14-alpine AS img
+FROM golang:1.13-alpine AS img
 
 RUN apk add --no-cache \
 	bash \
