@@ -7,18 +7,22 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
+	"github.com/containerd/containerd/gc"
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/rootfs"
-	cdsnapshot "github.com/containerd/containerd/snapshots"
+	"github.com/containerd/containerd/leases"
+	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/cache/metadata"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/executor"
 	"github.com/moby/buildkit/exporter"
 	imageexporter "github.com/moby/buildkit/exporter/containerimage"
@@ -26,7 +30,6 @@ import (
 	ociexporter "github.com/moby/buildkit/exporter/oci"
 	tarexporter "github.com/moby/buildkit/exporter/tar"
 	"github.com/moby/buildkit/frontend"
-	gw "github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/snapshot"
@@ -39,16 +42,17 @@ import (
 	"github.com/moby/buildkit/source/git"
 	"github.com/moby/buildkit/source/http"
 	"github.com/moby/buildkit/source/local"
+	"github.com/moby/buildkit/util/binfmt_misc"
 	"github.com/moby/buildkit/util/contentutil"
+	"github.com/moby/buildkit/util/leaseutil"
 	"github.com/moby/buildkit/util/progress"
-	"github.com/moby/buildkit/util/resolver"
 	"github.com/moby/buildkit/worker"
 	digest "github.com/opencontainers/go-digest"
-	ociidentity "github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -59,19 +63,21 @@ const labelCreatedAt = "buildkit/createdat"
 // WorkerOpt is specific to a worker.
 // See also CommonOpt.
 type WorkerOpt struct {
-	ID                 string
-	Labels             map[string]string
-	Platforms          []specs.Platform
-	GCPolicy           []client.PruneInfo
-	MetadataStore      *metadata.Store
-	Executor           executor.Executor
-	Snapshotter        snapshot.Snapshotter
-	ContentStore       content.Store
-	Applier            diff.Applier
-	Differ             diff.Comparer
-	ImageStore         images.Store // optional
-	ResolveOptionsFunc resolver.ResolveOptionsFunc
-	IdentityMapping    *idtools.IdentityMapping
+	ID              string
+	Labels          map[string]string
+	Platforms       []specs.Platform
+	GCPolicy        []client.PruneInfo
+	MetadataStore   *metadata.Store
+	Executor        executor.Executor
+	Snapshotter     snapshot.Snapshotter
+	ContentStore    content.Store
+	Applier         diff.Applier
+	Differ          diff.Comparer
+	ImageStore      images.Store // optional
+	RegistryHosts   docker.RegistryHosts
+	IdentityMapping *idtools.IdentityMapping
+	LeaseManager    leases.Manager
+	GarbageCollect  func(context.Context) (gc.Stats, error)
 }
 
 // Worker is a local worker instance with dedicated snapshotter, cache, and so on.
@@ -88,7 +94,6 @@ type Worker struct {
 func NewWorker(opt WorkerOpt) (*Worker, error) {
 	imageRefChecker := imagerefchecker.New(imagerefchecker.Opt{
 		ImageStore:   opt.ImageStore,
-		Snapshotter:  opt.Snapshotter,
 		ContentStore: opt.ContentStore,
 	})
 
@@ -96,6 +101,10 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		Snapshotter:     opt.Snapshotter,
 		MetadataStore:   opt.MetadataStore,
 		PruneRefChecker: imageRefChecker,
+		Applier:         opt.Applier,
+		GarbageCollect:  opt.GarbageCollect,
+		LeaseManager:    opt.LeaseManager,
+		ContentStore:    opt.ContentStore,
 	})
 	if err != nil {
 		return nil, err
@@ -112,7 +121,8 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		Applier:       opt.Applier,
 		ImageStore:    opt.ImageStore,
 		CacheAccessor: cm,
-		ResolverOpt:   opt.ResolveOptionsFunc,
+		RegistryHosts: opt.RegistryHosts,
+		LeaseManager:  opt.LeaseManager,
 	})
 	if err != nil {
 		return nil, err
@@ -162,6 +172,14 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		return nil, err
 	}
 
+	leases, err := opt.LeaseManager.List(context.TODO(), "labels.\"buildkit/lease.temporary\"")
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range leases {
+		opt.LeaseManager.Delete(context.TODO(), l)
+	}
+
 	return &Worker{
 		WorkerOpt:     opt,
 		CacheManager:  cm,
@@ -169,6 +187,10 @@ func NewWorker(opt WorkerOpt) (*Worker, error) {
 		imageWriter:   iw,
 		ImageSource:   is,
 	}, nil
+}
+
+func (w *Worker) ContentStore() content.Store {
+	return w.WorkerOpt.ContentStore
 }
 
 func (w *Worker) ID() string {
@@ -179,7 +201,19 @@ func (w *Worker) Labels() map[string]string {
 	return w.WorkerOpt.Labels
 }
 
-func (w *Worker) Platforms() []specs.Platform {
+func (w *Worker) Platforms(noCache bool) []specs.Platform {
+	if noCache {
+		pm := make(map[string]struct{}, len(w.WorkerOpt.Platforms))
+		for _, p := range w.WorkerOpt.Platforms {
+			pm[platforms.Format(p)] = struct{}{}
+		}
+		for _, p := range binfmt_misc.SupportedPlatforms(noCache) {
+			if _, ok := pm[p]; !ok {
+				pp, _ := platforms.Parse(p)
+				w.WorkerOpt.Platforms = append(w.WorkerOpt.Platforms, pp)
+			}
+		}
+	}
 	return w.WorkerOpt.Platforms
 }
 
@@ -213,7 +247,47 @@ func (w *Worker) ResolveOp(v solver.Vertex, s frontend.FrontendLLBBridge, sm *se
 	return nil, errors.Errorf("could not resolve %v", v)
 }
 
-func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt, sm *session.Manager) (digest.Digest, []byte, error) {
+func (w *Worker) PruneCacheMounts(ctx context.Context, ids []string) error {
+	mu := ops.CacheMountsLocker()
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, id := range ids {
+		id = "cache-dir:" + id
+		sis, err := w.MetadataStore.Search(id)
+		if err != nil {
+			return err
+		}
+		for _, si := range sis {
+			for _, k := range si.Indexes() {
+				if k == id || strings.HasPrefix(k, id+":") {
+					if siCached := w.CacheManager.Metadata(si.ID()); siCached != nil {
+						si = siCached
+					}
+					if err := cache.CachePolicyDefault(si); err != nil {
+						return err
+					}
+					si.Queue(func(b *bolt.Bucket) error {
+						return si.SetValue(b, k, nil)
+					})
+					if err := si.Commit(); err != nil {
+						return err
+					}
+					// if ref is unused try to clean it up right away by releasing it
+					if mref, err := w.CacheManager.GetMutable(ctx, si.ID()); err == nil {
+						go mref.Release(context.TODO())
+					}
+					break
+				}
+			}
+		}
+	}
+
+	ops.ClearActiveCacheMounts()
+	return nil
+}
+
+func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, opt llb.ResolveImageConfigOpt, sm *session.Manager) (digest.Digest, []byte, error) {
 	// ImageSource is typically source/containerimage
 	resolveImageConfig, ok := w.ImageSource.(resolveImageConfig)
 	if !ok {
@@ -223,7 +297,7 @@ func (w *Worker) ResolveImageConfig(ctx context.Context, ref string, opt gw.Reso
 }
 
 type resolveImageConfig interface {
-	ResolveImageConfig(ctx context.Context, ref string, opt gw.ResolveImageConfigOpt, sm *session.Manager) (digest.Digest, []byte, error)
+	ResolveImageConfig(ctx context.Context, ref string, opt llb.ResolveImageConfigOpt, sm *session.Manager) (digest.Digest, []byte, error)
 }
 
 func (w *Worker) Exec(ctx context.Context, meta executor.Meta, rootFS cache.ImmutableRef, stdin io.ReadCloser, stdout, stderr io.WriteCloser) error {
@@ -250,7 +324,8 @@ func (w *Worker) Exporter(name string, sm *session.Manager) (exporter.Exporter, 
 			Images:         w.ImageStore,
 			SessionManager: sm,
 			ImageWriter:    w.imageWriter,
-			ResolverOpt:    w.ResolveOptionsFunc,
+			RegistryHosts:  w.RegistryHosts,
+			LeaseManager:   w.LeaseManager,
 		})
 	case client.ExporterLocal:
 		return localexporter.New(localexporter.Opt{
@@ -265,12 +340,14 @@ func (w *Worker) Exporter(name string, sm *session.Manager) (exporter.Exporter, 
 			SessionManager: sm,
 			ImageWriter:    w.imageWriter,
 			Variant:        ociexporter.VariantOCI,
+			LeaseManager:   w.LeaseManager,
 		})
 	case client.ExporterDocker:
 		return ociexporter.New(ociexporter.Opt{
 			SessionManager: sm,
 			ImageWriter:    w.imageWriter,
 			Variant:        ociexporter.VariantDocker,
+			LeaseManager:   w.LeaseManager,
 		})
 	default:
 		return nil, errors.Errorf("exporter %q could not be found", name)
@@ -278,7 +355,14 @@ func (w *Worker) Exporter(name string, sm *session.Manager) (exporter.Exporter, 
 }
 
 func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIfNeeded bool) (*solver.Remote, error) {
-	diffPairs, err := blobs.GetDiffPairs(ctx, w.ContentStore, w.Snapshotter, w.Differ, ref, createIfNeeded)
+	ctx, done, err := leaseutil.WithLease(ctx, w.LeaseManager, leaseutil.MakeTemporary)
+	if err != nil {
+		return nil, err
+	}
+	defer done(ctx)
+
+	// TODO(fuweid): add compression option or config for cache exporter.
+	diffPairs, err := blobs.GetDiffPairs(ctx, w.ContentStore(), w.Differ, ref, createIfNeeded, blobs.DefaultCompression)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed calculating diff pairs for exported snapshot")
 	}
@@ -293,8 +377,10 @@ func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIf
 
 	descs := make([]ocispec.Descriptor, len(diffPairs))
 
+	cs := w.ContentStore()
+	layerMediaTypes := blobs.GetMediaTypeForLayers(diffPairs, ref)
 	for i, dp := range diffPairs {
-		info, err := w.ContentStore.Info(ctx, dp.Blobsum)
+		info, err := cs.Info(ctx, dp.Blobsum)
 		if err != nil {
 			return nil, err
 		}
@@ -304,10 +390,27 @@ func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIf
 			return nil, err
 		}
 
+		var mediaType string
+		if len(layerMediaTypes) > i {
+			mediaType = layerMediaTypes[i]
+		}
+
+		// NOTE: The media type might be missing for some migrated ones
+		// from before lease based storage. If so, we should detect
+		// the media type from blob data.
+		//
+		// Discussion: https://github.com/moby/buildkit/pull/1277#discussion_r352795429
+		if mediaType == "" {
+			mediaType, err = blobs.DetectLayerMediaType(ctx, cs, dp.Blobsum, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		descs[i] = ocispec.Descriptor{
 			Digest:    dp.Blobsum,
 			Size:      info.Size,
-			MediaType: images.MediaTypeDockerSchema2LayerGzip,
+			MediaType: mediaType,
 			Annotations: map[string]string{
 				"containerd.io/uncompressed": dp.DiffID.String(),
 				labelCreatedAt:               string(tm),
@@ -317,7 +420,7 @@ func (w *Worker) GetRemote(ctx context.Context, ref cache.ImmutableRef, createIf
 
 	return &solver.Remote{
 		Descriptors: descs,
-		Provider:    w.ContentStore,
+		Provider:    cs,
 	}, nil
 }
 
@@ -330,13 +433,30 @@ func getCreatedTimes(ref cache.ImmutableRef) (out []time.Time) {
 	return append(out, cache.GetCreatedAt(ref.Metadata()))
 }
 
-func (w *Worker) FromRemote(ctx context.Context, remote *solver.Remote) (cache.ImmutableRef, error) {
+func (w *Worker) FromRemote(ctx context.Context, remote *solver.Remote) (ref cache.ImmutableRef, err error) {
+	ctx, done, err := leaseutil.WithLease(ctx, w.LeaseManager, leaseutil.MakeTemporary)
+	if err != nil {
+		return nil, err
+	}
+	defer done(ctx)
+
 	eg, gctx := errgroup.WithContext(ctx)
 	for _, desc := range remote.Descriptors {
 		func(desc ocispec.Descriptor) {
 			eg.Go(func() error {
 				done := oneOffProgress(ctx, fmt.Sprintf("pulling %s", desc.Digest))
-				return done(contentutil.Copy(gctx, w.ContentStore, remote.Provider, desc))
+				if err := contentutil.Copy(gctx, w.ContentStore(), remote.Provider, desc); err != nil {
+					return done(err)
+				}
+				if ref, ok := desc.Annotations["containerd.io/distribution.source.ref"]; ok {
+					hf, err := docker.AppendDistributionSourceLabel(w.ContentStore(), ref)
+					if err != nil {
+						return done(err)
+					}
+					_, err = hf(ctx, desc)
+					return done(err)
+				}
+				return done(nil)
 			})
 		}(desc)
 	}
@@ -345,64 +465,39 @@ func (w *Worker) FromRemote(ctx context.Context, remote *solver.Remote) (cache.I
 		return nil, err
 	}
 
-	cs, release := snapshot.NewContainerdSnapshotter(w.Snapshotter)
-	defer release()
-
 	unpackProgressDone := oneOffProgress(ctx, "unpacking")
-	chainIDs, err := w.unpack(ctx, remote.Descriptors, cs)
-	if err != nil {
-		return nil, unpackProgressDone(err)
-	}
-	unpackProgressDone(nil)
-
-	for i, chainID := range chainIDs {
+	defer func() {
+		err = unpackProgressDone(err)
+	}()
+	var current cache.ImmutableRef
+	for i, desc := range remote.Descriptors {
 		tm := time.Now()
-		if tmstr, ok := remote.Descriptors[i].Annotations[labelCreatedAt]; ok {
+		if tmstr, ok := desc.Annotations[labelCreatedAt]; ok {
 			if err := (&tm).UnmarshalText([]byte(tmstr)); err != nil {
+				if current != nil {
+					current.Release(context.TODO())
+				}
 				return nil, err
 			}
 		}
 		descr := fmt.Sprintf("imported %s", remote.Descriptors[i].Digest)
-		if v, ok := remote.Descriptors[i].Annotations["buildkit/description"]; ok {
+		if v, ok := desc.Annotations["buildkit/description"]; ok {
 			descr = v
 		}
-		ref, err := w.CacheManager.Get(ctx, chainID, cache.WithDescription(descr), cache.WithCreationTime(tm))
+		ref, err := w.CacheManager.GetByBlob(ctx, desc, current, cache.WithDescription(descr), cache.WithCreationTime(tm))
+		if current != nil {
+			current.Release(context.TODO())
+		}
 		if err != nil {
 			return nil, err
 		}
-		if i == len(remote.Descriptors)-1 {
-			return ref, nil
-		}
-		ref.Release(context.TODO())
-	}
-	return nil, errors.Errorf("unreachable")
-}
-
-func (w *Worker) unpack(ctx context.Context, descs []ocispec.Descriptor, s cdsnapshot.Snapshotter) ([]string, error) {
-	layers, err := getLayers(ctx, descs)
-	if err != nil {
-		return nil, err
-	}
-
-	var chain []digest.Digest
-	for _, layer := range layers {
-		if _, err := rootfs.ApplyLayer(ctx, layer, chain, s, w.Applier); err != nil {
+		if err := ref.Extract(ctx); err != nil {
+			ref.Release(context.TODO())
 			return nil, err
 		}
-		chain = append(chain, layer.Diff.Digest)
-
-		chainID := ociidentity.ChainID(chain)
-		if err := w.Snapshotter.SetBlob(ctx, string(chainID), layer.Diff.Digest, layer.Blob.Digest); err != nil {
-			return nil, err
-		}
+		current = ref
 	}
-
-	ids := make([]string, len(chain))
-	for i := range chain {
-		ids[i] = string(ociidentity.ChainID(chain[:i+1]))
-	}
-
-	return ids, nil
+	return current, nil
 }
 
 // Labels returns default labels
@@ -435,30 +530,6 @@ func ID(root string) (string, error) {
 		}
 	}
 	return string(b), nil
-}
-
-func getLayers(ctx context.Context, descs []ocispec.Descriptor) ([]rootfs.Layer, error) {
-	layers := make([]rootfs.Layer, len(descs))
-	for i, desc := range descs {
-		diffIDStr := desc.Annotations["containerd.io/uncompressed"]
-		if diffIDStr == "" {
-			return nil, errors.Errorf("%s missing uncompressed digest", desc.Digest)
-		}
-		diffID, err := digest.Parse(diffIDStr)
-		if err != nil {
-			return nil, err
-		}
-		layers[i].Diff = ocispec.Descriptor{
-			MediaType: ocispec.MediaTypeImageLayer,
-			Digest:    diffID,
-		}
-		layers[i].Blob = ocispec.Descriptor{
-			MediaType: desc.MediaType,
-			Digest:    desc.Digest,
-			Size:      desc.Size,
-		}
-	}
-	return layers, nil
 }
 
 func oneOffProgress(ctx context.Context, id string) func(err error) error {

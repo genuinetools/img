@@ -20,6 +20,7 @@ import (
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerfile2llb"
 	"github.com/moby/buildkit/frontend/gateway/client"
+	gwpb "github.com/moby/buildkit/frontend/gateway/pb"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/util/apicaps"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -34,6 +35,7 @@ const (
 	keyFilename                = "filename"
 	keyCacheFrom               = "cache-from"    // for registry only. deprecated in favor of keyCacheImports
 	keyCacheImports            = "cache-imports" // JSON representation of []CacheOptionsEntry
+	keyCacheNS                 = "build-arg:BUILDKIT_CACHE_MOUNT_NS"
 	defaultDockerfileName      = "Dockerfile"
 	dockerignoreFilename       = ".dockerignore"
 	buildArgPrefix             = "build-arg:"
@@ -48,14 +50,16 @@ const (
 	keyNameContext             = "contextkey"
 	keyNameDockerfile          = "dockerfilekey"
 	keyContextSubDir           = "contextsubdir"
+	keyContextKeepGitDir       = "build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR"
 )
 
-var httpPrefix = regexp.MustCompile("^https?://")
-var gitUrlPathWithFragmentSuffix = regexp.MustCompile("\\.git(?:#.+)?$")
+var httpPrefix = regexp.MustCompile(`^https?://`)
+var gitUrlPathWithFragmentSuffix = regexp.MustCompile(`\.git(?:#.+)?$`)
 
 func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	opts := c.BuildOpts().Opts
 	caps := c.BuildOpts().LLBCaps
+	gwcaps := c.BuildOpts().Caps
 
 	marshalOpts := []llb.ConstraintsOpt{llb.WithCaps(caps)}
 
@@ -127,8 +131,8 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	fileop := useFileOp(opts, &caps)
 
 	var buildContext *llb.State
-	isScratchContext := false
-	if st, ok := detectGitContext(opts[localNameContext]); ok {
+	isNotLocalContext := false
+	if st, ok := detectGitContext(opts[localNameContext], opts[keyContextKeepGitDir]); ok {
 		if !forceLocalDockerfile {
 			src = *st
 		}
@@ -189,7 +193,25 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 				src = httpContext
 			}
 			buildContext = &httpContext
-			isScratchContext = true
+			isNotLocalContext = true
+		}
+	} else if (&gwcaps).Supports(gwpb.CapFrontendInputs) == nil {
+		inputs, err := c.Inputs(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get frontend inputs")
+		}
+
+		if !forceLocalDockerfile {
+			inputDockerfile, ok := inputs[DefaultLocalNameDockerfile]
+			if ok {
+				src = inputDockerfile
+			}
+		}
+
+		inputCtx, ok := inputs[DefaultLocalNameContext]
+		if ok {
+			buildContext = &inputCtx
+			isNotLocalContext = true
 		}
 	}
 
@@ -237,7 +259,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		return nil
 	})
 	var excludes []string
-	if !isScratchContext {
+	if !isNotLocalContext {
 		eg.Go(func() error {
 			dockerignoreState := buildContext
 			if dockerignoreState == nil {
@@ -322,6 +344,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 					MetaResolver:      c,
 					BuildArgs:         filter(opts, buildArgPrefix),
 					Labels:            filter(opts, labelPrefix),
+					CacheIDNamespace:  opts[keyCacheNS],
 					SessionID:         c.BuildOpts().SessionID,
 					BuildContext:      buildContext,
 					Excludes:          excludes,
@@ -433,9 +456,29 @@ func forwardGateway(ctx context.Context, c client.Client, ref string, cmdline st
 	}
 	opts["cmdline"] = cmdline
 	opts["source"] = ref
+
+	gwcaps := c.BuildOpts().Caps
+	var frontendInputs map[string]*pb.Definition
+	if (&gwcaps).Supports(gwpb.CapFrontendInputs) == nil {
+		inputs, err := c.Inputs(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get frontend inputs")
+		}
+
+		frontendInputs = make(map[string]*pb.Definition)
+		for name, state := range inputs {
+			def, err := state.Marshal()
+			if err != nil {
+				return nil, err
+			}
+			frontendInputs[name] = def.ToPB()
+		}
+	}
+
 	return c.Solve(ctx, client.SolveRequest{
-		Frontend:    "gateway.v0",
-		FrontendOpt: opts,
+		Frontend:       "gateway.v0",
+		FrontendOpt:    opts,
+		FrontendInputs: frontendInputs,
 	})
 }
 
@@ -449,10 +492,17 @@ func filter(opt map[string]string, key string) map[string]string {
 	return m
 }
 
-func detectGitContext(ref string) (*llb.State, bool) {
+func detectGitContext(ref, gitContext string) (*llb.State, bool) {
 	found := false
 	if httpPrefix.MatchString(ref) && gitUrlPathWithFragmentSuffix.MatchString(ref) {
 		found = true
+	}
+
+	keepGit := false
+	if gitContext != "" {
+		if v, err := strconv.ParseBool(gitContext); err == nil {
+			keepGit = v
+		}
 	}
 
 	for _, prefix := range []string{"git://", "github.com/", "git@"} {
@@ -470,7 +520,12 @@ func detectGitContext(ref string) (*llb.State, bool) {
 	if len(parts) > 1 {
 		branch = parts[1]
 	}
-	st := llb.Git(parts[0], branch, dockerfile2llb.WithInternalName("load git source "+ref))
+	gitOpts := []llb.GitOption{dockerfile2llb.WithInternalName("load git source " + ref)}
+	if keepGit {
+		gitOpts = append(gitOpts, llb.KeepGitDir())
+	}
+
+	st := llb.Git(parts[0], branch, gitOpts...)
 	return &st, true
 }
 

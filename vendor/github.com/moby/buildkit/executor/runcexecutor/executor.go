@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -25,7 +23,6 @@ import (
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/util/network"
 	rootlessspecconv "github.com/moby/buildkit/util/rootless/specconv"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -42,7 +39,9 @@ type Opt struct {
 	ProcessMode     oci.ProcessMode
 	IdentityMapping *idtools.IdentityMapping
 	// runc run --no-pivot (unrecommended)
-	NoPivot bool
+	NoPivot     bool
+	DNS         *oci.DNSConfig
+	OOMScoreAdj *int
 }
 
 var defaultCommandCandidates = []string{"buildkit-runc", "runc"}
@@ -57,6 +56,8 @@ type runcExecutor struct {
 	processMode      oci.ProcessMode
 	idmap            *idtools.IdentityMapping
 	noPivot          bool
+	dns              *oci.DNSConfig
+	oomScoreAdj      *int
 }
 
 func New(opt Opt, networkProviders map[pb.NetMode]network.Provider) (executor.Executor, error) {
@@ -79,7 +80,7 @@ func New(opt Opt, networkProviders map[pb.NetMode]network.Provider) (executor.Ex
 
 	root := opt.Root
 
-	if err := os.MkdirAll(root, 0700); err != nil {
+	if err := os.MkdirAll(root, 0711); err != nil {
 		return nil, errors.Wrapf(err, "failed to create %s", root)
 	}
 
@@ -115,6 +116,8 @@ func New(opt Opt, networkProviders map[pb.NetMode]network.Provider) (executor.Ex
 		processMode:      opt.ProcessMode,
 		idmap:            opt.IdentityMapping,
 		noPivot:          opt.NoPivot,
+		dns:              opt.DNS,
+		oomScoreAdj:      opt.OOMScoreAdj,
 	}
 	return w, nil
 }
@@ -134,12 +137,12 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		logrus.Info("enabling HostNetworking")
 	}
 
-	resolvConf, err := oci.GetResolvConf(ctx, w.root)
+	resolvConf, err := oci.GetResolvConf(ctx, w.root, w.idmap, w.dns)
 	if err != nil {
 		return err
 	}
 
-	hostsFile, clean, err := oci.GetHostsFile(ctx, w.root, meta.ExtraHosts)
+	hostsFile, clean, err := oci.GetHostsFile(ctx, w.root, meta.ExtraHosts, w.idmap)
 	if err != nil {
 		return err
 	}
@@ -152,16 +155,18 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		return err
 	}
 
-	rootMount, err := mountable.Mount()
+	rootMount, release, err := mountable.Mount()
 	if err != nil {
 		return err
 	}
-	defer mountable.Release()
+	if release != nil {
+		defer release()
+	}
 
 	id := identity.NewID()
 	bundle := filepath.Join(w.root, id)
 
-	if err := os.Mkdir(bundle, 0700); err != nil {
+	if err := os.Mkdir(bundle, 0711); err != nil {
 		return err
 	}
 	defer os.RemoveAll(bundle)
@@ -197,6 +202,17 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		opts = append(opts, containerdoci.WithRootFSReadonly())
 	}
 
+	identity = idtools.Identity{
+		UID: int(uid),
+		GID: int(gid),
+	}
+	if w.idmap != nil {
+		identity, err = w.idmap.ToHost(identity)
+		if err != nil {
+			return err
+		}
+	}
+
 	if w.cgroupParent != "" {
 		var cgroupsPath string
 		lastSeparator := w.cgroupParent[len(w.cgroupParent)-1:]
@@ -222,13 +238,13 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 	if err != nil {
 		return errors.Wrapf(err, "working dir %s points to invalid target", newp)
 	}
-	if err := idtools.MkdirAllAndChown(newp, 0755, identity); err != nil {
-		return errors.Wrapf(err, "failed to create working directory %s", newp)
+	if _, err := os.Stat(newp); err != nil {
+		if err := idtools.MkdirAllAndChown(newp, 0755, identity); err != nil {
+			return errors.Wrapf(err, "failed to create working directory %s", newp)
+		}
 	}
 
-	if err := setOOMScoreAdj(spec); err != nil {
-		return err
-	}
+	spec.Process.OOMScoreAdj = w.oomScoreAdj
 	if w.rootless {
 		if err := rootlessspecconv.ToRootless(spec); err != nil {
 			return err
@@ -277,12 +293,11 @@ func (w *runcExecutor) Exec(ctx context.Context, meta executor.Meta, root cache.
 		NoPivot: w.noPivot,
 	})
 	close(done)
-	if err != nil {
-		return err
-	}
 
-	if status != 0 {
-		err := errors.Errorf("exit code: %d", status)
+	if status != 0 || err != nil {
+		if err == nil {
+			err = errors.Errorf("exit code: %d", status)
+		}
 		select {
 		case <-ctx.Done():
 			return errors.Wrapf(ctx.Err(), err.Error())
@@ -318,21 +333,5 @@ func (s *forwardIO) Stdout() io.ReadCloser {
 }
 
 func (s *forwardIO) Stderr() io.ReadCloser {
-	return nil
-}
-
-// setOOMScoreAdj comes from https://github.com/genuinetools/img/blob/2fabe60b7dc4623aa392b515e013bbc69ad510ab/executor/runc/executor.go#L182-L192
-func setOOMScoreAdj(spec *specs.Spec) error {
-	// Set the oom_score_adj of our children containers to that of the current process.
-	b, err := ioutil.ReadFile("/proc/self/oom_score_adj")
-	if err != nil {
-		return errors.Wrap(err, "failed to read /proc/self/oom_score_adj")
-	}
-	s := strings.TrimSpace(string(b))
-	oom, err := strconv.Atoi(s)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse %s as int", s)
-	}
-	spec.Process.OOMScoreAdj = &oom
 	return nil
 }

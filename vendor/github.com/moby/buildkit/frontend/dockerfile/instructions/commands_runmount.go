@@ -142,6 +142,8 @@ func parseMount(value string) (*Mount, error) {
 				if m.Type == "secret" || m.Type == "ssh" {
 					m.Required = true
 					continue
+				} else {
+					return nil, errors.Errorf("unexpected key '%s' for mount type '%s'", key, m.Type)
 				}
 			}
 		}
@@ -176,6 +178,16 @@ func parseMount(value string) (*Mount, error) {
 			}
 			m.ReadOnly = !rw
 			roAuto = false
+		case "required":
+			if m.Type == "secret" || m.Type == "ssh" {
+				v, err := strconv.ParseBool(value)
+				if err != nil {
+					return nil, errors.Errorf("invalid value for %s: %s", key, value)
+				}
+				m.Required = v
+			} else {
+				return nil, errors.Errorf("unexpected key '%s' for mount type '%s'", key, m.Type)
+			}
 		case "id":
 			m.CacheID = value
 		case "sharing":
@@ -206,18 +218,18 @@ func parseMount(value string) (*Mount, error) {
 		}
 	}
 
-	fileInfoAllowed := m.Type == MountTypeSecret || m.Type == MountTypeSSH
+	fileInfoAllowed := m.Type == MountTypeSecret || m.Type == MountTypeSSH || m.Type == MountTypeCache
 
 	if m.Mode != nil && !fileInfoAllowed {
-		return nil, errors.Errorf("mode not allowed for %q type mounts")
+		return nil, errors.Errorf("mode not allowed for %q type mounts", m.Type)
 	}
 
 	if m.UID != nil && !fileInfoAllowed {
-		return nil, errors.Errorf("uid not allowed for %q type mounts")
+		return nil, errors.Errorf("uid not allowed for %q type mounts", m.Type)
 	}
 
 	if m.GID != nil && !fileInfoAllowed {
-		return nil, errors.Errorf("gid not allowed for %q type mounts")
+		return nil, errors.Errorf("gid not allowed for %q type mounts", m.Type)
 	}
 
 	if roAuto {

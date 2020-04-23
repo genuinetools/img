@@ -141,7 +141,7 @@ func (s *state) combinedCacheManager() CacheManager {
 		return s.mainCache
 	}
 
-	return newCombinedCacheManager(cms, s.mainCache)
+	return NewCombinedCacheManager(cms, s.mainCache)
 }
 
 func (s *state) Release() {
@@ -404,7 +404,9 @@ func (jl *Solver) Get(id string) (*Job, error) {
 
 	go func() {
 		<-ctx.Done()
+		jl.mu.Lock()
 		jl.updateCond.Broadcast()
+		jl.mu.Unlock()
 	}()
 
 	jl.mu.RLock()

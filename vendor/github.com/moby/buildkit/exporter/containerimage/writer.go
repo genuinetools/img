@@ -45,7 +45,7 @@ type ImageWriter struct {
 	opt WriterOpt
 }
 
-func (ic *ImageWriter) Commit(ctx context.Context, inp exporter.Source, oci bool) (*ocispec.Descriptor, error) {
+func (ic *ImageWriter) Commit(ctx context.Context, inp exporter.Source, oci bool, compression blobs.CompressionType) (*ocispec.Descriptor, error) {
 	platformsBytes, ok := inp.Metadata[exptypes.ExporterPlatformsKey]
 
 	if len(inp.Refs) > 0 && !ok {
@@ -53,7 +53,7 @@ func (ic *ImageWriter) Commit(ctx context.Context, inp exporter.Source, oci bool
 	}
 
 	if len(inp.Refs) == 0 {
-		layers, err := ic.exportLayers(ctx, inp.Ref)
+		layers, err := ic.exportLayers(ctx, compression, inp.Ref)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +76,7 @@ func (ic *ImageWriter) Commit(ctx context.Context, inp exporter.Source, oci bool
 		refs = append(refs, r)
 	}
 
-	layers, err := ic.exportLayers(ctx, refs...)
+	layers, err := ic.exportLayers(ctx, compression, refs...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,17 +138,10 @@ func (ic *ImageWriter) Commit(ctx context.Context, inp exporter.Source, oci bool
 	}
 	idxDone(nil)
 
-	for _, desc := range idx.Manifests {
-		// delete manifest root. manifest will remain linked to the index
-		if err := ic.opt.ContentStore.Delete(context.TODO(), desc.Digest); err != nil {
-			return nil, errors.Wrap(err, "error removing manifest root")
-		}
-	}
-
 	return &idxDesc, nil
 }
 
-func (ic *ImageWriter) exportLayers(ctx context.Context, refs ...cache.ImmutableRef) ([][]blobs.DiffPair, error) {
+func (ic *ImageWriter) exportLayers(ctx context.Context, compression blobs.CompressionType, refs ...cache.ImmutableRef) ([][]blobs.DiffPair, error) {
 	eg, ctx := errgroup.WithContext(ctx)
 	layersDone := oneOffProgress(ctx, "exporting layers")
 
@@ -157,7 +150,7 @@ func (ic *ImageWriter) exportLayers(ctx context.Context, refs ...cache.Immutable
 	for i, ref := range refs {
 		func(i int, ref cache.ImmutableRef) {
 			eg.Go(func() error {
-				diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Snapshotter, ic.opt.Differ, ref, true)
+				diffPairs, err := blobs.GetDiffPairs(ctx, ic.opt.ContentStore, ic.opt.Differ, ref, true, compression)
 				if err != nil {
 					return errors.Wrap(err, "failed calculating diff pairs for exported snapshot")
 				}
@@ -199,14 +192,12 @@ func (ic *ImageWriter) commitDistributionManifest(ctx context.Context, ref cache
 		configDigest = digest.FromBytes(config)
 		manifestType = ocispec.MediaTypeImageManifest
 		configType   = ocispec.MediaTypeImageConfig
-		layerType    = ocispec.MediaTypeImageLayerGzip
 	)
 
 	// Use docker media types for older Docker versions and registries
 	if !oci {
 		manifestType = images.MediaTypeDockerSchema2Manifest
 		configType = images.MediaTypeDockerSchema2Config
-		layerType = images.MediaTypeDockerSchema2LayerGzip
 	}
 
 	mfst := struct {
@@ -233,11 +224,31 @@ func (ic *ImageWriter) commitDistributionManifest(ctx context.Context, ref cache
 		"containerd.io/gc.ref.content.0": configDigest.String(),
 	}
 
+	layerMediaTypes := blobs.GetMediaTypeForLayers(diffPairs, ref)
+	cs := ic.opt.ContentStore
 	for i, dp := range diffPairs {
-		info, err := ic.opt.ContentStore.Info(ctx, dp.Blobsum)
+		info, err := cs.Info(ctx, dp.Blobsum)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not find blob %s from contentstore", dp.Blobsum)
 		}
+
+		var layerType string
+		if len(layerMediaTypes) > i {
+			layerType = layerMediaTypes[i]
+		}
+
+		// NOTE: The media type might be missing for some migrated ones
+		// from before lease based storage. If so, we should detect
+		// the media type from blob data.
+		//
+		// Discussion: https://github.com/moby/buildkit/pull/1277#discussion_r352795429
+		if layerType == "" {
+			layerType, err = blobs.DetectLayerMediaType(ctx, cs, dp.Blobsum, oci)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		mfst.Layers = append(mfst.Layers, ocispec.Descriptor{
 			Digest:    dp.Blobsum,
 			Size:      info.Size,
@@ -258,7 +269,7 @@ func (ic *ImageWriter) commitDistributionManifest(ctx context.Context, ref cache
 	}
 	mfstDone := oneOffProgress(ctx, "exporting manifest "+mfstDigest.String())
 
-	if err := content.WriteBlob(ctx, ic.opt.ContentStore, mfstDigest.String(), bytes.NewReader(mfstJSON), mfstDesc, content.WithLabels(labels)); err != nil {
+	if err := content.WriteBlob(ctx, ic.opt.ContentStore, mfstDigest.String(), bytes.NewReader(mfstJSON), mfstDesc, content.WithLabels((labels))); err != nil {
 		return nil, mfstDone(errors.Wrapf(err, "error writing manifest blob %s", mfstDigest))
 	}
 	mfstDone(nil)
@@ -274,11 +285,6 @@ func (ic *ImageWriter) commitDistributionManifest(ctx context.Context, ref cache
 		return nil, configDone(errors.Wrap(err, "error writing config blob"))
 	}
 	configDone(nil)
-
-	// delete config root. config will remain linked to the manifest
-	if err := ic.opt.ContentStore.Delete(context.TODO(), configDigest); err != nil {
-		return nil, errors.Wrap(err, "error removing config root")
-	}
 
 	return &ocispec.Descriptor{
 		Digest:    mfstDigest,

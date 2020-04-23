@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"unsafe"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -37,12 +38,14 @@ type ServiceDesc struct {
 }
 
 type serviceSet struct {
-	services map[string]ServiceDesc
+	services    map[string]ServiceDesc
+	interceptor UnaryServerInterceptor
 }
 
-func newServiceSet() *serviceSet {
+func newServiceSet(interceptor UnaryServerInterceptor) *serviceSet {
 	return &serviceSet{
-		services: make(map[string]ServiceDesc),
+		services:    make(map[string]ServiceDesc),
+		interceptor: interceptor,
 	}
 }
 
@@ -84,9 +87,17 @@ func (s *serviceSet) dispatch(ctx context.Context, serviceName, methodName strin
 		return nil
 	}
 
-	resp, err := method(ctx, unmarshal)
+	info := &UnaryServerInfo{
+		FullMethod: fullPath(serviceName, methodName),
+	}
+
+	resp, err := s.interceptor(ctx, unmarshal, info, method)
 	if err != nil {
 		return nil, err
+	}
+
+	if isNil(resp) {
+		return nil, errors.New("ttrpc: marshal called with nil")
 	}
 
 	switch v := resp.(type) {
@@ -146,5 +157,9 @@ func convertCode(err error) codes.Code {
 }
 
 func fullPath(service, method string) string {
-	return "/" + path.Join("/", service, method)
+	return "/" + path.Join(service, method)
+}
+
+func isNil(resp interface{}) bool {
+	return (*[2]uintptr)(unsafe.Pointer(&resp))[1] == 0
 }

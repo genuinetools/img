@@ -79,7 +79,7 @@ For the on-going work toward getting patches into container runtimes and
 Kubernetes, see:
 
 - [moby/moby#36644](https://github.com/moby/moby/pull/36644) **merged**
-- [docker/cli#1347](https://github.com/docker/cli/pull/1347)
+- [docker/cli#1347](https://github.com/docker/cli/pull/1347) **merged**
 - [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934) **merged**
 - [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283) **merged** 
 

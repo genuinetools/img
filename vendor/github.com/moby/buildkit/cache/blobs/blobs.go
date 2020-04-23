@@ -2,13 +2,12 @@ package blobs
 
 import (
 	"context"
-	"time"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
+	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/mount"
 	"github.com/moby/buildkit/cache"
-	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/util/flightcontrol"
 	"github.com/moby/buildkit/util/winlayers"
 	digest "github.com/opencontainers/go-digest"
@@ -26,11 +25,21 @@ type DiffPair struct {
 	Blobsum digest.Digest
 }
 
+type CompareWithParent interface {
+	CompareWithParent(ctx context.Context, ref string, opts ...diff.Opt) (ocispec.Descriptor, error)
+}
+
 var ErrNoBlobs = errors.Errorf("no blobs for snapshot")
 
-func GetDiffPairs(ctx context.Context, contentStore content.Store, snapshotter snapshot.Snapshotter, differ diff.Comparer, ref cache.ImmutableRef, createBlobs bool) ([]DiffPair, error) {
+// GetDiffPairs returns the DiffID/Blobsum pairs for a giver reference and saves it.
+// Caller must hold a lease when calling this function.
+func GetDiffPairs(ctx context.Context, contentStore content.Store, differ diff.Comparer, ref cache.ImmutableRef, createBlobs bool, compression CompressionType) ([]DiffPair, error) {
 	if ref == nil {
 		return nil, nil
+	}
+
+	if _, ok := leases.FromContext(ctx); !ok {
+		return nil, errors.Errorf("missing lease requirement for GetDiffPairs")
 	}
 
 	if err := ref.Finalize(ctx, true); err != nil {
@@ -41,22 +50,23 @@ func GetDiffPairs(ctx context.Context, contentStore content.Store, snapshotter s
 		ctx = winlayers.UseWindowsLayerMode(ctx)
 	}
 
-	return getDiffPairs(ctx, contentStore, snapshotter, differ, ref, createBlobs)
+	return getDiffPairs(ctx, contentStore, differ, ref, createBlobs, compression)
 }
 
-func getDiffPairs(ctx context.Context, contentStore content.Store, snapshotter snapshot.Snapshotter, differ diff.Comparer, ref cache.ImmutableRef, createBlobs bool) ([]DiffPair, error) {
+func getDiffPairs(ctx context.Context, contentStore content.Store, differ diff.Comparer, ref cache.ImmutableRef, createBlobs bool, compression CompressionType) ([]DiffPair, error) {
 	if ref == nil {
 		return nil, nil
 	}
 
+	baseCtx := ctx
 	eg, ctx := errgroup.WithContext(ctx)
 	var diffPairs []DiffPair
-	var currentPair DiffPair
+	var currentDescr ocispec.Descriptor
 	parent := ref.Parent()
 	if parent != nil {
 		defer parent.Release(context.TODO())
 		eg.Go(func() error {
-			dp, err := getDiffPairs(ctx, contentStore, snapshotter, differ, parent, createBlobs)
+			dp, err := getDiffPairs(ctx, contentStore, differ, parent, createBlobs, compression)
 			if err != nil {
 				return err
 			}
@@ -66,77 +76,110 @@ func getDiffPairs(ctx context.Context, contentStore content.Store, snapshotter s
 	}
 	eg.Go(func() error {
 		dp, err := g.Do(ctx, ref.ID(), func(ctx context.Context) (interface{}, error) {
-			diffID, blob, err := snapshotter.GetBlob(ctx, ref.ID())
-			if err != nil {
-				return nil, err
-			}
-			if blob != "" {
-				return DiffPair{DiffID: diffID, Blobsum: blob}, nil
+			refInfo := ref.Info()
+			if refInfo.Blob != "" {
+				return nil, nil
 			} else if !createBlobs {
 				return nil, errors.WithStack(ErrNoBlobs)
 			}
-			// reference needs to be committed
-			parent := ref.Parent()
-			var lower []mount.Mount
-			if parent != nil {
-				defer parent.Release(context.TODO())
-				m, err := parent.Mount(ctx, true)
+
+			var mediaType string
+			var descr ocispec.Descriptor
+			var err error
+
+			switch compression {
+			case Uncompressed:
+				mediaType = ocispec.MediaTypeImageLayer
+			case Gzip:
+				mediaType = ocispec.MediaTypeImageLayerGzip
+			default:
+				return nil, errors.Errorf("unknown layer compression type")
+			}
+
+			if pc, ok := differ.(CompareWithParent); ok {
+				descr, err = pc.CompareWithParent(ctx, ref.ID(), diff.WithMediaType(mediaType))
 				if err != nil {
 					return nil, err
 				}
-				lower, err = m.Mount()
+			}
+			if descr.Digest == "" {
+				// reference needs to be committed
+				parent := ref.Parent()
+				var lower []mount.Mount
+				var release func() error
+				if parent != nil {
+					defer parent.Release(context.TODO())
+					m, err := parent.Mount(ctx, true)
+					if err != nil {
+						return nil, err
+					}
+					lower, release, err = m.Mount()
+					if err != nil {
+						return nil, err
+					}
+					if release != nil {
+						defer release()
+					}
+				}
+				m, err := ref.Mount(ctx, true)
 				if err != nil {
 					return nil, err
 				}
-				defer m.Release()
+				upper, release, err := m.Mount()
+				if err != nil {
+					return nil, err
+				}
+				if release != nil {
+					defer release()
+				}
+				descr, err = differ.Compare(ctx, lower, upper,
+					diff.WithMediaType(mediaType),
+					diff.WithReference(ref.ID()),
+				)
+				if err != nil {
+					return nil, err
+				}
 			}
-			m, err := ref.Mount(ctx, true)
-			if err != nil {
-				return nil, err
+
+			if descr.Annotations == nil {
+				descr.Annotations = map[string]string{}
 			}
-			upper, err := m.Mount()
-			if err != nil {
-				return nil, err
-			}
-			defer m.Release()
-			descr, err := differ.Compare(ctx, lower, upper,
-				diff.WithMediaType(ocispec.MediaTypeImageLayerGzip),
-				diff.WithReference(ref.ID()),
-				diff.WithLabels(map[string]string{
-					"containerd.io/gc.root": time.Now().UTC().Format(time.RFC3339Nano),
-				}),
-			)
-			if err != nil {
-				return nil, err
-			}
+
 			info, err := contentStore.Info(ctx, descr.Digest)
 			if err != nil {
 				return nil, err
 			}
-			diffIDStr, ok := info.Labels[containerdUncompressed]
-			if !ok {
-				return nil, errors.Errorf("invalid differ response with no diffID: %v", descr.Digest)
+
+			if diffID, ok := info.Labels[containerdUncompressed]; ok {
+				descr.Annotations[containerdUncompressed] = diffID
+			} else if compression == Uncompressed {
+				descr.Annotations[containerdUncompressed] = descr.Digest.String()
+			} else {
+				return nil, errors.Errorf("unknown layer compression type")
 			}
-			diffIDDigest, err := digest.Parse(diffIDStr)
-			if err != nil {
-				return nil, err
-			}
-			if err := snapshotter.SetBlob(ctx, ref.ID(), diffIDDigest, descr.Digest); err != nil {
-				return nil, err
-			}
-			return DiffPair{DiffID: diffIDDigest, Blobsum: descr.Digest}, nil
+			return descr, nil
+
 		})
 		if err != nil {
 			return err
 		}
-		currentPair = dp.(DiffPair)
+
+		if dp != nil {
+			currentDescr = dp.(ocispec.Descriptor)
+		}
 		return nil
 	})
 	err := eg.Wait()
 	if err != nil {
 		return nil, err
 	}
-	return append(diffPairs, currentPair), nil
+	if currentDescr.Digest != "" {
+		if err := ref.SetBlob(baseCtx, currentDescr); err != nil {
+			return nil, err
+		}
+	}
+	refInfo := ref.Info()
+	return append(diffPairs, DiffPair{DiffID: refInfo.DiffID, Blobsum: refInfo.Blob}), nil
 }
 
 func isTypeWindows(ref cache.ImmutableRef) bool {

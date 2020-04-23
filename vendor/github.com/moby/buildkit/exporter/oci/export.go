@@ -6,32 +6,37 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/images/oci"
+	archiveexporter "github.com/containerd/containerd/images/archive"
+	"github.com/containerd/containerd/leases"
 	"github.com/docker/distribution/reference"
+	"github.com/moby/buildkit/cache/blobs"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/exporter/containerimage"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/filesync"
-	"github.com/moby/buildkit/util/dockerexporter"
+	"github.com/moby/buildkit/util/leaseutil"
 	"github.com/moby/buildkit/util/progress"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ExporterVariant string
 
 const (
-	keyImageName  = "name"
-	VariantOCI    = "oci"
-	VariantDocker = "docker"
-	ociTypes      = "oci-mediatypes"
+	keyImageName        = "name"
+	keyLayerCompression = "compression"
+	VariantOCI          = "oci"
+	VariantDocker       = "docker"
+	ociTypes            = "oci-mediatypes"
 )
 
 type Opt struct {
 	SessionManager *session.Manager
 	ImageWriter    *containerimage.ImageWriter
 	Variant        ExporterVariant
+	LeaseManager   leases.Manager
 }
 
 type imageExporter struct {
@@ -58,11 +63,24 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 	}
 
 	var ot *bool
-	i := &imageExporterInstance{imageExporter: e, caller: caller}
+	i := &imageExporterInstance{
+		imageExporter:    e,
+		caller:           caller,
+		layerCompression: blobs.DefaultCompression,
+	}
 	for k, v := range opt {
 		switch k {
 		case keyImageName:
 			i.name = v
+		case keyLayerCompression:
+			switch v {
+			case "gzip":
+				i.layerCompression = blobs.Gzip
+			case "uncompressed":
+				i.layerCompression = blobs.Uncompressed
+			default:
+				return nil, errors.Errorf("unsupported layer compression type: %v", v)
+			}
 		case ociTypes:
 			ot = new(bool)
 			if v == "" {
@@ -91,10 +109,11 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 
 type imageExporterInstance struct {
 	*imageExporter
-	meta     map[string][]byte
-	caller   session.Caller
-	name     string
-	ociTypes bool
+	meta             map[string][]byte
+	caller           session.Caller
+	name             string
+	ociTypes         bool
+	layerCompression blobs.CompressionType
 }
 
 func (e *imageExporterInstance) Name() string {
@@ -113,7 +132,13 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 		src.Metadata[k] = v
 	}
 
-	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes)
+	ctx, done, err := leaseutil.WithLease(ctx, e.opt.LeaseManager, leaseutil.MakeTemporary)
+	if err != nil {
+		return nil, err
+	}
+	defer done(context.TODO())
+
+	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes, e.layerCompression)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +151,7 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 	desc.Annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
 
 	resp := make(map[string]string)
+	resp["containerimage.digest"] = desc.Digest.String()
 
 	if n, ok := src.Metadata["image.name"]; e.name == "*" && ok {
 		e.name = string(n)
@@ -140,21 +166,32 @@ func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source)
 		resp["image.name"] = strings.Join(names, ",")
 	}
 
-	exp, err := getExporter(e.opt.Variant, names)
-	if err != nil {
-		return nil, err
+	expOpts := []archiveexporter.ExportOpt{archiveexporter.WithManifest(*desc, names...)}
+	switch e.opt.Variant {
+	case VariantOCI:
+		expOpts = append(expOpts, archiveexporter.WithAllPlatforms(), archiveexporter.WithSkipDockerManifest())
+	case VariantDocker:
+	default:
+		return nil, errors.Errorf("invalid variant %q", e.opt.Variant)
 	}
 
-	w, err := filesync.CopyFileWriter(ctx, e.caller)
+	w, err := filesync.CopyFileWriter(ctx, resp, e.caller)
 	if err != nil {
 		return nil, err
 	}
 	report := oneOffProgress(ctx, "sending tarball")
-	if err := exp.Export(ctx, e.opt.ImageWriter.ContentStore(), *desc, w); err != nil {
+	if err := archiveexporter.Export(ctx, e.opt.ImageWriter.ContentStore(), w, expOpts...); err != nil {
 		w.Close()
+		if st, ok := status.FromError(errors.Cause(err)); ok && st.Code() == codes.AlreadyExists {
+			return resp, report(nil)
+		}
 		return nil, report(err)
 	}
-	return resp, report(w.Close())
+	err = w.Close()
+	if st, ok := status.FromError(errors.Cause(err)); ok && st.Code() == codes.AlreadyExists {
+		return resp, report(nil)
+	}
+	return resp, report(err)
 }
 
 func oneOffProgress(ctx context.Context, id string) func(err error) error {
@@ -171,20 +208,6 @@ func oneOffProgress(ctx context.Context, id string) func(err error) error {
 		pw.Write(id, st)
 		pw.Close()
 		return err
-	}
-}
-
-func getExporter(variant ExporterVariant, names []string) (images.Exporter, error) {
-	switch variant {
-	case VariantOCI:
-		if len(names) != 0 {
-			return nil, errors.New("oci exporter cannot export named image")
-		}
-		return oci.ResolveV1ExportOpt(oci.WithAllPlatforms(true))
-	case VariantDocker:
-		return &dockerexporter.DockerExporter{Names: names}, nil
-	default:
-		return nil, errors.Errorf("invalid variant %q", variant)
 	}
 }
 

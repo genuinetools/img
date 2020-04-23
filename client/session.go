@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"os"
 
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
@@ -38,7 +39,7 @@ func (c *Client) Session(ctx context.Context) (*session.Session, session.Dialer,
 		syncedDirs = append(syncedDirs, filesync.SyncedDir{Name: name, Dir: d})
 	}
 	s.Allow(filesync.NewFSSyncProvider(syncedDirs))
-	s.Allow(authprovider.NewDockerAuthProvider())
+	s.Allow(authprovider.NewDockerAuthProvider(os.Stderr))
 	return s, sessionDialer(s, m), err
 }
 
