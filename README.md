@@ -19,58 +19,30 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
   * [Additional Reading](#additional-reading)
 - [Getting Started](#getting-started)
   * [Run In Docker](#run-in-docker)
-    + [Example Build](#example-build)
-    + [Run Interactively](#run-interactively)
-    + [PID Namespace Isolation](#pid-namespace-isolation)
   * [Running with Kubernetes](#running-with-kubernetes)
   * [Mac or Windows Installation](#mac-or-windows-installation)
   * [Linux Installation](#linux-installation)
-    + [Prerequisites](#prerequisites)
-      - [Disable Embedded Runc](#disable-embedded-runc)
-    + [Binary Installation](#binary-installation)
-    + [Install From Source](#install-from-source)
-    + [Linux Distribution Packages](#linux-distribution-packages)
-      - [Alpine Linux](#alpine-linux)
-      - [Arch Linux](#arch-linux)
-      - [Gentoo](#gentoo)
 - [CLI Reference](#cli-reference)
-  * [`build` Build an Image](#build-build-an-image)
-    + [Options](#options)
-    + [Cross Platform Builds](#cross-platform-builds)
-    + [Exporter Types](#exporter-types)
-  * [`ls` List Image Layers](#ls-list-image-layers)
-    + [Options](#options-1)
-  * [`pull` Pull an Image](#pull-pull-an-image)
-  * [`push` Push an Image](#push-push-an-image)
-    + [Options](#options-2)
-    + [Example](#example)
-  * [`tag` Tag an Image](#tag-tag-an-image)
-  * [`save` Export an Image to Docker](#save-export-an-image-to-docker)
-    + [Options](#options-3)
-    + [Example](#example-1)
-  * [`unpack` Unpack an Image to a rootfs](#unpack-unpack-an-image-to-a-rootfs)
-    + [Options](#options-4)
-    + [Example](#example-2)
-  * [`rm` Remove an Image](#rm-remove-an-image)
-  * [`du` Disk Usage](#du-disk-usage)
-    + [Options](#options-5)
-    + [Example](#example-3)
-  * [`prune` Prune and Cleanup the Build Cache](#prune-prune-and-cleanup-the-build-cache)
-  * [`login` Login to a Docker Registry](#login-login-to-a-docker-registry)
-    + [Usage](#usage)
-    + [Options](#options-6)
-  * [`logout` Logout from a Registry](#logout-logout-from-a-registry)
-    + [Usage](#usage-1)
-  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
+  * [`build`](#build)
+  * [`du`](#du)
+  * [`login`](#login)
+  * [`logout`](#logout)
+  * [`ls`](#ls)
+  * [`prune`](#prune)
+  * [`pull`](#pull)
+  * [`push`](#push)
+  * [`rm`](#rm)
+  * [`save`](#save)
+  * [`tag`](#tag)
+  * [`unpack`](#unpack)
+- [Common Issues](#common-issues)
 - [How It Works](#how-it-works)
   * [Unprivileged Mounting](#unprivileged-mounting)
   * [High Level](#high-level)
   * [Low Level](#low-level)
   * [Snapshotter Backends](#snapshotter-backends)
-    + [auto (default)](#auto-default)
-    + [native](#native)
-    + [overlayfs](#overlayfs)
 - [Contributing](#contributing)
+  * [Quick-Start With Docker](#quick-start-with-docker)
 - [Acknowledgements](#acknowledgements)
 
 <!-- tocstop -->
@@ -240,7 +212,8 @@ $ sudo emerge -a app-emulation/img
 
 ## CLI Reference
 
-Img provides a `-h`, or `--help` flag to guide usage of the CLI.
+Img provides a `-h`, or `--help` flag to guide usage of the CLI and any commands. Img provides a subset of the most
+important commands for building images found in the [Docker CLI].
 
 ```console
 $ img -h
@@ -274,23 +247,29 @@ Commands:
 Use "img [command] --help" for more information about a command.
 ```
 
-### `build` Build an Image
+### `build`
 
 Build an image from a Dockerfile. **Use just like you would `docker build`.**
 
-#### Options
+#### Usage
 
 ```console
-      --build-arg list   Set build-time variables
-  -f, --file string      Name of the Dockerfile (Default is 'PATH/Dockerfile')
-      --label list       Set metadata for an image
-      --no-cache         Do not use cache when building the image
-      --no-console       Use non-console progress UI
-  -o, --output string    BuildKit output specification (e.g. type=tar,dest=build.tar)
-      --platform list    Set platforms for which the image should be built
-  -t, --tag list         Name and optionally a tag in the 'name:tag' format
-      --target string    Set the target build stage to build
+img build [OPTIONS] PATH
 ```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--build-arg` | | Set build-time variables |
+| `--file , -f` | `PATH/Dockerfile` | Name of the Dockerfile |
+| `--label` | | Set metadata for an image |
+| `--no-cache`| | Do not use cache when building the image |
+| `--no-console`| | Use non-console progress UI |
+| `--output , -o`| | BuildKit output [specification](#exporter-types) (e.g. type=tar,dest=build.tar) |
+| `--platform`| | Set [platforms](#cross-platform-builds) for which the image should be built |
+| `--tag , -t`| | Name and optionally a tag in the `name:tag` format |
+| `--target   `| | Set the target build stage to build |
 
 #### Cross Platform Builds
 
@@ -344,101 +323,7 @@ When used in conjunction with a Dockerfile which has a final `FROM scratch` stag
 only copies files of interest from earlier stages with `COPY --from=...`, this can be
 utilized to output arbitrary build artifacts for example.
 
-### `ls` List Image Layers
-
-List all the image layers stored in the backend.
-
-#### Options
-
-```console
-  -f, --filter list   Filter output based on conditions provided
-```
-
-### `pull` Pull an Image
-
-If you need to use self-signed certs with your registry, see 
-[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
-
-```console
-$ img pull r.j3ss.co/stress
-```
-
-### `push` Push an Image
-
-If you need to use self-signed certs with your registry, see 
-[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
-
-#### Options
-
-```console
-      --insecure-registry   Push to insecure registry
-```
-
-#### Example
-
-```console
-$ img push jess/thing
-Pushing jess/thing:latest...
-Successfully pushed jess/thing:latest
-```
-
-### `tag` Tag an Image
-
-Create a tag that refers to the source image.
-
-```console
-$ img tag jess/thing jess/otherthing
-Successfully tagged jess/thing as jess/otherthing
-```
-
-### `save` Export an Image to Docker
-
-Save an image to a tar archive (streamed to STDOUT by default). Provide an `--output` file to write to a file.
-
-
-#### Options
-
-```console
-      --format string   image output format (docker|oci) (default "docker")
-  -o, --output string   write to a file, instead of STDOUT
-```
-
-#### Example
-
-This is an example of sending an image from img's backend to docker.
-
-```console
-$ img save jess/thing | docker load
-6c3d70c8619c: Loading layer [==================================================>]  9.927MB/9.927MB                                      
-7e336c441b5e: Loading layer [==================================================>]  5.287MB/5.287MB                                      
-533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
-3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
-Loaded image: jess/thing
-```
-
-### `unpack` Unpack an Image to a rootfs
-
-Unpack the contents of an image to a rootfs. Provide an `--output` to specify where to unpack to, otherwise it saves the
-image to `rootfs/` in the current directory.
-
-#### Options
-
-```console
-  -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
-```
-
-#### Example
-
-```console
-$ img unpack busybox
-Successfully unpacked rootfs for busybox to: /home/user/rootfs
-```
-
-### `rm` Remove an Image
-
-Remove an image from the image store.
-
-### `du` Disk Usage
+### `du`
 
 List images and disk usage.
 
@@ -466,54 +351,28 @@ Reclaimable:    1.08GiB
 Total:          1.08GiB
 ```
 
-### `prune` Prune and Cleanup the Build Cache
+### `login`
 
-Remove unused and dangling layers in the cache to reclaim space. Perform a `prune` after an `rm` to cleanup old images.
-
-```console
-$ img prune
-ID                                                                      RECLAIMABLE     SIZE            DESCRIPTION
-j1yil8bdz35eyxp0m17tggknd                                               true            5.08KiB         local source for dockerfile
-je23wfyz2apii1au38occ8zag                                               true            52.95MiB        mount / from exec /bin/sh -c useradd --create-home...
-sha256:74906c0186257f2897c5fba99e1ea87eb8b2ee0bb03b611f5e866232bfbf6739 true            2.238MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-vr2pvhmrt1sjs8n7jodesrvnz*                                              true            572.6MiB        mount / from exec /bin/sh -c git clone https://git...
-afn0clz11yphlv6g8golv59c8                                               true            4KiB            local source for context
-qx5yql370piuscuczutrnansv*                                              true            692.4MiB        mount / from exec /bin/sh -c make static && mv img...
-uxocruvniojl1jqlm8gs3ds1e*                                              true            113.8MiB        local source for context
-sha256:0b9cfed6a170b357c528cd9dfc104d8b404d08d84152b38e98c60f50d2ae718b true            1.449MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-vz0716utmnlmya1vhkojyxd4o                                               true            55.39MiB        mount /dest from exec copy /src-0/runc usr/bin/run...
-a0om6hwulbf9gd2jfgmxsyaoa                                               true            646.5MiB        mount / from exec /bin/sh -c go get -u github.com/...
-ys8y9ixi3didtbpvwbxuptdfq                                               true            641.2MiB        mount /dest from exec copy /src-0 go/src/github.co...
-sha256:f64a552a56ce93b6e389328602f2cd830280fd543ade026905e69895b5696b7a true            1.234MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-05wxxnq6yu5nssn3bojsz2mii                                               true            52.4MiB         mount /dest from exec copy /src-0/img usr/bin/img
-wlrp1nxsa37cixf127bh6w2sv                                               true            35.11MiB        mount / from exec /bin/sh -c apk add --no-cache  b...
-wy0173xa6rkoq49tf9g092r4z                                               true            527.4MiB        mount / from exec /bin/sh -c apk add --no-cache  b...
-Reclaimed:      4.148GiB
-Total:          4.148GiB
-```
-
-### `login` Login to a Docker Registry
-
-Img authentication works just like docker to login to repositories.
+Login to a registry. Img authentication works just like docker to login to repositories.
 
 If you need to use self-signed certs with your registry, see 
 [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
 
 #### Usage
 
-```console
+```bash
 img login [OPTIONS] [SERVER]
 ```
 
 #### Options
 
-```console
-  -p, --password string   Password
-      --password-stdin    Take the password from stdin
-  -u, --user string       Username
-```
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `-p , --password` | | Password |
+| `--password-stdin` | | Take the password from stdin |
+| `-u, --user` | | Username |
 
-### `logout` Logout from a Registry
+### `logout`
 
 Removes credentials for a registry.
 
@@ -523,7 +382,138 @@ Removes credentials for a registry.
 img logout [SERVER]
 ```
 
-### Using Self-Signed Certs with a Registry
+### `ls`
+
+List all the image layers stored in the backend.
+
+#### Usage
+
+```console
+img ls [OPTIONS]
+```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `-f , --filter` | | Filter output based on conditions provided |
+
+
+### `prune`
+
+Remove unused and dangling layers in the cache to reclaim space. Perform a `prune` after an `rm` to cleanup old images.
+
+#### Usage
+
+```console
+img prune [OPTIONS]
+```
+
+### `pull`
+
+Pull an Image from a registry. If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
+#### Usage
+
+```console
+img pull [OPTIONS] NAME[:TAG|@DIGEST]
+```
+
+### `push`
+
+Push an Image to a registry. If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
+#### Usage
+
+```console
+img push [OPTIONS] NAME[:TAG]
+```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--insecure-registry` | | Push to insecure registry |
+
+### `rm`
+
+Remove images from the image store.
+
+#### Usage
+
+```console
+img rm [OPTIONS] IMAGE [IMAGE...]
+```
+
+### `save`
+
+Save an image to a tar archive (streamed to STDOUT by default). Provide an `--output` file to write to a file.
+
+#### Usage
+
+```console
+img save [OPTIONS] IMAGE [IMAGE...]
+```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--format` | `docker`| image output format (`docker` | `oci`) |
+| `--output , -o` | | Output file, instead of STDOUT |
+
+#### Examples
+
+##### Save Image via STDOUT
+
+Send an image from img's backend to docker.
+
+```console
+$ img save jess/thing | docker load
+6c3d70c8619c: Loading layer [==================================================>]  9.927MB/9.927MB                                      
+7e336c441b5e: Loading layer [==================================================>]  5.287MB/5.287MB                                      
+533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
+3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
+Loaded image: jess/thing
+```
+
+
+### `tag`
+
+Create a tag that refers to the source image.
+
+#### Usage
+
+
+```console
+$ img tag jess/thing jess/otherthing
+Successfully tagged jess/thing as jess/otherthing
+```
+
+
+### `unpack`
+
+Unpack the contents of an image to a rootfs. Provide an `--output` to specify where to unpack to, otherwise it saves the
+image to `rootfs/` in the current directory.
+
+#### Options
+
+```console
+  -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
+```
+
+#### Example
+
+```console
+$ img unpack busybox
+Successfully unpacked rootfs for busybox to: /home/user/rootfs
+```
+
+## Common Issues
+
+#### Using Self-Signed Certs with a Registry
 
 We do not allow users to pass all the custom certificate flags on commands
 because it is unnecessarily messy and can be handled through Linux itself.
@@ -554,6 +544,7 @@ $ dpkg-reconfigure ca-certificates
 # On other distros...
 $ update-ca-certificates
 ```
+
 
 ## How It Works
 
