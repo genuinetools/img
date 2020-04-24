@@ -35,13 +35,13 @@ have to do is replace `docker` with `img` in your scripts, command line, CI/CD, 
   * [`save`](#save)
   * [`tag`](#tag)
   * [`unpack`](#unpack)
-- [Common Issues](#common-issues)
-  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
+  * [Snapshotter Backend](#snapshotter-backend)
 - [How It Works](#how-it-works)
   * [Unprivileged Mounting](#unprivileged-mounting)
   * [High Level](#high-level)
   * [Low Level](#low-level)
-  * [Snapshotter Backends](#snapshotter-backends)
+- [Common Issues](#common-issues)
+  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 - [Contributing](#contributing)
   * [Quick-Start With Docker](#quick-start-with-docker)
 - [Acknowledgements](#acknowledgements)
@@ -50,7 +50,7 @@ have to do is replace `docker` with `img` in your scripts, command line, CI/CD, 
 
 ## Goals
 
-The key goals of Img are:
+The key goals of `img` are:
 
 * **Least-Privileged.** Build containers without requiring root and utilizing as few permissions as possible.
 * **Docker CLI Compatibility.** Don't change your development workflow, provide a drop-in replacement for docker for key functionality.
@@ -67,14 +67,14 @@ You might also be interested in reading:
 
 ## Getting Started
 
-Img can be installed on any Linux distribution, or run via Docker on Windows or Mac. Img requires [runc](https://github.com/opencontainers/runc) and thus only 
+Img can be installed directly Linux, or run via Docker on Windows or Mac. Img requires [runc](https://github.com/opencontainers/runc) and thus only 
 supports Linux natively.
 
 ### Run in Docker
 
 A prebuilt docker image is provided to run img via Docker: `r.j3ss.co/img`. This image is configured to be executed as 
-an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7, but please note the security
-options provided below.
+an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7, but please note the [security
+options](#docker-security-options) provided below.
 
 #### Example Build
 
@@ -261,7 +261,7 @@ Use "img [command] --help" for more information about a command.
 
 ### `build`
 
-Build an image from a Dockerfile. **Use just like you would `docker build`.**
+Build an image from a Dockerfile. Use just like you would `docker build`.
 
 #### Usage
 
@@ -366,7 +366,7 @@ Total:          1.08GiB
 
 ### `login`
 
-Login to a registry. Img authentication works just like docker to login to repositories.
+Login to a registry. `img` authentication works just like docker to login to repositories.
 
 If you need to use self-signed certs with your registry, see 
 [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
@@ -481,7 +481,7 @@ img save [OPTIONS] IMAGE [IMAGE...]
 
 ##### Save Image via STDOUT
 
-Send an image from img's backend to docker.
+Send an image from `img`'s backend to docker.
 
 ```console
 $ img save jess/thing | docker load
@@ -521,15 +521,50 @@ $ img unpack busybox
 Successfully unpacked rootfs for busybox to: /home/user/rootfs
 ```
 
+### Snapshotter Backend
+
+The snapshotter backend is responsible for storing the image layers. This option is provided by `--backend` to any command.
+
+#### `auto` (default)
+
+The `auto` backend is resolved into either `native` or `overlayfs`, depending on
+the availability of `overlayfs` on the system.
+
+#### Native
+
+The `native` backends creates image layers by simply copying files.
+`copy_file_range(2)` is used when available.
+
+#### overlayfs
+
+The `overlayfs` backend can also be used, but that requires a kernel patch from Ubuntu to be unprivileged, 
+see [#22](https://github.com/genuinetools/img/issues/22).
+
+## How It Works
+
+### Unprivileged Mounting
+
+To mount a filesystem without root access, `img` invokes 
+[`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) 
+SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
+
+Make sure sufficient entries (typically `>=65536`) are in `/etc/subuid` and `/etc/subgid`.
+
+### High Level
+
+<img src="contrib/how-it-works-high-level.png" width=300 />
+
+### Low Level
+
+<img src="contrib/how-it-works-low-level.png" width=300 />
+
 ## Common Issues
 
 ### Using Self-Signed Certs with a Registry
 
-We do not allow users to pass all the custom certificate flags on commands
-because it is unnecessarily messy and can be handled through Linux itself.
-Which we believe is a better user experience than having to pass three
-different flags just to communicate with a registry using self-signed or
-private certificates.
+We do not allow users to pass all the custom certificate flags on commands because it is unnecessarily messy and can be
+handled through Linux itself. We believe this is a better user experience than having to pass three different flags just
+to communicate with a registry using self-signed or private certificates.
 
 #### Installing Self-Signed Certificate on Linux
 
@@ -553,42 +588,6 @@ trusted ca-certificates on Linux (Ubuntu/Debian). Must be run as root.
     ```console
     $ update-ca-certificates
     ```
-
-## How It Works
-
-### Unprivileged Mounting
-
-To mount a filesystem without root accsess, `img` automatically invokes 
-[`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) 
-SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
-
-Make sure sufficient entries (typically `>=65536`) are in `/etc/subuid` and `/etc/subgid`.
-
-### High Level
-
-<img src="contrib/how-it-works-high-level.png" width=300 />
-
-### Low Level
-
-<img src="contrib/how-it-works-low-level.png" width=300 />
-
-### Snapshotter Backends
-
-#### auto (default)
-
-The `auto` backend is resolved into either `native` or `overlayfs`, depending on
-the availability of `overlayfs` on the system.
-
-#### native
-
-The `native` backends creates image layers by simply copying files.
-`copy_file_range(2)` is used when available.
-
-#### overlayfs
-
-The `overlayfs` backend can also be used, but that requires a kernel patch from Ubuntu to be unprivileged, 
-see [#22](https://github.com/genuinetools/img/issues/22).
-
 
 ## Contributing
 
@@ -641,7 +640,7 @@ basic development environment up and running.
    $ ./img build -t test .
    ```
 
-6. Alright! You've built img (twice!) and can start contributing.
+6. Alright! You've built `img` (twice!) and can start contributing.
 
 Since your local filesystem is mounted in the container, you can use any IDE or text editor you are comfortable with on 
 your host system, and run builds within the dev container.
