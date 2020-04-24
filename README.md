@@ -4,12 +4,12 @@
 [![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/genuinetools/img)
 [![Github All Releases](https://img.shields.io/github/downloads/genuinetools/img/total.svg?style=for-the-badge)](https://github.com/genuinetools/img/releases)
 
-Simple, standalone, daemon-less, unprivileged Dockerfile and OCI compatible container image builder.
+Simple, standalone, daemon-less, unprivileged Dockerfile and OCI-compatible container image builder.
 
 `img` is a simple CLI tool built on top of [buildkit](https://github.com/moby/buildkit).
 
 The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
-have to do is replace `docker` with `img` in your scripts, command line, and/or life.
+have to do is replace `docker` with `img` in your scripts, command line, CI/CD, and/or life.
 
 **Table of Contents**
 
@@ -49,7 +49,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
 
 ## Goals
 
-The key goals of this project are to provide the following:
+The key goals of Img are:
 
 * **Least-Privileged.** Build containers without requiring root and utilizing as few permissions as possible.
 * **Docker CLI Compatibility.** Don't change your development workflow, provide a drop-in replacement for docker for key functionality.
@@ -68,7 +68,7 @@ You might also be interested in reading:
 ## Getting Started
 
 Img can be installed on any Linux distribution, or run via Docker on Windows or Mac. Img requires [runc](https://github.com/opencontainers/runc) and thus only 
-supports Linux.
+supports Linux natively.
 
 ### Run In Docker
 
@@ -368,9 +368,9 @@ img login [OPTIONS] [SERVER]
 
 | Name, shorthand | Default | Description |
 | --- | --- | --- |
-| `-p , --password` | | Password |
+| `--password , -p` | | Password |
 | `--password-stdin` | | Take the password from stdin |
-| `-u, --user` | | Username |
+| `--user , -u` | | Username |
 
 ### `logout`
 
@@ -396,7 +396,7 @@ img ls [OPTIONS]
 
 | Name, shorthand | Default | Description |
 | --- | --- | --- |
-| `-f , --filter` | | Filter output based on conditions provided |
+| `--filter, -f` | | Filter output based on conditions provided |
 
 
 ### `prune`
@@ -500,9 +500,9 @@ image to `rootfs/` in the current directory.
 
 #### Options
 
-```console
-  -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
-```
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--output , -o` | `$(pwd)/rootfs`| Directory to unpack the rootfs to. |
 
 #### Example
 
