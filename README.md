@@ -11,15 +11,15 @@ Simple, standalone, daemon-less, unprivileged Dockerfile and OCI-compatible cont
 The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, CI/CD, and/or life.
 
-**Table of Contents**
+## Table of Contents
 
 <!-- toc -->
 
 - [Goals](#goals)
   * [Additional Reading](#additional-reading)
 - [Getting Started](#getting-started)
-  * [Run In Docker](#run-in-docker)
-  * [Running with Kubernetes](#running-with-kubernetes)
+  * [Run in Docker](#run-in-docker)
+  * [Run in Kubernetes](#run-in-kubernetes)
   * [Mac or Windows Installation](#mac-or-windows-installation)
   * [Linux Installation](#linux-installation)
 - [CLI Reference](#cli-reference)
@@ -36,6 +36,7 @@ have to do is replace `docker` with `img` in your scripts, command line, CI/CD, 
   * [`tag`](#tag)
   * [`unpack`](#unpack)
 - [Common Issues](#common-issues)
+  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 - [How It Works](#how-it-works)
   * [Unprivileged Mounting](#unprivileged-mounting)
   * [High Level](#high-level)
@@ -60,10 +61,9 @@ The key goals of Img are:
 
 You might also be interested in reading:
  
-* [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
-* [A blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/) 
-* [Benchmarks comparing various container builders](https://github.com/AkihiroSuda/buildbench/issues/1) by @AkihiroSuda.
-
+* The original [design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing) by [@jessfrazz](https://github.com/jessfrazz).
+* A blog post on [building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)  by [@jessfrazz](https://github.com/jessfrazz). 
+* Benchmarks [comparing various container builders](https://github.com/AkihiroSuda/buildbench/issues/1) by [@AkihiroSuda](https://github.com/AkihiroSuda).
 
 ## Getting Started
 
@@ -136,6 +136,7 @@ Note that even with `--privileged`, `img` works as an unprivileged user with UID
 Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
 
 However the following security annotations are needed:
+
 ```
 container.apparmor.security.beta.kubernetes.io/img: unconfined
 container.seccomp.security.alpha.kubernetes.io/img: unconfined
@@ -301,6 +302,7 @@ If you use multiple `--platform` options for the same build, they will be includ
 
 The most common way to get `RUN` working in cross-platform builds is to install an emulator such as QEMU on the host system (static bindings are recommended to avoid shared library loading issues). To properly use the emulator inside the build environment, the kernel [binfmt_misc](https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html) parameters must be set with the following flags: `OCF`.
 You can check the settings in `/proc` to ensure they are set correctly.
+
 ```console
 $ cat /proc/sys/fs/binfmt_misc/qemu-arm | grep flags
 flags: OCF
@@ -490,19 +492,16 @@ $ img save jess/thing | docker load
 Loaded image: jess/thing
 ```
 
-
 ### `tag`
 
 Create a tag that refers to the source image.
 
 #### Usage
 
-
 ```console
 $ img tag jess/thing jess/otherthing
 Successfully tagged jess/thing as jess/otherthing
 ```
-
 
 ### `unpack`
 
@@ -524,7 +523,7 @@ Successfully unpacked rootfs for busybox to: /home/user/rootfs
 
 ## Common Issues
 
-#### Using Self-Signed Certs with a Registry
+### Using Self-Signed Certs with a Registry
 
 We do not allow users to pass all the custom certificate flags on commands
 because it is unnecessarily messy and can be handled through Linux itself.
@@ -532,30 +531,28 @@ Which we believe is a better user experience than having to pass three
 different flags just to communicate with a registry using self-signed or
 private certificates.
 
+#### Installing Self-Signed Certificate on Linux
+
 Below are instructions on adding a self-signed or private certificate to your
-trusted ca-certificates on Linux.
+trusted ca-certificates on Linux (Ubuntu/Debian). Must be run as root.
 
-Make sure you have the package `ca-certificates` installed.
+1. Make sure the package `ca-certificates` installed.
 
-Copy the public half of your CA certificate (the one user to sign the CSR) into
-the CA certificate directory (as root):
+    ```console
+   $ apt install ca-certificates 
+   ```
 
-```console
-$ cp cacert.pem /usr/share/ca-certificates
-```
+2. Copy the public certificate, intermediate, or CA certificates into the CA certificate directory:
 
-Rebuild the directory with your certificate included, run as root:
+    ```console
+    $ cp cacert.pem /usr/share/ca-certificates
+    ```
 
-```console
-# On debian, this will bring up a menu.
-# Select the ask option, scroll to the certificate you are adding,
-# 	mark it for inclusion, and select ok.
-$ dpkg-reconfigure ca-certificates
+3. Update the certificates.
 
-# On other distros...
-$ update-ca-certificates
-```
-
+    ```console
+    $ update-ca-certificates
+    ```
 
 ## How It Works
 
@@ -565,8 +562,7 @@ To mount a filesystem without root accsess, `img` automatically invokes
 [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) 
 SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
 
-Make sure you have sufficient entries (typically `>=65536`) in your 
-`/etc/subuid` and `/etc/subgid`.
+Make sure sufficient entries (typically `>=65536`) are in `/etc/subuid` and `/etc/subgid`.
 
 ### High Level
 
@@ -590,14 +586,13 @@ The `native` backends creates image layers by simply copying files.
 
 #### overlayfs
 
-You can also use `overlayfs` 
-backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
+The `overlayfs` backend can also be used, but that requires a kernel patch from Ubuntu to be unprivileged, 
 see [#22](https://github.com/genuinetools/img/issues/22).
 
 
 ## Contributing
 
-Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/genuinetools/img/issues).
+Please do! This is a young project and can use some love :love:. Check out the [issues](https://github.com/genuinetools/img/issues).
 
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.
@@ -608,18 +603,21 @@ A [Dockerfile](Dockerfile.dev) is provided as a build environment for this proje
 contributing for all users without modifying local system versions, or if running on a Mac or Windows machine but need a 
 Linux environment to build and test `img`.
 
-Utilize the same security options present in the [Run in Docker](#run-in-docker) section when running this container.
+Utilize the same security options present in the [Run in Docker](#docker-security-options) section when running this container.
 
-The steps below will provide you with an environment with all the correct prerequisites installed. Since this is an 
-Ubuntu image, you can augment this image with whatever development tools you might need. This is a simple way to get a 
+The steps below will provide an environment with all the correct prerequisites installed. Since this is an 
+Ubuntu image, can be augmented with whatever development tools needed. This is a simple way to get a 
 basic development environment up and running.
 
 1. Clone and `cd` into the `img` directory.
 2. Build the development image with Docker. This is an Ubuntu-based image.
+
     ```bash
     $ docker build -t img.dev -f Dockerfile.dev .
     ```
-3. Run the image via Docker, mounting the `img` filesystem. You can modify files and the running container will see updates.
+
+3. Run the image via Docker, mounting the `img` filesystem, so the running container will see any updates made.
+
    ```bash
    $ docker run --rm -it \
          --name img \
@@ -629,15 +627,20 @@ basic development environment up and running.
          --security-opt systempaths=unconfined \
          img.dev
    ```
-4. Run `make` to build. This will build an `img` binary in the current directory. You can also explore the other 
+
+4. Run `make` to build. This will build an `img` binary in the current directory. Explore the other 
    targets available in the [Makefile](Makefile) or [basic.mk](basic.mk).
+
    ```bash
    $ make
    ```
+
 5. Test the built binary. Since we are in the `img` project, we can test building `img` with it's [Dockerfile](Dockerfile)!
+
    ```bash
    $ ./img build -t test .
    ```
+
 6. Alright! You've built img (twice!) and can start contributing.
 
 Since your local filesystem is mounted in the container, you can use any IDE or text editor you are comfortable with on 
