@@ -70,7 +70,7 @@ You might also be interested in reading:
 Img can be installed on any Linux distribution, or run via Docker on Windows or Mac. Img requires [runc](https://github.com/opencontainers/runc) and thus only 
 supports Linux natively.
 
-### Run In Docker
+### Run in Docker
 
 A prebuilt docker image is provided to run img via Docker: `r.j3ss.co/img`. This image is configured to be executed as 
 an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7, but please note the security
@@ -114,13 +114,24 @@ you can also run a build your own project.
 $ img build -t user/myimage .
 ```
 
+#### Docker Security Options
+
+In order for `img` to work in a container, it requires the following additional capabilities to work correctly. These 
+requirements are typically due to dependencies such as runc and buildkit.
+
+| Docker CLI Option | Description |
+| --- | --- |
+|  `--security-opt seccomp=unconfined` | Remove seccomp confinement. |
+|  `--security-opt apparmor=unconfined` | Remove AppArmor confinement. |
+|  `--security-opt systempaths=unconfined` | Unmask system paths, like `/proc`. |
+
 #### PID Namespace Isolation
 
 To enable PID namespace isolation (which disallows build containers to `kill(2)` the `img` process), you need to specify
 `--privileged` so that build containers can mount `/proc` with unshared PID namespaces.
 Note that even with `--privileged`, `img` works as an unprivileged user with UID 1000.
 
-### Running with Kubernetes
+### Run in Kubernetes
 
 Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
 
