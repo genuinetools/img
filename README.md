@@ -591,7 +591,7 @@ trusted ca-certificates on Linux (Ubuntu/Debian). Must be run as root.
 
 ## Contributing
 
-Please do! This is a young project and can use some love :love:. Check out the [issues](https://github.com/genuinetools/img/issues).
+Please do! This is a young project and can use some love :heart:. Check out the [issues](https://github.com/genuinetools/img/issues).
 
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.
