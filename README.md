@@ -4,118 +4,180 @@
 [![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/genuinetools/img)
 [![Github All Releases](https://img.shields.io/github/downloads/genuinetools/img/total.svg?style=for-the-badge)](https://github.com/genuinetools/img/releases)
 
-Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
-container image builder.
+Simple, standalone, daemon-less, unprivileged Dockerfile and OCI-compatible container image builder.
 
-`img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
-as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
+`img` is a simple CLI tool built on top of [buildkit](https://github.com/moby/buildkit).
 
 The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
-have to do is replace `docker` with `img` in your scripts, command line, and/or life.
+have to do is replace `docker` with `img` in your scripts, command line, CI/CD, and/or life.
 
-**Table of Contents**
+## Table of Contents
 
 <!-- toc -->
 
 - [Goals](#goals)
-      - [Upstream Patches](#upstream-patches)
-      - [Benchmarks](#benchmarks)
-- [Installation](#installation)
-    + [Binaries](#binaries)
-    + [From Source](#from-source)
-    + [Alpine Linux](#alpine-linux)
-    + [Arch Linux](#arch-linux)
-    + [Gentoo](#gentoo)
-    + [Running with Docker](#running-with-docker)
-  * [Running with Kubernetes](#running-with-kubernetes)
-- [Usage](#usage)
-  * [Build an Image](#build-an-image)
-    + [Cross Platform](#cross-platform)
-    + [Exporter Types](#exporter-types)
-  * [List Image Layers](#list-image-layers)
-  * [Pull an Image](#pull-an-image)
-  * [Push an Image](#push-an-image)
-  * [Tag an Image](#tag-an-image)
-  * [Export an Image to Docker](#export-an-image-to-docker)
-  * [Unpack an Image to a rootfs](#unpack-an-image-to-a-rootfs)
-  * [Remove an Image](#remove-an-image)
-  * [Disk Usage](#disk-usage)
-  * [Prune and Cleanup the Build Cache](#prune-and-cleanup-the-build-cache)
-  * [Login to a Registry](#login-to-a-registry)
-  * [Logout from a Registry](#logout-from-a-registry)
-  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
+  * [Additional Reading](#additional-reading)
+- [Getting Started](#getting-started)
+  * [Run in Docker](#run-in-docker)
+  * [Run in Kubernetes](#run-in-kubernetes)
+  * [Mac or Windows Installation](#mac-or-windows-installation)
+  * [Linux Installation](#linux-installation)
+- [CLI Reference](#cli-reference)
+  * [`build`](#build)
+  * [`du`](#du)
+  * [`login`](#login)
+  * [`logout`](#logout)
+  * [`ls`](#ls)
+  * [`prune`](#prune)
+  * [`pull`](#pull)
+  * [`push`](#push)
+  * [`rm`](#rm)
+  * [`save`](#save)
+  * [`tag`](#tag)
+  * [`unpack`](#unpack)
+  * [Snapshotter Backend](#snapshotter-backend)
 - [How It Works](#how-it-works)
   * [Unprivileged Mounting](#unprivileged-mounting)
   * [High Level](#high-level)
   * [Low Level](#low-level)
-  * [Snapshotter Backends](#snapshotter-backends)
-    + [auto (default)](#auto-default)
-    + [native](#native)
-    + [overlayfs](#overlayfs)
+- [Common Issues](#common-issues)
+  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
 - [Contributing](#contributing)
+  * [Quick-Start With Docker](#quick-start-with-docker)
 - [Acknowledgements](#acknowledgements)
 
 <!-- tocstop -->
 
 ## Goals
 
-This a glorified cli tool built on top of
-[buildkit](https://github.com/moby/buildkit). The goal of this project is to be
-able to build container images as an unprivileged user.
+The key goals of `img` are:
 
-Running unprivileged allows companies who use LDAP and other login mechanisms
-to use `img` without needing root. This is very important in HPC environments
-and academia as well.
+* **Least-Privileged.** Build containers without requiring root and utilizing as few permissions as possible.
+* **Docker CLI Compatibility.** Don't change your development workflow, provide a drop-in replacement for docker for key functionality.
+* **Dockerfile Compatibility.** Use the same Dockerfile you know and love to develop locally, and in your CI/CD builds.
+* **Single Process.** Provide the simplest possible way to build without daemons or complex architectures. 
 
-Currently this works out of the box on a Linux machine if you install via 
-the directions covered in [installing from binaries](#binaries). This
-installation will ensure you have the correct version of `img` and also `runc`.
+### Additional Reading
 
-##### Upstream Patches
+You might also be interested in reading:
+ 
+* The original [design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing) by [@jessfrazz](https://github.com/jessfrazz).
+* A blog post on [building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)  by [@jessfrazz](https://github.com/jessfrazz). 
+* Benchmarks [comparing various container builders](https://github.com/AkihiroSuda/buildbench/issues/1) by [@AkihiroSuda](https://github.com/AkihiroSuda).
 
-The ultimate goal is to also have this work inside a container. There are
-patches being made to container runtimes and Kubernetes to make this possible. 
-For the on-going work toward getting patches into container runtimes and
-Kubernetes, see:
+## Getting Started
 
-- [moby/moby#36644](https://github.com/moby/moby/pull/36644) **merged**
-- [docker/cli#1347](https://github.com/docker/cli/pull/1347) **merged**
-- [kubernetes/community#1934](https://github.com/kubernetes/community/pull/1934) **merged**
-- [kubernetes/kubernetes#64283](https://github.com/kubernetes/kubernetes/pull/64283) **merged** 
+Img can be installed directly Linux, or run via Docker on Windows or Mac. Img requires [runc](https://github.com/opencontainers/runc) and thus only 
+supports Linux natively.
 
-The patches for runc has been merged into the upstream since `ecd55a4135e0a26de884ce436442914f945b1e76` (May 30, 2018).
-The upstream BuildKit can also run in rootless mode since `65b526438b86a17cf35042011051ce15c8bfb92a` (June 1, 2018).
+### Run in Docker
 
-You might also be interested in reading: 
-* [the original design doc](https://docs.google.com/document/d/1rT2GUSqDGcI2e6fD5nef7amkW0VFggwhlljrKQPTn0s/edit?usp=sharing)
-* [a blog post on building images securely in Kubernetes](https://blog.jessfraz.com/post/building-container-images-securely-on-kubernetes/)
+A prebuilt docker image is provided to run img via Docker: `r.j3ss.co/img`. This image is configured to be executed as 
+an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7, but please note the [security
+options](#docker-security-options) provided below.
 
-##### Benchmarks
+#### Example Build
 
-If you are curious about benchmarks comparing various container builders, check
-out [@AkihiroSuda's buildbench](https://github.com/AkihiroSuda/buildbench) 
-[results](https://github.com/AkihiroSuda/buildbench/issues/1).
+The following runs builds an image in an unprivileged container. This demonstrates that we are able to build images
+within a container. The example below mounts the current directory as a volume, and also mounts docker credentials.
+
+```console
+$ docker run --rm -it \
+    --name img \
+    --volume "$(pwd):/home/user/src:ro" \
+    --workdir /home/user/src \
+    --volume "${HOME}/.docker:/root/.docker:ro" \
+    --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+    --security-opt systempaths=unconfined \
+    r.j3ss.co/img build -t user/myimage .
+```
+
+#### Run Interactively
+
+Instead of directly calling img, you can enter a shell prompt to test out some of the capabilities of `img`. 
+
+```console
+$ docker run --rm -it \
+    --name img \
+    --volume "$(pwd):/home/user/src:ro" \
+    --workdir /home/user/src \
+    --volume "${HOME}/.docker:/root/.docker:ro" \
+    --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+    --security-opt systempaths=unconfined \
+    --entrypoint sh r.j3ss.co/img 
+```
+
+This will open a shell prompt where you can run `img` commands. Your current directory is also mounted as a volume, so 
+you can also run a build your own project.
+
+```console
+$ img build -t user/myimage .
+```
+
+#### Docker Security Options
+
+In order for `img` to work in a container, it requires the following additional capabilities to work correctly. These 
+requirements are typically due to dependencies such as runc and buildkit.
+
+| Docker CLI Option | Description |
+| --- | --- |
+|  `--security-opt seccomp=unconfined` | Remove seccomp confinement. |
+|  `--security-opt apparmor=unconfined` | Remove AppArmor confinement. |
+|  `--security-opt systempaths=unconfined` | Unmask system paths, like `/proc`. |
+
+#### PID Namespace Isolation
+
+To enable PID namespace isolation (which disallows build containers to `kill(2)` the `img` process), you need to specify
+`--privileged` so that build containers can mount `/proc` with unshared PID namespaces.
+Note that even with `--privileged`, `img` works as an unprivileged user with UID 1000.
+
+### Run in Kubernetes
+
+Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
+
+However the following security annotations are needed:
+
+```
+container.apparmor.security.beta.kubernetes.io/img: unconfined
+container.seccomp.security.alpha.kubernetes.io/img: unconfined
+```
+
+To enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
+`securityContext.privileged` to `true`).
+`securityContext.procMount` is available since Kubernetes 1.12 with Docker 18.06/containerd 1.2/CRI-O 1.12.
 
 
-## Installation
+### Mac or Windows Installation
 
-You need to have `newuidmap` installed. On Ubuntu, `newuidmap` is provided by the `uidmap` package.
+To utilize img on Mac or Windows, install Docker for Desktop, and then utilize the Run In Docker instructions above.
 
-You also need to have `seccomp` installed. On Ubuntu, `seccomp` is provided by the `libseccomp-dev` package.
+### Linux Installation
+
+#### Prerequisites
+
+The following requirements must be met:
+
+1. `newuidmap`. On Ubuntu, `newuidmap` is provided by the `uidmap` package.
+2. `seccomp`. On Ubuntu, `seccomp` is provided by the `libseccomp-dev` package.
+3. `runc` (optional). An embedded runc binary is provided within img if one is not available locally.
+4. User namespace support enabled. On some distros (Debian and Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
+
+##### Disable Embedded Runc
 
 `runc` will be installed on start from an embedded binary if it is not already
 available locally. If you would like to disable the embedded runc you can use `BUILDTAGS="seccomp
 noembed"` while building from source with `make`. Or the environment variable
 `IMG_DISABLE_EMBEDDED_RUNC=1` on execution of the `img` binary.
 
-NOTE: These steps work only for Linux. Compile and run in a container 
-(explained below) if you're on Windows or MacOS.
-
-#### Binaries
+#### Binary Installation
 
 For installation instructions from binaries please visit the [Releases Page](https://github.com/genuinetools/img/releases).
+This installation will ensure you have the correct version of `img` and also `runc`.
 
-#### From Source
+#### Install From Source
+
+A build environment suitable for installing from source is provided in the [Dockerfile.dev](Dockerfile.dev) file. Ensure
+system [prerequisites](#prerequisites) are met.
 
 ```bash
 $ mkdir -p $GOPATH/src/github.com/genuinetools
@@ -128,7 +190,9 @@ $ sudo make install
 $ make BUILDTAGS="seccomp noembed"
 ```
 
-#### Alpine Linux
+#### Linux Distribution Packages
+
+##### Alpine Linux
 
 There is an [APKBUILD](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/img).
 
@@ -136,7 +200,7 @@ There is an [APKBUILD](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/
 $ apk add img --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
 ```
 
-#### Arch Linux
+##### Arch Linux
 
 There is an [AUR build](https://aur.archlinux.org/packages/img/).
 
@@ -150,7 +214,7 @@ $ cd img
 $ makepkg -si
 ```
 
-#### Gentoo
+##### Gentoo
 
 There is an [ebuild](https://github.com/gentoo/gentoo/tree/master/app-emulation/img).
 
@@ -158,45 +222,10 @@ There is an [ebuild](https://github.com/gentoo/gentoo/tree/master/app-emulation/
 $ sudo emerge -a app-emulation/img
 ```
 
-#### Running with Docker
+## CLI Reference
 
-Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.7.
-
-```console
-$ docker run --rm -it \
-    --name img \
-    --volume $(pwd):/home/user/src:ro \ # for the build context and dockerfile, can be read-only since we won't modify it
-    --workdir /home/user/src \ # set the builder working directory
-    --volume "${HOME}/.docker:/root/.docker:ro" \ # for credentials to push to docker hub or a registry
-    --security-opt seccomp=unconfined --security-opt apparmor=unconfined \ # required by runc
-    r.j3ss.co/img build -t user/myimage .
-```
-
-To enable PID namespace isolation (which disallows build containers to `kill(2)` the `img` process), you need to specify
-`--privileged` so that build containers can mount `/proc` with unshared PID namespaces.
-Note that even with `--privileged`, `img` works as an unprivileged user with UID 1000.
-
-See [docker/cli patch](#upstream-patches) for how to allow mounting `/proc` without `--privileged`.
-
-### Running with Kubernetes
-
-Since `img` v0.5.7, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
-
-However the following security annotations are needed:
-```
-container.apparmor.security.beta.kubernetes.io/img: unconfined
-container.seccomp.security.alpha.kubernetes.io/img: unconfined
-```
-
-To enable PID namespace isolation, you need to set `securityContext.procMount` to `Unmasked` (or simply set
-`securityContext.privileged` to `true`).
-`securityContext.procMount` is available since Kubernetes 1.12 with Docker 18.06/containerd 1.2/CRI-O 1.12.
-
-## Usage
-
-Make sure you have user namespace support enabled. On some distros (Debian and
-Arch Linux) this requires running `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`.
-
+Img provides a `-h`, or `--help` flag to guide usage of the CLI and any commands. Img provides a subset of the most
+important commands for building images found in the [Docker CLI].
 
 ```console
 $ img -h
@@ -230,78 +259,31 @@ Commands:
 Use "img [command] --help" for more information about a command.
 ```
 
-### Build an Image
+### `build`
+
+Build an image from a Dockerfile. Use just like you would `docker build`.
+
+#### Usage
 
 ```console
-$ img build -h
-build -  Build an image from a Dockerfile
-
-Usage: img build [OPTIONS] PATH
-
-Flags:
-      --build-arg list   Set build-time variables
-  -f, --file string      Name of the Dockerfile (Default is 'PATH/Dockerfile')
-  -h, --help             help for build
-      --label list       Set metadata for an image
-      --no-cache         Do not use cache when building the image
-      --no-console       Use non-console progress UI
-  -o, --output string    BuildKit output specification (e.g. type=tar,dest=build.tar)
-      --platform list    Set platforms for which the image should be built
-  -t, --tag list         Name and optionally a tag in the 'name:tag' format
-      --target string    Set the target build stage to build
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
+img build [OPTIONS] PATH
 ```
 
-**Use just like you would `docker build`.**
+#### Options
 
-```console
-$ img build -t r.j3ss.co/img .
-Building r.j3ss.co/img:latest
-Setting up the rootfs... this may take a bit.
-[+] Building 44.7s (16/16) FINISHED                                                        
- => local://dockerfile (Dockerfile)                                                   0.0s
- => => transferring dockerfile: 1.15kB                                                0.0s
- => local://context (.dockerignore)                                                   0.0s
- => => transferring context: 02B                                                      0.0s
- => CACHED docker-image://docker.io/tonistiigi/copy:v0.1.1@sha256:854cee92ccab4c6d63  0.0s
- => => resolve docker.io/tonistiigi/copy:v0.1.1@sha256:854cee92ccab4c6d63183d147389e  0.0s
- => CACHED docker-image://docker.io/library/alpine@sha256:e1871801d30885a610511c867d  0.0s
- => => resolve docker.io/library/alpine@sha256:e1871801d30885a610511c867de0d6baca7ed  0.0s
- => docker-image://docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e58  5.5s
- => => resolve docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e5896d1  0.0s
- => => sha256:866414f805391b58973d4e3d76e5d32ae51baecb1c93762c9751b9d6c5 126B / 126B  0.0s
- => => sha256:ae8dbf6f23bf1c326de78fc780c6a870bf11eb86b45a7dc567 308.02kB / 308.02kB  0.0s
- => => sha256:44ccce322b34208317d748e998212cd677c16f1a58c2ff5e59578c 3.86kB / 3.86kB  0.0s
- => => sha256:0d01df27c53e651ecfa5c689dafb8c63c759761a757cc37e30eccc5e3a 153B / 153B  0.0s
- => => sha256:ff3a5c916c92643ff77519ffa742d3ec61b7f591b6b7504599d95a 2.07MB / 2.07MB  0.0s
- => => sha256:4be696a8d726150ed9636ea7156edcaa9ba8293df1aae49f9e 113.26MB / 113.26MB  0.0s
- => => sha256:98c1f3458b21f50ac2e5896d14a644eadb3adcae5afdceac0cc9c2 2.04kB / 2.04kB  0.0s
- => => sha256:bb31085d5c5db578edf3d4e5541cfb949b713bb7018bbac4dfd407 1.36kB / 1.36kB  0.0s
- => => unpacking docker.io/library/golang:1.10-alpine@sha256:98c1f3458b21f50ac2e5896  5.4s
- => local://context                                                                   0.8s
- => => transferring context: 116.83MB                                                 0.8s
- => /bin/sh -c apk add --no-cache  bash  build-base  gcc  git  libseccomp-dev  linux  3.8s
- => copy /src-0 go/src/github.com/genuinetools/img/                                   1.5s
- => /bin/sh -c go get -u github.com/jteeuwen/go-bindata/...                           7.3s
- => /bin/sh -c make static && mv img /usr/bin/img                                    15.2s
- => /bin/sh -c git clone https://github.com/opencontainers/runc.git "$GOPATH/src/git  7.6s
- => /bin/sh -c apk add --no-cache  bash  git  shadow  shadow-uidmap  strace           2.3s
- => copy /src-0/img usr/bin/img                                                       0.5s
- => copy /src-0/runc usr/bin/runc                                                     0.4s
- => /bin/sh -c useradd --create-home --home-dir $HOME user  && chown -R user:user $H  0.4s
- => exporting to image                                                                1.5s
- => => exporting layers                                                               1.4s
- => => exporting manifest sha256:03e034afb839fe6399a271efc972da823b1b6297ea792ec94fa  0.0s
- => => exporting config sha256:92d033f9575176046db41f4f1feacc0602c8f2811f59d59f8e7b6  0.0s
- => => naming to r.j3ss.co/img:latest                                                 0.0s
-Successfully built r.j3ss.co/img:latest
-```
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--build-arg` | | Set build-time variables |
+| `--file , -f` | `PATH/Dockerfile` | Name of the Dockerfile |
+| `--label` | | Set metadata for an image |
+| `--no-cache`| | Do not use cache when building the image |
+| `--no-console`| | Use non-console progress UI |
+| `--output , -o`| | BuildKit output [specification](#exporter-types) (e.g. type=tar,dest=build.tar) |
+| `--platform`| | Set [platforms](#cross-platform-builds) for which the image should be built |
+| `--tag , -t`| | Name and optionally a tag in the `name:tag` format |
+| `--target   `| | Set the target build stage to build |
 
-#### Cross Platform
+#### Cross Platform Builds
 
 `img` and the underlying `buildkit` library support building containers for arbitrary platforms (OS and architecture combinations). In `img` this can be achieved using the `--platform` option, but note that
 using the `RUN` command during a build requires installing support for the desired platform, and any `FROM` images used must exist for the target platform as well.
@@ -320,6 +302,7 @@ If you use multiple `--platform` options for the same build, they will be includ
 
 The most common way to get `RUN` working in cross-platform builds is to install an emulator such as QEMU on the host system (static bindings are recommended to avoid shared library loading issues). To properly use the emulator inside the build environment, the kernel [binfmt_misc](https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html) parameters must be set with the following flags: `OCF`.
 You can check the settings in `/proc` to ensure they are set correctly.
+
 ```console
 $ cat /proc/sys/fs/binfmt_misc/qemu-arm | grep flags
 flags: OCF
@@ -353,192 +336,17 @@ When used in conjunction with a Dockerfile which has a final `FROM scratch` stag
 only copies files of interest from earlier stages with `COPY --from=...`, this can be
 utilized to output arbitrary build artifacts for example.
 
-### List Image Layers
+### `du`
+
+List images and disk usage.
+
+#### Options
 
 ```console
-$ img ls -h
-ls -  List images and digests.
-
-Usage: img ls [OPTIONS]
-
-Flags:
   -f, --filter list   Filter output based on conditions provided
-  -h, --help          help for ls
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
 
-```console
-$ img ls
-NAME                    SIZE            CREATED AT      UPDATED AT      DIGEST
-jess/img:latest         1.534KiB        9 seconds ago   9 seconds ago   sha256:27d862ac32022946d61afbb91ddfc6a1fa2341a78a0da11ff9595a85f651d51e
-jess/thing:latest       591B            30 minutes ago  30 minutes ago  sha256:d664b4e9b9cd8b3067e122ef68180e95dd4494fd4cb01d05632b6e77ce19118e
-```
-
-### Pull an Image
-
-If you need to use self-signed certs with your registry, see 
-[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
-
-```console
-$ img pull -h
-pull -  Pull an image or a repository from a registry.
-
-Usage: img pull [OPTIONS] NAME[:TAG|@DIGEST]
-
-Flags:
-  -h, --help   help for pull
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img pull r.j3ss.co/stress
-Pulling r.j3ss.co/stress:latest...
-Snapshot ref: sha256:2bb7a0a5f074ffe898b1ef64b3761e7f5062c3bdfe9947960e6db48a998ae1d6
-Size: 365.9KiB
-```
-
-### Push an Image
-
-If you need to use self-signed certs with your registry, see 
-[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
-
-```console
-$ img push -h
-push -  Push an image or a repository to a registry.
-
-Usage: img push [OPTIONS] NAME[:TAG]
-
-Flags:
-  -h, --help                help for push
-      --insecure-registry   Push to insecure registry
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img push jess/thing
-Pushing jess/thing:latest...
-Successfully pushed jess/thing:latest
-```
-
-### Tag an Image
-
-```console
-$ img tag -h
-tag -  Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE.
-
-Usage: img tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
-
-Flags:
-  -h, --help   help for tag
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img tag jess/thing jess/otherthing
-Successfully tagged jess/thing as jess/otherthing
-```
-
-### Export an Image to Docker
-
-```console
-$ img save -h
-save -  Save an image to a tar archive (streamed to STDOUT by default).
-
-Usage: img save [OPTIONS] IMAGE [IMAGE...]
-
-Flags:
-      --format string   image output format (docker|oci) (default "docker")
-  -h, --help            help for save
-  -o, --output string   write to a file, instead of STDOUT
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img save jess/thing | docker load
-6c3d70c8619c: Loading layer [==================================================>]  9.927MB/9.927MB                                      
-7e336c441b5e: Loading layer [==================================================>]  5.287MB/5.287MB                                      
-533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
-3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
-Loaded image: jess/thing
-```
-
-### Unpack an Image to a rootfs
-
-```console
-$ img unpack -h
-unpack -  Unpack an image to a rootfs directory.
-
-Usage: img unpack [OPTIONS] IMAGE
-
-Flags:
-  -h, --help            help for unpack
-  -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img unpack busybox
-Successfully unpacked rootfs for busybox to: /home/user/rootfs
-```
-
-### Remove an Image
-
-```console
-$ img rm -h
-rm -  Remove one or more images.
-
-Usage: img rm [OPTIONS] IMAGE [IMAGE...]
-
-Flags:
-  -h, --help   help for rm
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-### Disk Usage
-
-```console
-$ img du -h
-du -  Show image disk usage.
-
-Usage: img du [OPTIONS]
-
-Flags:
-  -f, --filter list   Filter output based on conditions provided
-  -h, --help          help for du
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
+#### Example
 
 ```console
 $ img du 
@@ -556,127 +364,191 @@ Reclaimable:    1.08GiB
 Total:          1.08GiB
 ```
 
-### Prune and Cleanup the Build Cache
+### `login`
 
-```console
-$ img prune -h
-prune -  Prune and clean up the build cache.
-
-Usage: img prune [OPTIONS]
-
-Flags:
-  -h, --help   help for prune
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
-```
-
-```console
-$ img prune
-ID                                                                      RECLAIMABLE     SIZE            DESCRIPTION
-j1yil8bdz35eyxp0m17tggknd                                               true            5.08KiB         local source for dockerfile
-je23wfyz2apii1au38occ8zag                                               true            52.95MiB        mount / from exec /bin/sh -c useradd --create-home...
-sha256:74906c0186257f2897c5fba99e1ea87eb8b2ee0bb03b611f5e866232bfbf6739 true            2.238MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-vr2pvhmrt1sjs8n7jodesrvnz*                                              true            572.6MiB        mount / from exec /bin/sh -c git clone https://git...
-afn0clz11yphlv6g8golv59c8                                               true            4KiB            local source for context
-qx5yql370piuscuczutrnansv*                                              true            692.4MiB        mount / from exec /bin/sh -c make static && mv img...
-uxocruvniojl1jqlm8gs3ds1e*                                              true            113.8MiB        local source for context
-sha256:0b9cfed6a170b357c528cd9dfc104d8b404d08d84152b38e98c60f50d2ae718b true            1.449MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-vz0716utmnlmya1vhkojyxd4o                                               true            55.39MiB        mount /dest from exec copy /src-0/runc usr/bin/run...
-a0om6hwulbf9gd2jfgmxsyaoa                                               true            646.5MiB        mount / from exec /bin/sh -c go get -u github.com/...
-ys8y9ixi3didtbpvwbxuptdfq                                               true            641.2MiB        mount /dest from exec copy /src-0 go/src/github.co...
-sha256:f64a552a56ce93b6e389328602f2cd830280fd543ade026905e69895b5696b7a true            1.234MiB        pulled from docker.io/tonistiigi/copy:v0.1.1@sha25...
-05wxxnq6yu5nssn3bojsz2mii                                               true            52.4MiB         mount /dest from exec copy /src-0/img usr/bin/img
-wlrp1nxsa37cixf127bh6w2sv                                               true            35.11MiB        mount / from exec /bin/sh -c apk add --no-cache  b...
-wy0173xa6rkoq49tf9g092r4z                                               true            527.4MiB        mount / from exec /bin/sh -c apk add --no-cache  b...
-Reclaimed:      4.148GiB
-Total:          4.148GiB
-```
-
-### Login to a Registry
+Login to a registry. `img` authentication works just like docker to login to repositories.
 
 If you need to use self-signed certs with your registry, see 
 [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
 
-```console
-$ img login -h
-login -  Log in to a Docker registry.
+#### Usage
 
-Usage: img login [OPTIONS] [SERVER]
-
-Flags:
-  -h, --help              help for login
-  -p, --password string   Password
-      --password-stdin    Take the password from stdin
-  -u, --user string       Username
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
+```bash
+img login [OPTIONS] [SERVER]
 ```
 
-### Logout from a Registry
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--password , -p` | | Password |
+| `--password-stdin` | | Take the password from stdin |
+| `--user , -u` | | Username |
+
+### `logout`
+
+Removes credentials for a registry.
+
+#### Usage
 
 ```console
-$ img logout -h
-logout -  Log out from a Docker registry.
-
-Usage: img logout [SERVER]
-
-Flags:
-  -h, --help   help for logout
-
-Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
-  -d, --debug            enable debug logging
-  -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
+img logout [SERVER]
 ```
 
-### Using Self-Signed Certs with a Registry
+### `ls`
 
-We do not allow users to pass all the custom certificate flags on commands
-because it is unnecessarily messy and can be handled through Linux itself.
-Which we believe is a better user experience than having to pass three
-different flags just to communicate with a registry using self-signed or
-private certificates.
+List all the image layers stored in the backend.
 
-Below are instructions on adding a self-signed or private certificate to your
-trusted ca-certificates on Linux.
-
-Make sure you have the package `ca-certificates` installed.
-
-Copy the public half of your CA certificate (the one user to sign the CSR) into
-the CA certificate directory (as root):
+#### Usage
 
 ```console
-$ cp cacert.pem /usr/share/ca-certificates
+img ls [OPTIONS]
 ```
 
-Rebuild the directory with your certificate included, run as root:
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--filter, -f` | | Filter output based on conditions provided |
+
+
+### `prune`
+
+Remove unused and dangling layers in the cache to reclaim space. Perform a `prune` after an `rm` to cleanup old images.
+
+#### Usage
 
 ```console
-# On debian, this will bring up a menu.
-# Select the ask option, scroll to the certificate you are adding,
-# 	mark it for inclusion, and select ok.
-$ dpkg-reconfigure ca-certificates
-
-# On other distros...
-$ update-ca-certificates
+img prune [OPTIONS]
 ```
+
+### `pull`
+
+Pull an Image from a registry. If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
+#### Usage
+
+```console
+img pull [OPTIONS] NAME[:TAG|@DIGEST]
+```
+
+### `push`
+
+Push an Image to a registry. If you need to use self-signed certs with your registry, see 
+[Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry).
+
+#### Usage
+
+```console
+img push [OPTIONS] NAME[:TAG]
+```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--insecure-registry` | | Push to insecure registry |
+
+### `rm`
+
+Remove images from the image store.
+
+#### Usage
+
+```console
+img rm [OPTIONS] IMAGE [IMAGE...]
+```
+
+### `save`
+
+Save an image to a tar archive (streamed to STDOUT by default). Provide an `--output` file to write to a file.
+
+#### Usage
+
+```console
+img save [OPTIONS] IMAGE [IMAGE...]
+```
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--format` | `docker`| image output format (`docker` | `oci`) |
+| `--output , -o` | | Output file, instead of STDOUT |
+
+#### Examples
+
+##### Save Image via STDOUT
+
+Send an image from `img`'s backend to docker.
+
+```console
+$ img save jess/thing | docker load
+6c3d70c8619c: Loading layer [==================================================>]  9.927MB/9.927MB                                      
+7e336c441b5e: Loading layer [==================================================>]  5.287MB/5.287MB                                      
+533fecff21a8: Loading layer [==================================================>]   2.56MB/2.56MB                                       
+3db7019eac28: Loading layer [==================================================>]  1.679kB/1.679kB                                      
+Loaded image: jess/thing
+```
+
+### `tag`
+
+Create a tag that refers to the source image.
+
+#### Usage
+
+```console
+$ img tag jess/thing jess/otherthing
+Successfully tagged jess/thing as jess/otherthing
+```
+
+### `unpack`
+
+Unpack the contents of an image to a rootfs. Provide an `--output` to specify where to unpack to, otherwise it saves the
+image to `rootfs/` in the current directory.
+
+#### Options
+
+| Name, shorthand | Default | Description |
+| --- | --- | --- |
+| `--output , -o` | `$(pwd)/rootfs`| Directory to unpack the rootfs to. |
+
+#### Example
+
+```console
+$ img unpack busybox
+Successfully unpacked rootfs for busybox to: /home/user/rootfs
+```
+
+### Snapshotter Backend
+
+The snapshotter backend is responsible for storing the image layers. This option is provided by `--backend` to any command.
+
+#### `auto` (default)
+
+The `auto` backend is resolved into either `native` or `overlayfs`, depending on
+the availability of `overlayfs` on the system.
+
+#### Native
+
+The `native` backends creates image layers by simply copying files.
+`copy_file_range(2)` is used when available.
+
+#### overlayfs
+
+The `overlayfs` backend can also be used, but that requires a kernel patch from Ubuntu to be unprivileged, 
+see [#22](https://github.com/genuinetools/img/issues/22).
 
 ## How It Works
 
 ### Unprivileged Mounting
 
-To mount a filesystem without root accsess, `img` automatically invokes 
+To mount a filesystem without root access, `img` invokes 
 [`newuidmap(1)`](http://man7.org/linux/man-pages/man1/newuidmap.1.html)/[`newgidmap(1)`](http://man7.org/linux/man-pages/man1/newgidmap.1.html) 
 SUID binaries to prepare SUBUIDs/SUBGIDs, which is typically required by `apt`.
 
-Make sure you have sufficient entries (typically `>=65536`) in your 
-`/etc/subuid` and `/etc/subgid`.
+Make sure sufficient entries (typically `>=65536`) are in `/etc/subuid` and `/etc/subgid`.
 
 ### High Level
 
@@ -686,31 +558,92 @@ Make sure you have sufficient entries (typically `>=65536`) in your
 
 <img src="contrib/how-it-works-low-level.png" width=300 />
 
-### Snapshotter Backends
+## Common Issues
 
-#### auto (default)
+### Using Self-Signed Certs with a Registry
 
-The `auto` backend is resolved into either `native` or `overlayfs`, depending on
-the availability of `overlayfs` on the system.
+We do not allow users to pass all the custom certificate flags on commands because it is unnecessarily messy and can be
+handled through Linux itself. We believe this is a better user experience than having to pass three different flags just
+to communicate with a registry using self-signed or private certificates.
 
-#### native
+#### Installing Self-Signed Certificate on Linux
 
-The `native` backends creates image layers by simply copying files.
-`copy_file_range(2)` is used when available.
+Below are instructions on adding a self-signed or private certificate to your
+trusted ca-certificates on Linux (Ubuntu/Debian). Must be run as root.
 
-#### overlayfs
+1. Make sure the package `ca-certificates` installed.
 
-You can also use `overlayfs` 
-backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
-see [#22](https://github.com/genuinetools/img/issues/22).
+    ```console
+   $ apt install ca-certificates 
+   ```
 
+2. Copy the public certificate, intermediate, or CA certificates into the CA certificate directory:
+
+    ```console
+    $ cp cacert.pem /usr/share/ca-certificates
+    ```
+
+3. Update the certificates.
+
+    ```console
+    $ update-ca-certificates
+    ```
 
 ## Contributing
 
-Please do! This is a new project and can use some love <3. Check out the [issues](https://github.com/genuinetools/img/issues).
+Please do! This is a young project and can use some love :heart:. Check out the [issues](https://github.com/genuinetools/img/issues).
 
 The local directories are mostly re-implementations of `buildkit` interfaces to
 be unprivileged.
+
+### Quick-Start With Docker
+
+A [Dockerfile](Dockerfile.dev) is provided as a build environment for this project. This is a simple way to begin
+contributing for all users without modifying local system versions, or if running on a Mac or Windows machine but need a 
+Linux environment to build and test `img`.
+
+Utilize the same security options present in the [Run in Docker](#docker-security-options) section when running this container.
+
+The steps below will provide an environment with all the correct prerequisites installed. Since this is an 
+Ubuntu image, can be augmented with whatever development tools needed. This is a simple way to get a 
+basic development environment up and running.
+
+1. Clone and `cd` into the `img` directory.
+2. Build the development image with Docker. This is an Ubuntu-based image.
+
+    ```bash
+    $ docker build -t img.dev -f Dockerfile.dev .
+    ```
+
+3. Run the image via Docker, mounting the `img` filesystem, so the running container will see any updates made.
+
+   ```bash
+   $ docker run --rm -it \
+         --name img \
+         --volume $(pwd):/home/user/img \
+         --workdir /home/user/img \
+         --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+         --security-opt systempaths=unconfined \
+         img.dev
+   ```
+
+4. Run `make` to build. This will build an `img` binary in the current directory. Explore the other 
+   targets available in the [Makefile](Makefile) or [basic.mk](basic.mk).
+
+   ```bash
+   $ make
+   ```
+
+5. Test the built binary. Since we are in the `img` project, we can test building `img` with it's [Dockerfile](Dockerfile)!
+
+   ```bash
+   $ ./img build -t test .
+   ```
+
+6. Alright! You've built `img` (twice!) and can start contributing.
+
+Since your local filesystem is mounted in the container, you can use any IDE or text editor you are comfortable with on 
+your host system, and run builds within the dev container.
 
 ## Acknowledgements
 
