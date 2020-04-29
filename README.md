@@ -84,7 +84,7 @@ within a container. The example below mounts the current directory as a volume, 
 ```console
 $ docker run --rm -it \
     --name img \
-    --volume $(pwd):/home/user/src:ro \
+    --volume "$(pwd):/home/user/src:ro" \
     --workdir /home/user/src \
     --volume "${HOME}/.docker:/root/.docker:ro" \
     --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
@@ -99,7 +99,7 @@ Instead of directly calling img, you can enter a shell prompt to test out some o
 ```console
 $ docker run --rm -it \
     --name img \
-    --volume $(pwd):/home/user/src:ro \
+    --volume "$(pwd):/home/user/src:ro" \
     --workdir /home/user/src \
     --volume "${HOME}/.docker:/root/.docker:ro" \
     --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
