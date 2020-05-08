@@ -160,7 +160,7 @@ $ sudo emerge -a app-emulation/img
 
 #### Running with Docker
 
-Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.9.
+Docker image `r.j3ss.co/img` is configured to be executed as an unprivileged user with UID 1000 and it does not need `--privileged` since `img` v0.5.10.
 
 ```console
 $ docker run --rm -it \
@@ -180,7 +180,7 @@ See [docker/cli patch](#upstream-patches) for how to allow mounting `/proc` with
 
 ### Running with Kubernetes
 
-Since `img` v0.5.9, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
+Since `img` v0.5.10, you don't need to specify any `securityContext` for running `img` as a Kubernetes container.
 
 However the following security annotations are needed:
 ```
