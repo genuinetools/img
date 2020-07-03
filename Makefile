@@ -5,7 +5,7 @@ PKG := github.com/genuinetools/$(NAME)
 CGO_ENABLED := 1
 
 # Set any default go build tags
-BUILDTAGS ?= seccomp
+BUILDTAGS ?= seccomp osusergo
 
 include basic.mk
 
