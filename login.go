@@ -42,7 +42,7 @@ func newLoginCommand() *cobra.Command {
 
 	fs := cmd.Flags()
 
-	fs.StringVarP(&login.user, "user", "u", "", "Username")
+	fs.StringVarP(&login.user, "username", "u", "", "Username")
 	fs.StringVarP(&login.password, "password", "p", "", "Password")
 	fs.BoolVar(&login.passwordStdin, "password-stdin", false, "Take the password from stdin")
 
