@@ -104,7 +104,7 @@ func (cmd *loginCommand) Run(args []string) error {
 	}
 
 	// Attempt to login to the registry.
-	r, err := registryapi.New(cliconfigtypes2dockerapitypes(authConfig), registryapi.Opt{Debug: debug})
+	r, err := registryapi.New(cliconfigtypes2dockerapitypes(authConfig), registryapi.Opt{Debug: debug, SkipPing: true})
 	if err != nil {
 		return fmt.Errorf("creating registry client failed: %v", err)
 	}
