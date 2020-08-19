@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 
 	"fmt"
@@ -46,6 +47,7 @@ func newBuildCommand() *cobra.Command {
 		labels:    newListValue(),
 		platforms: newListValue(),
 		cacheFrom: newListValue(),
+		cacheTo:   newListValue(),
 	}
 
 	cmd := &cobra.Command{
@@ -71,7 +73,8 @@ func newBuildCommand() *cobra.Command {
 	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
 	fs.StringVarP(&build.output, "output", "o", "", "BuildKit output specification (e.g. type=tar,dest=build.tar)")
-	fs.Var(build.cacheFrom, "cache-from", "Images to consider as cache sources")
+	fs.Var(build.cacheFrom, "cache-from", "Buildkit import-cache or Buildx cache-from specification")
+	fs.Var(build.cacheTo, "cache-to", "Buildx cache-to specification")
 	return cmd
 }
 
@@ -84,6 +87,7 @@ type buildCommand struct {
 	platforms      *listValue
 	output         string
 	cacheFrom      *listValue
+	cacheTo        *listValue
 	bkoutput       bkclient.ExportEntry
 
 	contextDir string
@@ -258,23 +262,61 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 		return sess.Run(ctx, sessDialer)
 	})
 
-	var cacheExports []*controlapi.CacheOptionsEntry
-	cacheExports = append(cacheExports, &controlapi.CacheOptionsEntry{
-		Type: "inline",
-	})
+	//create cacheTo list for buildlkit's export-cache
+	var cacheToList []*controlapi.CacheOptionsEntry
+	if cmdCacheToList := cmd.cacheTo.GetAll(); len(cmdCacheToList) > 0 {
+		parsedCacheToList, err := build.ParseExportCache(cmdCacheToList, []string{})
+		if err != nil {
+			return fmt.Errorf("error parsing export cache: %v", err)
+		}
 
-	var cacheImports []*controlapi.CacheOptionsEntry
-	for _, cacheTarget := range cmd.cacheFrom.GetAll() {
-		cacheImports = append(cacheImports, &controlapi.CacheOptionsEntry{
-			Type: "registry",
-			Attrs: map[string]string{
-				"ref": cacheTarget,
-			},
+		for _, cacheToItem := range parsedCacheToList {
+			cacheToList = append(cacheToList, &controlapi.CacheOptionsEntry{
+				Type:  cacheToItem.Type,
+				Attrs: cacheToItem.Attrs,
+			})
+		}
+	} else {
+		cacheToList = append(cacheToList, &controlapi.CacheOptionsEntry{
+			Type: "inline",
 		})
 	}
 
-	if cmd.cacheFrom.Len() > 0 {
-		frontendAttrs["cache-from"] = strings.Join(cmd.cacheFrom.GetAll(), ",")
+	//create cacheFrom list for buildlkit's import-cache
+	var cacheFromList []*controlapi.CacheOptionsEntry
+	strCacheFromList := make([]string, 0)
+	for _, cacheFrom := range cmd.cacheFrom.GetAll() {
+		if !strings.Contains(cacheFrom, "type=") {
+			//append early to not trigger warning in ParseImportCache func below
+			cacheFromList = append(cacheFromList, &controlapi.CacheOptionsEntry{
+				Type: "registry",
+				Attrs: map[string]string{
+					"ref": cacheFrom,
+				},
+			})
+		} else {
+			strCacheFromList = append(strCacheFromList, cacheFrom)
+		}
+	}
+
+	//parse the remainder of the cacheFrom list
+	parsedCacheFromList, err := build.ParseImportCache(strCacheFromList)
+	if err != nil {
+		return fmt.Errorf("error parsing import cache: %v", err)
+	}
+	for _, cacheFromItem := range parsedCacheFromList {
+		cacheFromList = append(cacheFromList, &controlapi.CacheOptionsEntry{
+			Type:  cacheFromItem.Type,
+			Attrs: cacheFromItem.Attrs,
+		})
+	}
+
+	if len(cacheFromList) > 0 {
+		cacheImportMarshalled, err := json.Marshal(cacheFromList)
+		if err != nil {
+			return fmt.Errorf("failed to marshal cache-imports: %v", err)
+		}
+		frontendAttrs["cache-imports"] = string(cacheImportMarshalled)
 	}
 
 	// Solve the dockerfile.
@@ -288,8 +330,8 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 			Frontend:      "dockerfile.v0",
 			FrontendAttrs: frontendAttrs,
 			Cache: controlapi.CacheOptions{
-				Exports: cacheExports,
-				Imports: cacheImports,
+				Exports: cacheToList,
+				Imports: cacheFromList,
 			},
 		}, ch)
 	})

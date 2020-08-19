@@ -239,16 +239,18 @@ build -  Build an image from a Dockerfile
 Usage: img build [OPTIONS] PATH
 
 Flags:
-      --build-arg list   Set build-time variables
-  -f, --file string      Name of the Dockerfile (Default is 'PATH/Dockerfile')
-  -h, --help             help for build
-      --label list       Set metadata for an image
-      --no-cache         Do not use cache when building the image
-      --no-console       Use non-console progress UI
-  -o, --output string    BuildKit output specification (e.g. type=tar,dest=build.tar)
-      --platform list    Set platforms for which the image should be built
-  -t, --tag list         Name and optionally a tag in the 'name:tag' format
-      --target string    Set the target build stage to build
+      --build-arg list    Set build-time variables
+      --cache-from list   Buildkit import-cache or Buildx cache-from specification
+      --cache-to list     Buildx cache-to specification
+  -f, --file string       Name of the Dockerfile (Default is 'PATH/Dockerfile')
+  -h, --help              help for build
+      --label list        Set metadata for an image
+      --no-cache          Do not use cache when building the image
+      --no-console        Use non-console progress UI
+  -o, --output string     BuildKit output specification (e.g. type=tar,dest=build.tar)
+      --platform list     Set platforms for which the image should be built
+  -t, --tag list          Name and optionally a tag in the 'name:tag' format
+      --target string     Set the target build stage to build
 
 Global Flags:
   -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")

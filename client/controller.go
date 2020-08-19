@@ -2,9 +2,12 @@ package client
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/moby/buildkit/cache/remotecache"
 	inlineremotecache "github.com/moby/buildkit/cache/remotecache/inline"
+	localremotecache "github.com/moby/buildkit/cache/remotecache/local"
 	registryremotecache "github.com/moby/buildkit/cache/remotecache/registry"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/frontend"
@@ -14,7 +17,6 @@ import (
 	"github.com/moby/buildkit/solver/bboltcachestorage"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
-	"path/filepath"
 )
 
 func (c *Client) createController() error {
@@ -52,9 +54,12 @@ func (c *Client) createController() error {
 	}
 
 	remoteCacheExporterFuncs := map[string]remotecache.ResolveCacheExporterFunc{
-		"inline": inlineremotecache.ResolveCacheExporterFunc(),
+		"inline":   inlineremotecache.ResolveCacheExporterFunc(),
+		"local":    localremotecache.ResolveCacheExporterFunc(sm),
+		"registry": registryremotecache.ResolveCacheExporterFunc(sm, docker.ConfigureDefaultRegistries()),
 	}
 	remoteCacheImporterFuncs := map[string]remotecache.ResolveCacheImporterFunc{
+		"local":    localremotecache.ResolveCacheImporterFunc(sm),
 		"registry": registryremotecache.ResolveCacheImporterFunc(sm, opt.ContentStore, docker.ConfigureDefaultRegistries()),
 	}
 
@@ -66,7 +71,6 @@ func (c *Client) createController() error {
 		ResolveCacheExporterFuncs: remoteCacheExporterFuncs,
 		ResolveCacheImporterFuncs: remoteCacheImporterFuncs,
 		CacheKeyStorage:           cacheStorage,
-		// No cache importer/exporter
 	})
 	if err != nil {
 		return fmt.Errorf("creating new controller failed: %v", err)
