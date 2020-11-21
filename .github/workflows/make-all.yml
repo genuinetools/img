@@ -24,7 +24,7 @@ jobs:
           go get honnef.co/go/tools/cmd/staticcheck
           go get -u github.com/go-bindata/go-bindata/go-bindata
           sudo mkdir -p /run/runc
-          echo $USER
+          sudo chown runner:runner -R /run/runc
         shell: bash
       - name: make all
         run: make all
