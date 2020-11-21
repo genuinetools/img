@@ -1,0 +1,29 @@
+on: push
+name: make all
+jobs:
+  makeall:
+    name: make all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: install deps
+        run: |
+          apt install -y \
+            libseccomp-dev \
+            parallel \
+            uidmap \
+            pigz \
+            --no-install-recommends
+        shell: bash
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.13.1' # The Go version to download (if necessary) and use.
+      - name: install go tools
+        run: |
+          go get golang.org/x/lint/golint
+          go get honnef.co/go/tools/cmd/staticcheck
+          go get -u github.com/go-bindata/go-bindata/go-bindata
+        shell: bash
+      - name: make all
+        run: make all
+        shell: bash

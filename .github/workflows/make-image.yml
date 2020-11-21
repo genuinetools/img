@@ -1,0 +1,11 @@
+on: push
+name: make image
+jobs:
+  makeimage:
+    name: make image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: make image
+        run: make image
+        shell: bash
