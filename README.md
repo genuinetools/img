@@ -1,3 +1,21 @@
+# img
+
+[![make-all](https://github.com/genuinetools/img/workflows/make%20all/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+all%22)
+[![make-image](https://github.com/genuinetools/img/workflows/make%20image/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+image%22)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/genuinetools/img)
+[![Github All Releases](https://img.shields.io/github/downloads/genuinetools/img/total.svg?style=for-the-badge)](https://github.com/genuinetools/img/releases)
+
+Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
+container image builder.
+
+`img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
+as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
+
+The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
+have to do is replace `docker` with `img` in your scripts, command line, and/or life.
+
+**Table of Contents**
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**
@@ -43,65 +61,6 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# img
-
-[![make-all](https://github.com/genuinetools/img/workflows/make%20all/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+all%22)
-[![make-image](https://github.com/genuinetools/img/workflows/make%20image/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+image%22)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/genuinetools/img)
-[![Github All Releases](https://img.shields.io/github/downloads/genuinetools/img/total.svg?style=for-the-badge)](https://github.com/genuinetools/img/releases)
-
-Standalone, daemon-less, unprivileged Dockerfile and OCI compatible
-container image builder.
-
-`img` is more cache-efficient than Docker and can also execute multiple build stages concurrently, 
-as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
-
-The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
-have to do is replace `docker` with `img` in your scripts, command line, and/or life.
-
-**Table of Contents**
-
-<!-- toc -->
-
-- [Goals](#goals)
-      - [Upstream Patches](#upstream-patches)
-      - [Benchmarks](#benchmarks)
-- [Installation](#installation)
-    + [Binaries](#binaries)
-    + [From Source](#from-source)
-    + [Alpine Linux](#alpine-linux)
-    + [Arch Linux](#arch-linux)
-    + [Gentoo](#gentoo)
-    + [Running with Docker](#running-with-docker)
-  * [Running with Kubernetes](#running-with-kubernetes)
-- [Usage](#usage)
-  * [Build an Image](#build-an-image)
-    + [Cross Platform](#cross-platform)
-    + [Exporter Types](#exporter-types)
-  * [List Image Layers](#list-image-layers)
-  * [Pull an Image](#pull-an-image)
-  * [Push an Image](#push-an-image)
-  * [Tag an Image](#tag-an-image)
-  * [Export an Image to Docker](#export-an-image-to-docker)
-  * [Unpack an Image to a rootfs](#unpack-an-image-to-a-rootfs)
-  * [Remove an Image](#remove-an-image)
-  * [Disk Usage](#disk-usage)
-  * [Prune and Cleanup the Build Cache](#prune-and-cleanup-the-build-cache)
-  * [Login to a Registry](#login-to-a-registry)
-  * [Logout from a Registry](#logout-from-a-registry)
-  * [Using Self-Signed Certs with a Registry](#using-self-signed-certs-with-a-registry)
-- [How It Works](#how-it-works)
-  * [Unprivileged Mounting](#unprivileged-mounting)
-  * [High Level](#high-level)
-  * [Low Level](#low-level)
-  * [Snapshotter Backends](#snapshotter-backends)
-    + [auto (default)](#auto-default)
-    + [native](#native)
-    + [overlayfs](#overlayfs)
-- [Contributing](#contributing)
-- [Acknowledgements](#acknowledgements)
-
-<!-- tocstop -->
 
 ## Goals
 
