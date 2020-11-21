@@ -27,3 +27,14 @@ jobs:
       - name: make all
         run: make all
         shell: bash
+      - name: Run Test Coverage
+        run: |
+          make cover
+          bash <(curl -s https://codecov.io/bash)
+        shell: bash
+      - name: Run e2e Tests
+        run: |
+          make install
+          ./contrib/e2e-dockerfiles-build-test.sh
+        env:
+          STATE_DIR: $HOME/img
