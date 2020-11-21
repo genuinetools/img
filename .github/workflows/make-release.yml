@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@master
       - name: install deps
         run: |
-          apt install -y \
+          sudo apt install -y \
             libseccomp-dev \
             parallel \
             uidmap \
