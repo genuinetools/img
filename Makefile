@@ -16,7 +16,7 @@ RUNCBUILDDIR=$(BUILDDIR)/src/github.com/opencontainers/runc
 RUNCCOMMIT=56aca5aa50d07548d5db8fd33e9dc562f70f3208
 $(RUNCBUILDDIR):
 	git clone -c advice.detachedHead=false https://github.com/opencontainers/runc.git "$@"
-	
+
 
 $(BUILDDIR)/bin/runc: $(RUNCBUILDDIR)
 	( cd $(RUNCBUILDDIR) ; git checkout $(RUNCCOMMIT) )

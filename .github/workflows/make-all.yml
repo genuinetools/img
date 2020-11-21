@@ -23,6 +23,8 @@ jobs:
           go get golang.org/x/lint/golint
           go get honnef.co/go/tools/cmd/staticcheck
           go get -u github.com/go-bindata/go-bindata/go-bindata
+          sudo mkdir -p /run/runc
+          echo $USER
         shell: bash
       - name: make all
         run: make all
