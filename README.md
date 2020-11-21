@@ -14,8 +14,6 @@ as it internally uses [BuildKit](https://github.com/moby/buildkit)'s DAG solver.
 The commands/UX are the same as `docker {build,tag,push,pull,login,logout,save}` so all you 
 have to do is replace `docker` with `img` in your scripts, command line, and/or life.
 
-**Table of Contents**
-
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**
