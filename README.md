@@ -1,6 +1,7 @@
 # img
 
-[![Travis CI](https://img.shields.io/travis/genuinetools/img.svg?style=for-the-badge)](https://travis-ci.org/genuinetools/img)
+[![make-all](https://github.com/genuinetools/img/workflows/make%20all/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+all%22)
+[![make-image](https://github.com/genuinetools/img/workflows/make%20image/badge.svg)](https://github.com/genuinetools/img/actions?query=workflow%3A%22make+image%22)
 [![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/genuinetools/img)
 [![Github All Releases](https://img.shields.io/github/downloads/genuinetools/img/total.svg?style=for-the-badge)](https://github.com/genuinetools/img/releases)
 
