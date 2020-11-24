@@ -132,10 +132,10 @@ $ make BUILDTAGS="seccomp noembed"
 
 #### Alpine Linux
 
-There is an [APKBUILD](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/img).
+There is an [APKBUILD](https://pkgs.alpinelinux.org/package/edge/community/x86_64/img).
 
 ```console
-$ apk add img --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+$ apk add img
 ```
 
 #### Arch Linux
