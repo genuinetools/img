@@ -53,6 +53,7 @@ have to do is replace `docker` with `img` in your scripts, command line, and/or 
     - [auto (default)](#auto-default)
     - [native](#native)
     - [overlayfs](#overlayfs)
+    - [fuse-overlayfs](#fuse-overlayfs)
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
 
@@ -207,7 +208,7 @@ img -  Standalone, daemon-less, unprivileged Dockerfile and OCI compatible conta
 Usage: img [OPTIONS] COMMAND [ARG...]
 
 Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -h, --help             help for img
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
@@ -255,7 +256,7 @@ Flags:
       --target string     Set the target build stage to build
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -370,7 +371,7 @@ Flags:
   -h, --help          help for ls
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -397,7 +398,7 @@ Flags:
   -h, --help   help for pull
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -425,7 +426,7 @@ Flags:
       --insecure-registry   Push to insecure registry
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -448,7 +449,7 @@ Flags:
   -h, --help   help for tag
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -472,7 +473,7 @@ Flags:
   -o, --output string   write to a file, instead of STDOUT
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -499,7 +500,7 @@ Flags:
   -o, --output string   Directory to unpack the rootfs to. (defaults to rootfs/ in the current working directory)
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -521,7 +522,7 @@ Flags:
   -h, --help   help for rm
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -539,7 +540,7 @@ Flags:
   -h, --help          help for du
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -572,7 +573,7 @@ Flags:
   -h, --help   help for prune
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -617,7 +618,7 @@ Flags:
   -u, --user string       Username
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -634,7 +635,7 @@ Flags:
   -h, --help   help for logout
 
 Global Flags:
-  -b, --backend string   backend for snapshots ([auto native overlayfs]) (default "auto")
+  -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
   -d, --debug            enable debug logging
   -s, --state string     directory to hold the global state (default "/home/user/.local/share/img")
 ```
@@ -694,19 +695,25 @@ Make sure you have sufficient entries (typically `>=65536`) in your
 
 #### auto (default)
 
-The `auto` backend is resolved into either `native` or `overlayfs`, depending on
-the availability of `overlayfs` on the system.
+The `auto` backend selects a backend based on what the current system supports,
+preferring `overlayfs`, then `fuse-overlayfs`, then `native`.
 
 #### native
 
-The `native` backends creates image layers by simply copying files.
+The `native` backend creates image layers by simply copying files.
 `copy_file_range(2)` is used when available.
 
 #### overlayfs
 
-You can also use `overlayfs` 
-backend, but that requires a kernel patch from Ubuntu to be unprivileged, 
-see [#22](https://github.com/genuinetools/img/issues/22).
+The `overlayfs` backend uses the kernel's native overlayfs support. It requires
+a kernel patch from Ubuntu to be unprivileged, see
+[#22](https://github.com/genuinetools/img/issues/22).
+
+#### fuse-overlayfs
+
+The `fuse-overlayfs` backend provides overlay support without any kernel
+patches. It requires a Linux kernel >= 4.18 and for
+[fuse-overlayfs](https://github.com/containers/fuse-overlayfs) to be installed.
 
 
 ## Contributing
