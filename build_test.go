@@ -134,6 +134,41 @@ func TestBuildLabels(t *testing.T) {
 	}
 }
 
+func TestBuildMultipleSecrets(t *testing.T) {
+	name := "testbuildmustiplesecrets"
+
+	args := []string{"build", "-t", name, "--secret", "id=s1,src=/dev/null", "--secret", "id=s2,src=/dev/null", "-"}
+	_, err := doRun(args, withDockerfile(`
+  FROM alpine
+  RUN --mount=type=secret,id=s1,dst=/tmp/secret1 \
+      --mount=type=secret,id=s2,dst=/tmp/secret2 \
+      cat /tmp/secret1 /tmp/secret2
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}
+
+func TestBuildSsh(t *testing.T) {
+	name := "testbuildssh"
+
+	args := []string{"build", "-t", name, "--ssh", "key=testdata/test-ssh.pem", "-"}
+	_, err := doRun(args, withDockerfile(`
+	FROM alpine
+	RUN apk add openssh-client
+	RUN test -z "$SSH_AUTH_SOCK" && echo "Socket is absent as expected"
+	RUN --mount=type=ssh,id=absent ssh-add -l; test 0 -ne "$?"
+	RUN --mount=type=ssh,id=key ssh-add -l; test 0 -eq "$?"
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}
+
 func TestBuildMultipleTags(t *testing.T) {
 	names := []string{"testbuildmultipletags", "testbuildmultipletags:v1", "testbuildmultipletagsv1"}
 	args := []string{"build"}

@@ -30,6 +30,7 @@ import (
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/filesync"
+	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/appcontext"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/spf13/cobra"
@@ -45,6 +46,8 @@ func newBuildCommand() *cobra.Command {
 		tags:      newListValue().WithValidator(validateTag),
 		buildArgs: newListValue(),
 		labels:    newListValue(),
+		secrets:   newListValue(),
+		ssh:       newListValue(),
 		platforms: newListValue(),
 		cacheFrom: newListValue(),
 		cacheTo:   newListValue(),
@@ -70,6 +73,8 @@ func newBuildCommand() *cobra.Command {
 	fs.Var(build.platforms, "platform", "Set platforms for which the image should be built")
 	fs.Var(build.buildArgs, "build-arg", "Set build-time variables")
 	fs.Var(build.labels, "label", "Set metadata for an image")
+	fs.Var(build.secrets, "secret", "Secret value exposed to the build. Format id=secretname,src=filepath")
+	fs.Var(build.ssh, "ssh", "Allow forwarding SSH agent to the builder. Format default|<id>[=<socket>|<key>[,<key>]]")
 	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
 	fs.StringVarP(&build.output, "output", "o", "", "BuildKit output specification (e.g. type=tar,dest=build.tar)")
@@ -82,6 +87,8 @@ type buildCommand struct {
 	buildArgs      *listValue
 	dockerfilePath string
 	labels         *listValue
+	secrets        *listValue
+	ssh            *listValue
 	target         string
 	tags           *listValue
 	platforms      *listValue
@@ -255,6 +262,27 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 				"name": strings.Join(cmd.tags.GetAll(), ","),
 			},
 		}
+	}
+
+	// parse secrets (--secret)
+	if cmd.secrets.Len() > 0 {
+		secretProvider, err := build.ParseSecret(cmd.secrets.GetAll())
+		if err != nil {
+			return fmt.Errorf("could not parse secrets: %v", err)
+		}
+		sess.Allow(secretProvider)
+	}
+	// parse ssh (--ssh)
+	if cmd.ssh.Len() > 0 {
+		configs, err := build.ParseSSH(cmd.ssh.GetAll())
+		if err != nil {
+			return fmt.Errorf("could not parse ssh: %v", err)
+		}
+		sp, err := sshprovider.NewSSHAgentProvider(configs)
+		if err != nil {
+			return err
+		}
+		sess.Allow(sp)
 	}
 
 	ch := make(chan *controlapi.StatusResponse)
