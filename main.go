@@ -73,6 +73,7 @@ func main() {
 	cmd.AddCommand(
 		newBuildCommand(),
 		newDiskUsageCommand(),
+		newInspectCommand(),
 		newListCommand(),
 		newLoginCommand(),
 		newLogoutCommand(),
