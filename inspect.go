@@ -12,8 +12,8 @@ import (
 	"github.com/moby/buildkit/session"
 )
 
-const inspectUsageShortHelp = `Return low-level information about the image.`
-const inspectUsageLongHelp = `Return low-level information about the image.`
+const inspectUsageShortHelp = `Return the JSON-encoded OCI image config. The output format is not compatible with "docker inspect".`
+const inspectUsageLongHelp = `Return the JSON-encoded OCI image config. The output format is not compatible with "docker inspect".`
 
 func newInspectCommand() *cobra.Command {
 	inspect := &inspectCommand{}
