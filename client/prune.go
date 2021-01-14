@@ -29,7 +29,7 @@ func (c *Client) Prune(ctx context.Context) ([]*controlapi.UsageRecord, error) {
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		// Call prune on the worker.
-		return w.Prune(ctx, ch)
+		return w.Prune(ctx, ch, client.PruneInfo{})
 	})
 
 	eg2, ctx := errgroup.WithContext(ctx)
