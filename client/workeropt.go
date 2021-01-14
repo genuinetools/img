@@ -3,17 +3,17 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/containerd/containerd/remotes/docker"
-	"github.com/moby/buildkit/util/leaseutil"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 
+	fuseoverlayfs "github.com/AkihiroSuda/containerd-fuse-overlayfs"
 	"github.com/containerd/containerd/content/local"
 	"github.com/containerd/containerd/diff/apply"
 	"github.com/containerd/containerd/diff/walking"
 	ctdmetadata "github.com/containerd/containerd/metadata"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/remotes/docker"
 	ctdsnapshot "github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/native"
 	"github.com/containerd/containerd/snapshots/overlay"
@@ -24,6 +24,7 @@ import (
 	"github.com/moby/buildkit/executor/runcexecutor"
 	containerdsnapshot "github.com/moby/buildkit/snapshot/containerd"
 	"github.com/moby/buildkit/util/binfmt_misc"
+	"github.com/moby/buildkit/util/leaseutil"
 	"github.com/moby/buildkit/util/network/netproviders"
 	"github.com/moby/buildkit/worker/base"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -53,6 +54,8 @@ func (c *Client) createWorkerOpt(withExecutor bool) (opt base.WorkerOpt, err err
 	case types.OverlayFSBackend:
 		// On some distros such as Ubuntu overlayfs can be mounted without privileges
 		s, err = overlay.NewSnapshotter(snapshotRoot)
+	case types.FUSEOverlayFSBackend:
+		s, err = fuseoverlayfs.NewSnapshotter(snapshotRoot)
 	default:
 		// "auto" backend needs to be already resolved on Client instantiation
 		return opt, fmt.Errorf("%s is not a valid snapshots backend", c.backend)

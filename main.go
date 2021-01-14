@@ -25,7 +25,7 @@ var (
 	stateDir string
 	debug    bool
 
-	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend}
+	validBackends = []string{types.AutoBackend, types.NativeBackend, types.OverlayFSBackend, types.FUSEOverlayFSBackend}
 )
 
 const rootHelpTemplate = `{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
