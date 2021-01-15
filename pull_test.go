@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestPullFromDefaultRegistry(t *testing.T) {
@@ -27,5 +30,21 @@ func TestPullIsInListOutput(t *testing.T) {
 	out := run(t, "ls")
 	if !strings.Contains(out, "busybox:latest") {
 		t.Fatalf("expected busybox:latest in ls output, got: %s", out)
+	}
+}
+
+func TestPullRetainsConfig(t *testing.T) {
+	// Test an official image,
+	run(t, "pull", "alpine")
+
+	out := run(t, "inspect", "alpine")
+
+	var image ocispec.Image
+	if err := json.Unmarshal([]byte(out), &image); err != nil {
+		t.Fatalf("error decoding JSON: %s", err)
+	}
+
+	if len(image.Config.Cmd) == 0 {
+		t.Fatal("image config should be populated")
 	}
 }
