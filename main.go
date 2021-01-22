@@ -75,6 +75,7 @@ func main() {
 		newDiskUsageCommand(),
 		newInspectCommand(),
 		newListCommand(),
+		newLoadCommand(),
 		newLoginCommand(),
 		newLogoutCommand(),
 		newPruneCommand(),
