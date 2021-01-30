@@ -31,6 +31,10 @@ func newPullCommand() *cobra.Command {
 		},
 	}
 
+	fs := cmd.Flags()
+
+	fs.BoolVar(&pull.insecure, "insecure-registry", false, "Pull from insecure registry")
+
 	return cmd
 }
 
@@ -44,6 +48,7 @@ func validatePullImageArgs(cmd *cobra.Command, args []string) error {
 
 type pullCommand struct {
 	image string
+	insecure bool
 }
 
 func (cmd *pullCommand) Run(args []string) (err error) {
@@ -78,7 +83,7 @@ func (cmd *pullCommand) Run(args []string) (err error) {
 	eg.Go(func() error {
 		defer sess.Close()
 		var err error
-		listedImage, err = c.Pull(ctx, cmd.image)
+		listedImage, err = c.Pull(ctx, cmd.image, cmd.insecure)
 		return err
 	})
 	if err := eg.Wait(); err != nil {

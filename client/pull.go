@@ -14,7 +14,7 @@ import (
 )
 
 // Pull retrieves an image from a remote registry.
-func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
+func (c *Client) Pull(ctx context.Context, image string, insecure bool) (*ListedImage, error) {
 	sm, err := c.getSessionManager()
 	if err != nil {
 		return nil, err
@@ -52,6 +52,11 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 		return nil, err
 	}
 
+	registriesHosts := opt.RegistryHosts
+	if insecure {
+		registriesHosts = configureRegistries("http")
+	}
+
 	// Create the source for the pull.
 	srcOpt := containerimage.SourceOpt{
 		Snapshotter:   opt.Snapshotter,
@@ -59,7 +64,7 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 		Applier:       opt.Applier,
 		CacheAccessor: cm,
 		ImageStore:    opt.ImageStore,
-		RegistryHosts: opt.RegistryHosts,
+		RegistryHosts: registriesHosts,
 		LeaseManager:  opt.LeaseManager,
 	}
 	src, err := containerimage.NewSource(srcOpt)

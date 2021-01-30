@@ -3,11 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/docker/distribution/reference"
 	"github.com/moby/buildkit/util/push"
-	"github.com/containerd/containerd/remotes/docker"
 )
 
 // Push sends an image to a remote registry.
@@ -39,31 +37,8 @@ func (c *Client) Push(ctx context.Context, image string, insecure bool) error {
 
 	registriesHosts := opt.RegistryHosts
 	if insecure {
-		registriesHosts = configurePushRegistries("http")
+		registriesHosts = configureRegistries("http")
 	}
 
 	return push.Push(ctx, sm, opt.ContentStore, imgObj.Target.Digest, image, insecure, registriesHosts, false)
-}
-
-func configurePushRegistries(scheme string) docker.RegistryHosts {
-	return func(host string) ([]docker.RegistryHost, error) {
-		config := docker.RegistryHost{
-			Client:       http.DefaultClient,
-			Authorizer:   nil,
-			Host:         host,
-			Scheme:       scheme,
-			Path:         "/v2",
-			Capabilities: docker.HostCapabilityPull | docker.HostCapabilityResolve | docker.HostCapabilityPush,
-		}
-
-		if config.Client == nil {
-			config.Client = http.DefaultClient
-		}
-
-		if host == "docker.io" {
-			config.Host = "registry-1.docker.io"
-		}
-
-		return []docker.RegistryHost{config}, nil
-	}
 }

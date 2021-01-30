@@ -3,6 +3,7 @@ package client
 import (
 	"os"
 	"path/filepath"
+	"net/http"
 
 	fuseoverlayfs "github.com/AkihiroSuda/containerd-fuse-overlayfs"
 	"github.com/containerd/containerd/snapshots/overlay"
@@ -10,6 +11,7 @@ import (
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/session"
 	"github.com/sirupsen/logrus"
+	"github.com/containerd/containerd/remotes/docker"
 )
 
 // Client holds the information for the client we will use for communicating
@@ -52,6 +54,29 @@ func New(root, backend string, localDirs map[string]string) (*Client, error) {
 		root:      root,
 		localDirs: localDirs,
 	}, nil
+}
+
+func configureRegistries(scheme string) docker.RegistryHosts {
+	return func(host string) ([]docker.RegistryHost, error) {
+		config := docker.RegistryHost{
+			Client:       http.DefaultClient,
+			Authorizer:   nil,
+			Host:         host,
+			Scheme:       scheme,
+			Path:         "/v2",
+			Capabilities: docker.HostCapabilityPull | docker.HostCapabilityResolve | docker.HostCapabilityPush,
+		}
+
+		if config.Client == nil {
+			config.Client = http.DefaultClient
+		}
+
+		if host == "docker.io" {
+			config.Host = "registry-1.docker.io"
+		}
+
+		return []docker.RegistryHost{config}, nil
+	}
 }
 
 // Close safely closes the client.
