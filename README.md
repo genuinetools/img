@@ -395,7 +395,8 @@ pull -  Pull an image or a repository from a registry.
 Usage: img pull [OPTIONS] NAME[:TAG|@DIGEST]
 
 Flags:
-  -h, --help   help for pull
+  -h, --help                help for pull
+      --insecure-registry   Pull from insecure registry
 
 Global Flags:
   -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
