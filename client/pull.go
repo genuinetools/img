@@ -9,8 +9,11 @@ import (
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	imageexporter "github.com/moby/buildkit/exporter/containerimage"
+	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/source/containerimage"
+	"github.com/moby/buildkit/util/imageutil"
+	"github.com/moby/buildkit/util/pull"
 )
 
 // Pull retrieves an image from a remote registry.
@@ -66,6 +69,22 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Fetch the configuration for the image. src.Resolve below fetches
+	// all the data layers but does NOT fetch the configuration. We need this
+	// to set it for export later.
+	_, configBytes, err := imageutil.Config(
+		ctx,
+		image,
+		pull.NewResolver(ctx, opt.RegistryHosts, sm, opt.ImageStore, source.ResolveModeDefault, image),
+		opt.ContentStore,
+		opt.LeaseManager,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	s, err := src.Resolve(ctx, identifier, sm)
 	if err != nil {
 		return nil, err
@@ -99,7 +118,13 @@ func (c *Client) Pull(ctx context.Context, image string) (*ListedImage, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := e.Export(ctx, exporter.Source{Ref: ref}); err != nil {
+	if _, err := e.Export(ctx, exporter.Source{
+		Ref: ref,
+		Metadata: map[string][]byte{
+			// This sets the image config to preserve entrypoint, workingdir, etc.
+			exptypes.ExporterImageConfigKey: configBytes,
+		},
+	}); err != nil {
 		return nil, err
 	}
 
