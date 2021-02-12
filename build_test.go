@@ -3,6 +3,10 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -126,6 +130,93 @@ func TestBuildLabels(t *testing.T) {
   LABEL stage "builder"
   FROM scratch
   LABEL stage "final"
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}
+
+func TestBuildMultipleSecrets(t *testing.T) {
+	name := "testbuildmustiplesecrets"
+
+	args := []string{"build", "-t", name, "--secret", "id=s1,src=/dev/null", "--secret", "id=s2,src=/dev/null", "-"}
+	_, err := doRun(args, withDockerfile(`
+  FROM alpine
+  RUN --mount=type=secret,id=s1,dst=/tmp/secret1 \
+      --mount=type=secret,id=s2,dst=/tmp/secret2 \
+      cat /tmp/secret1 /tmp/secret2
+  `))
+
+	if err != nil {
+		t.Logf("img %v failed unexpectedly: %v", args, err)
+		t.FailNow()
+	}
+}
+
+// generatePrivateKey creates a RSA Private Key of specified byte size in PEM format
+func generatePrivateKeyPEM(bitSize int) ([]byte, error) {
+	// Private Key generation
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate Private Key
+	err = privateKey.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get ASN.1 DER format
+	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
+
+	// pem.Block
+	privBlock := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   privDER,
+	}
+
+	// Private key in PEM format
+	privatePEM := pem.EncodeToMemory(&privBlock)
+
+	return privatePEM, nil
+}
+
+func TestBuildSsh(t *testing.T) {
+	name := "testbuildssh"
+
+	tmpf, err := ioutil.TempFile("", "id_rsa_test")
+	if err != nil {
+		t.Fatalf("creating temporary file for ssh private key failed: %v", err)
+	}
+
+	defer os.Remove(tmpf.Name())
+
+	err = tmpf.Chmod(0600)
+	if err != nil {
+		t.Fatalf("changing file mode failed: %v", err)
+	}
+
+	privatePEM, err := generatePrivateKeyPEM(4096)
+	if err != nil {
+		t.Fatalf("generating private key failed: %v", err)
+	}
+
+	_, err = tmpf.Write(privatePEM)
+	if err != nil {
+		t.Fatalf("writing private key to temporary file failed: %v", err)
+	}
+
+	args := []string{"build", "-t", name, "--ssh", fmt.Sprintf("key=%s", tmpf.Name()), "-"}
+	_, err = doRun(args, withDockerfile(`
+	FROM alpine
+	RUN apk add openssh-client
+	RUN test -z "$SSH_AUTH_SOCK" && echo "Socket is absent as expected"
+	RUN --mount=type=ssh,id=absent ssh-add -l; test 0 -ne "$?"
+	RUN --mount=type=ssh,id=key ssh-add -l; test 0 -eq "$?"
   `))
 
 	if err != nil {

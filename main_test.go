@@ -32,7 +32,7 @@ func init() {
 // deletes it after the tests have been run.
 func TestMain(m *testing.M) {
 	os.Unsetenv("IMG_RUNNING_TESTS")
-	args := []string{"build", "-o", "testimg" + exeSuffix}
+	args := []string{"build", "-tags", "dfrunmount dfsecrets dfssh", "-o", "testimg" + exeSuffix}
 	out, err := exec.Command("go", args...).CombinedOutput()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "building testimg failed: %v\n%s\n", err, out)
