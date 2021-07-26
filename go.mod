@@ -9,7 +9,7 @@ replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402
 require (
 	github.com/AkihiroSuda/containerd-fuse-overlayfs v1.0.0
 	github.com/containerd/console v0.0.0-20191219165238-8375c3424e4d
-	github.com/containerd/containerd v1.4.0
+	github.com/containerd/containerd v1.4.8
 	github.com/containerd/go-runc v0.0.0-20200220073739-7016d3ce2328
 	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/docker/cli v0.0.0-20200227165822-2298e6a3fe24
