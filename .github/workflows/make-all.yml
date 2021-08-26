@@ -11,31 +11,8 @@ jobs:
     name: make all
     runs-on: ubuntu-latest
     steps:
-      - name: Determine ref
-        id: ref
-        run: |
-          ref=""
-
-          if [ "${{ github.event_name }}" == "push" ]; then
-            full_ref="${{ github.ref }}"
-            ref_without_ref="${full_ref##refs/}"
-            ref_without_heads="${ref_without_ref##heads/}"
-            ref="${ref_without_heads##tags/}"
-          elif [ "${{ github.event_name }}" == "pull_request" ]; then
-            ref="${{ github.head_ref }}"
-          else
-            echo "Something went VERY wrong!"
-            exit 5
-          fi
-
-          echo "Ref: ${ref}"
-          echo "::set-output name=ref::${ref}"
-
-      - name: Clone code
-        run: git clone --depth=1 --branch="${{ steps.ref.outputs.ref }}" -c core.autocrlf=false https://github.com/${{ github.repository }} .
-
+      - uses: actions/checkout@master
       - name: install deps
-        shell: bash
         run: |
           sudo apt install -y \
             libseccomp-dev \
@@ -43,33 +20,29 @@ jobs:
             uidmap \
             pigz \
             --no-install-recommends
-
+        shell: bash
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.13.1" # The Go version to download (if necessary) and use.
-
       - name: install go tools
-        shell: bash
         run: |
           go get golang.org/x/lint/golint
           go get honnef.co/go/tools/cmd/staticcheck
           go get -u github.com/go-bindata/go-bindata/go-bindata
           sudo mkdir -p /run/runc
           sudo chown runner:runner -R /run/runc
-
+        shell: bash
       - name: make all
-        shell: bash
         run: make all
-
-      - name: Run Test Coverage
         shell: bash
+      - name: Run Test Coverage
         run: |
           make cover
           bash <(curl -s https://codecov.io/bash)
-
+        shell: bash
       - name: Run e2e Tests
-        env:
-          STATE_DIR: $HOME/img
         run: |
           make install
           ./contrib/e2e-dockerfiles-build-test.sh
+        env:
+          STATE_DIR: $HOME/img
