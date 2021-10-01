@@ -615,7 +615,7 @@ Flags:
   -h, --help              help for login
   -p, --password string   Password
       --password-stdin    Take the password from stdin
-  -u, --user string       Username
+  -u, --username string   Username
 
 Global Flags:
   -b, --backend string   backend for snapshots ([auto native overlayfs fuse-overlayfs]) (default "auto")
