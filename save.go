@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io"
 	"os"
+
+	"github.com/spf13/cobra"
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/pkg/term"
@@ -15,8 +16,8 @@ import (
 )
 
 // TODO(AkihiroSuda): support OCI archive
-const saveUsageShortHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
-const saveUsageLongHelp = `Save an image to a tar archive (streamed to STDOUT by default).`
+const saveUsageShortHelp = `Save one or more images to a tar archive (streamed to STDOUT by default).`
+const saveUsageLongHelp = `Save one or more images to a tar archive (streamed to STDOUT by default).`
 
 func newSaveCommand() *cobra.Command {
 
@@ -76,11 +77,9 @@ func (cmd *saveCommand) Run(args []string) (err error) {
 		return err
 	}
 
-	// Loop over the arguments as images and run save.
-	for _, image := range args {
-		if err := c.SaveImage(ctx, image, cmd.format, writer); err != nil {
-			return err
-		}
+	// Assume that the arguments are all image references
+	if err := c.SaveImages(ctx, args, cmd.format, writer); err != nil {
+		return err
 	}
 
 	return nil
