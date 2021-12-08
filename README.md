@@ -463,7 +463,7 @@ Successfully tagged jess/thing as jess/otherthing
 
 ```console
 $ img save -h
-save -  Save an image to a tar archive (streamed to STDOUT by default).
+save -  Save one or more images to a tar archive (streamed to STDOUT by default).
 
 Usage: img save [OPTIONS] IMAGE [IMAGE...]
 
