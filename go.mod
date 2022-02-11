@@ -13,7 +13,7 @@ require (
 	github.com/containerd/go-runc v0.0.0-20200220073739-7016d3ce2328
 	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/docker/cli v0.0.0-20200227165822-2298e6a3fe24
-	github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
+	github.com/docker/distribution v2.8.0+incompatible
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0
