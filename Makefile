@@ -1,6 +1,6 @@
 # Setup name variables for the package/tool
 NAME := img
-PKG := github.com/genuinetools/$(NAME)
+PKG := github.com/avmnu-sng/$(NAME)
 
 CGO_ENABLED := 1
 

@@ -27,7 +27,7 @@ jobs:
           sudo chown runner:runner -R /run/runc
         shell: bash
       - name: make all
-        run: make all
+        run: make clean install
         shell: bash
       - name: Run Test Coverage
         run: |
