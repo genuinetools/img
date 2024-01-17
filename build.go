@@ -77,6 +77,8 @@ func newBuildCommand() *cobra.Command {
 	fs.Var(build.ssh, "ssh", "Allow forwarding SSH agent to the builder. Format default|<id>[=<socket>|<key>[,<key>]]")
 	fs.BoolVar(&build.noConsole, "no-console", false, "Use non-console progress UI")
 	fs.BoolVar(&build.noCache, "no-cache", false, "Do not use cache when building the image")
+	fs.BoolVar(&build.push, "push", false, "Shorthand for \"--output=type=registry\"")
+	fs.BoolVar(&build.load, "load", false, "Shorthand for \"--output=type=docker\"") // no-op flag
 	fs.StringVarP(&build.output, "output", "o", "", "BuildKit output specification (e.g. type=tar,dest=build.tar)")
 	fs.Var(build.cacheFrom, "cache-from", "Buildkit import-cache or Buildx cache-from specification")
 	fs.Var(build.cacheTo, "cache-to", "Buildx cache-to specification")
@@ -100,6 +102,8 @@ type buildCommand struct {
 	contextDir string
 	noConsole  bool
 	noCache    bool
+	push       bool
+	load       bool // no-op
 }
 
 // validateTag checks if the given image name can be resolved, and ensures the latest tag is added if it is missing.
@@ -120,6 +124,11 @@ func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 		return fmt.Errorf("must pass a path to build")
 	}
 
+	if cmd.push {
+		c.Flag("output").Changed = true
+		cmd.output = fmt.Sprintf("type=image,push=true,name=%s", cmd.tags.values[0])
+	}
+
 	if c.Flag("output").Changed {
 		out, err := build.ParseOutput([]string{cmd.output})
 		if err != nil || len(out) != 1 {
@@ -131,6 +140,11 @@ func (cmd *buildCommand) ValidateArgs(c *cobra.Command, args []string) error {
 				return err
 			}
 			out[0].Attrs["name"] = validated
+		}
+		if out[0].Type == "registry" {
+			out[0].Type = "image"
+			out[0].Attrs["push"] = "true"
+			cmd.push = true
 		}
 		cmd.bkoutput = out[0]
 	} else if cmd.tags.Len() < 1 {
@@ -262,6 +276,9 @@ func (cmd *buildCommand) Run(args []string) (err error) {
 				"name": strings.Join(cmd.tags.GetAll(), ","),
 			},
 		}
+	}
+	if cmd.push {
+		out.Attrs["name"] = strings.Join(cmd.tags.GetAll(), ",")
 	}
 
 	// parse secrets (--secret)
