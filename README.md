@@ -155,10 +155,10 @@ $ makepkg -si
 
 #### Gentoo
 
-There is an [ebuild](https://github.com/gentoo/gentoo/tree/master/app-emulation/img).
+There is an [ebuild](https://github.com/gentoo/gentoo/tree/master/app-containers/img).
 
 ```console
-$ sudo emerge -a app-emulation/img
+$ sudo emerge -a app-containers/img
 ```
 
 #### Running with Docker
